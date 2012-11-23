@@ -1,0 +1,59 @@
+*** Dependencies ***
+
+This module uses the msiGetFormattedSystemTime microservice from the guinot module.
+
+*** Installation ***
+
+1.1: enable the modules in "<irods>/modules/EUDAT-PID/info.txt" and "<irods>/modules/guinot/info.txt" and re-run irodsssetup
+OR
+1.2: enable the module manually
+	./scripts/configure --enable-EUDAT-PID
+        ./scripts/configure --enable-guinot
+     and recompile iRODS
+	make clean
+	make
+
+3. create a symbolic link to the eudat rulebase
+	cd <irods>
+	ln -s <absolute-irods-path>/modules/EUDAT-PID/rulebase/eudat-v1-beta.re ./server/config/reConfigs/eudat.re
+
+4. edit <irods>/server/config/server.config and append ",eudat" to "reRuleSet" 
+	(make sure to include the comma and no spaces)
+
+5. configure iRODS hooks.
+	edit the <irods>/server/config/reConfigs/core.re file and add the following two acPostProcForPutHooks:
+
+	acPostProcForPut {
+        	ON($objPath like "\*.replicate") {
+                	processReplicationCommandFile($objPath);
+        	}
+	}
+	acPostProcForPut {
+        	ON($objPath like "\*.pid.create") {
+                	processPIDCommandFile($objPath);
+       	 	}
+	}
+
+6. properly configure the default resource in <irods>/server/config/reConfigs/core.re
+
+7.1 install the python scripts
+	cd <irods>
+        ln -s <absolute-irods-path>/modules/EUDAT-PID/cmd/* ./server/bin/cmd/
+        check permissions on the scripts and make sure they are executable by the irods user
+            e.g.chmod u+x cmd/*
+
+7.2 update the python wrapper scripts with the proper credentials
+        createHandle.py, modifyHandle.py and searchHandle.py
+
+8. create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.
+        - defaults to "<zone>/replicate"
+        - make sure all users involved in the replication can write in this collection.
+
+9. test the replication by changing and triggering "replicate.r" rule in <irods>/modules/EUDAT-PID/rules
+
+*** TODO ***
+
+- improve logic and data actual written/conveyed
+- improve error handling
+- change writeToLog microservice to specify a log level (preferably log at debug level)
+ 
