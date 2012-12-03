@@ -508,7 +508,7 @@ class Credentials():
 
         Please store credentials in the following format, otherwise there are problems...
         {
-        "baseuri": "https://epic.sara.nl/epic1/", 
+        "baseuri": "https://https://epic_api_endpoint here", 
         "username": "XXX",
         "password": "YYYYYYYY",
         "accept_format": "application/json"
@@ -520,7 +520,11 @@ class Credentials():
         self.file = file
 
         self.debug = False
-        self.baseuri = 'https://epic.sara.nl/epic1/'
+        """
+        The following default values should be set via the credentials files.
+        These example values will be overwritten
+        """
+        self.baseuri = 'https://epic.sara.nl/v2_test/handles/'
         self.username = 'XXX'
         self.prefix = self.username
         self.password = 'YYYYYY'

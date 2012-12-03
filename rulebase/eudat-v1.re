@@ -14,7 +14,7 @@
 getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug) {
     *credStoreType="os";
     *credStorePath="/srv/irods/current/modules/EUDAT/cmd/credentials_test";
-    *epicApi="https://epic.sara.nl/v2_test/handles/";
+    *epicApi="http://hdl.handle.net/"; 
     *epicDebug=2; 
 }
 
