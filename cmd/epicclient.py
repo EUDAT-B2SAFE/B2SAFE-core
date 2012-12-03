@@ -508,7 +508,7 @@ class Credentials():
 
         Please store credentials in the following format, otherwise there are problems...
         {
-        "baseuri": "https://https://epic_api_endpoint here", 
+        "baseuri": "https://epic_api_endpoint here", 
         "username": "XXX",
         "password": "YYYYYYYY",
         "accept_format": "application/json"

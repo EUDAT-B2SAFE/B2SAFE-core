@@ -1,9 +1,9 @@
 *** Dependencies ***
 
-< iRODS 3.2
+< iRODS 3.1
 This module uses the msiGetFormattedSystemTime microservice from the guinot module.
 
->= iRODS 3.2
+>= iRODS 3.1
 No dependencies, msiGetFormattedSystemTime is available out of the box
 
 *** Installation ***
