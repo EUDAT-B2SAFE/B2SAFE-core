@@ -10,7 +10,7 @@
 #include "rcGlobalExtern.h"
 
 int 
-msiWriteToLog(msParam_t *in_msg, ruleExecInfo_t *rei);
+msiWriteToLog(msParam_t *in_level, msParam_t *in_msg, ruleExecInfo_t *rei);
 
 int 
 msiGetZoneNameFromPath(msParam_t *inPath, msParam_t *outZoneName, ruleExecInfo_t *rei);

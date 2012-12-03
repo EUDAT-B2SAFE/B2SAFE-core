@@ -3,8 +3,13 @@
 import httplib2
 import simplejson
 from xml.dom import minidom, Node
+
+import uuid
+import argparse
+import sys
+
 """
-httpib2
+httplib2
 download from http://code.google.com/p/httplib2
 python setup.py install
 
@@ -13,86 +18,22 @@ download from http://pypi.python.org/pypi/simplejson/
 python setup.py install
 
 ubuntu: apt-get install python-httplib2 python-simplejson
-
 """
 
-"""
-    get credentials from different storages, right now irods or filesystem
-    
-    Please store credentials in the following format, otherwise there are problems...
-    {
-    "baseuri": "https://epic.sara.nl/epic1/", 
-    "username": "XXX",
-    "password": "YYYYYYYY",
-    "accept_format": "application/json"
-    }
-
-"""
-def credential_parser(store, file, debug):
-
-    baseuri = 'https://epic.sara.nl/epic1/'
-    username = 'XXX'
-    password = 'YYYYYY'
-    accept_format = 'application/json'
-
-    if ((store!="os" and store!="irods") or file =="NULL"):
-        if debug: print "credential store or path not given/valid, using:%s %s %s" % (baseuri,username,accept_format)
-        return [baseuri,username,password,accept_format]
-    
-    if store=="os":
-        try:
-            filehandle=open(file,"r")
-            tmp=eval(filehandle.read())
-            filehandle.close()
-            baseuri=tmp['baseuri']
-            username=tmp['username']
-            password=tmp['password']
-            accept_format=tmp['accept_format']
-            if debug: print "credentials from filespace:%s %s %s" % (baseuri,username,accept_format)
-        except Exception, e:
-            print "problem while getting credentials from filespace"
-            print "Error:", e
-    elif store=="irods":
-        try:
-            from irods import getRodsEnv,rcConnect,clientLogin,iRodsOpen
-            myEnv, status = getRodsEnv()
-            conn, errMsg = rcConnect(myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone())
-            if debug: print myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone()
-            status = clientLogin(conn)
-            test = iRodsOpen(conn, file, 'r')
-            
-            tmp = eval(test.read())    
-            test.close()
-            conn.disconnect()
-            
-            baseuri=tmp['baseuri']
-            username=tmp['username']
-            password=tmp['password']
-            accept_format=tmp['accept_format']
-            if debug: print "credentials from irods:%s %s %s" % (baseuri,username,accept_format)
-        except Exception, e:
-            print "problem while getting credentials from irods"
-    else:
-        print "this should not happen..."
-        
-    return [baseuri,username,password,accept_format]
-
-
+################################################################################
+# Epic Client Class #
+################################################################################
 
 class EpicClient():
     """Class implementing an EPIC client."""
     
-    
-    def __init__(self, baseuri, username, password, accept_format=None,debug=False):
+    def __init__(self, cred):
 	"""Initialize object with connection parameters."""
 	
-	self.baseuri = baseuri
-	self.username = username
-	self.password = password
-	self.accept_format = accept_format
-	self.debug = debug
+        self.cred  = cred
+        self.debug = cred.debug
 	self.http = httplib2.Http(disable_ssl_certificate_validation=True)
-	self.http.add_credentials(username, password)
+	self.http.add_credentials(cred.username, cred.password)
 	
 	
     def _debugMsg(self,method,msg):
@@ -103,8 +44,8 @@ class EpicClient():
     
     # Public methods
 	    
-    def searchHandle(self,prefix,url):
-        """Search for handles containing the specified URL.
+    def searchHandle(self,prefix,key,value):
+        """Search for handles containing the specified key with the specified value.
 	
 	Parameters:
 	prefix: URI to the resource, or the prefix if suffix is not ''.
@@ -112,15 +53,15 @@ class EpicClient():
 	Returns the searched data field, or None if not found.
 	
 	"""
-        if self.baseuri.endswith('/'):
-            uri = self.baseuri + prefix + '/?URL='+url
+        if self.cred.baseuri.endswith('/'):
+            uri = self.cred.baseuri + prefix + '/?'+key+'='+value
         else:
-            uri = self.baseuri + '/' + prefix + '/?URL='+url
+            uri = self.cred.baseuri + '/' + prefix + '/?'+key+'='+value
 		
 	self._debugMsg('searchHandle',"URI " + uri)
 	
 	hdrs = None
-	if self.accept_format: hdrs = {'Accept': self.accept_format}
+	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format}
 	try:
 	    response, content = self.http.request(uri,method='GET',headers=hdrs)
 	except:
@@ -142,10 +83,10 @@ class EpicClient():
         make sure to only return the handle and strip off the baseuri if it is included
         """
         hdl = handle[0]
-        if hdl.startswith(self.baseuri):
-            return hdl[len(self.baseuri):len(hdl)]
-        elif hdl.startswith(self.baseuri + '/'):
-            return hdl[len(self.baseuri + '/'):len(hdl)]
+        if hdl.startswith(self.cred.baseuri):
+            return hdl[len(self.cred.baseuri):len(hdl)]
+        elif hdl.startswith(self.cred.baseuri + '/'):
+            return hdl[len(self.cred.baseuri + '/'):len(hdl)]
 	return prefix + '/' + hdl
 
     def retrieveHandle(self,prefix,suffix=''):
@@ -157,15 +98,15 @@ class EpicClient():
 	Returns the content of the handle in JSON, None on error.
 	
 	"""
-	if self.baseuri.endswith('/'):
-            uri = self.baseuri + prefix
+	if self.cred.baseuri.endswith('/'):
+            uri = self.cred.baseuri + prefix
         else:
-            uri = self.baseuri + '/' + prefix
-	if suffix != '': uri += "/" + suffix
+            uri = self.cred.baseuri + '/' + prefix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	
 	self._debugMsg('retrieveHandle',"URI " + uri)
 	hdrs = None
-	if self.accept_format: hdrs = {'Accept': self.accept_format}
+	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format}
 	try:
 	    response, content = self.http.request(uri,method='GET',headers=hdrs)
 	except:
@@ -224,12 +165,12 @@ class EpicClient():
 	
 	"""
 	
-        if self.baseuri.endswith('/'):
-            uri = self.baseuri + prefix
+        if self.cred.baseuri.endswith('/'):
+            uri = self.cred.baseuri + prefix
         else:
-            uri = self.baseuri + '/' + prefix
+            uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	self._debugMsg('createHandleWithLocation',"URI " + uri)
 	hdrs = {'If-None-Match': '*','Content-Type':'application/json'}
 
@@ -249,17 +190,24 @@ class EpicClient():
 	    
 	if response.status != 201:
 	    self._debugMsg('createHandleWithLocation', "Not Created: Response status: "+str(response.status))
+            if response.status == 400:
+                self._debugMsg('createHandleWithLocation', 'body josn:' + new_handle_json)
 	    return None
+
+        
 	
         """
         make sure to only return the handle and strip off the baseuri if it is included
         """
         hdl = response['location']
+
+        self.updateHandleWithLocation(hdl,location)
+
 	self._debugMsg('hdl', hdl)
-        if hdl.startswith(self.baseuri):
-            return hdl[len(self.baseuri):len(hdl)]
-        elif hdl.startswith(self.baseuri + '/'):
-            return hdl[len(self.baseuri + '/'):len(hdl)]
+        if hdl.startswith(self.cred.baseuri):
+            return hdl[len(self.cred.baseuri):len(hdl)]
+        elif hdl.startswith(self.cred.baseuri + '/'):
+            return hdl[len(self.cred.baseuri + '/'):len(hdl)]
    	
     	self._debugMsg('final hdl', hdl)
 	return hdl
@@ -277,15 +225,15 @@ class EpicClient():
 	
 	"""
 
-        if prefix.startswith(self.baseuri): 
-	    prefix = prefix[len(self.baseuri):] 
+        if prefix.startswith(self.cred.baseuri): 
+	    prefix = prefix[len(self.cred.baseuri):] 
 	
-        if self.baseuri.endswith('/'):
-            uri = self.baseuri + prefix
+        if self.cred.baseuri.endswith('/'):
+            uri = self.cred.baseuri + prefix
         else:
-            uri = self.baseuri + '/' + prefix
+            uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	
 	self._debugMsg('modifyHandle',"URI " + uri)
 	hdrs = {'Content-Type' : 'application/json'}
@@ -348,12 +296,12 @@ class EpicClient():
 	
 	"""
 	
-	if self.baseuri.endswith('/'):
-            uri = self.baseuri + prefix
+	if self.cred.baseuri.endswith('/'):
+            uri = self.cred.baseuri + prefix
         else:
-            uri = self.baseuri + '/' + prefix
+            uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	self._debugMsg('deleteHandle',"DELETE URI " + uri)
 	
 	try:
@@ -382,12 +330,12 @@ class EpicClient():
          
         """
 
-	if self.baseuri.endswith('/'):
-		uri = self.baseuri + prefix
+	if self.cred.baseuri.endswith('/'):
+		uri = self.cred.baseuri + prefix
 	else:
-	        uri = self.baseuri + '/' + prefix
+	        uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 
 	loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
 	self._debugMsg('updateHandleWithLocation', "found 10320/LOC: " +str(loc10320))
@@ -430,12 +378,12 @@ class EpicClient():
 	Returns True if removed, False otherwise.
 	"""
 	
-	if self.baseuri.endswith('/'):
-		uri = self.baseuri + prefix
+	if self.cred.baseuri.endswith('/'):
+		uri = self.cred.baseuri + prefix
 	else:
-	        uri = self.baseuri + '/' + prefix
+	        uri = self.cred.baseuri + '/' + prefix
 	
-	if suffix != '': uri += "/" + suffix
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 
         loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
         if loc10320 is None:
@@ -457,6 +405,9 @@ class EpicClient():
 			
 	return True
 
+################################################################################
+# EPIC Client Location Type Class #
+################################################################################
 
 class LocationType():
 	"""Class implementing a 10320/LOC handle type."""
@@ -547,113 +498,271 @@ class LocationType():
 			self._debugMsg('addLocation', "an exception occurred, adding the new location: " +loc)
 			return False, None
 
+################################################################################
+# EPIC Client Credentials Class #
+################################################################################
 
-############################################
-
-# Examples using EpicClient
-
-if __name__ == "__main__":
-
-    baseuri = 'https://epic.sara.nl/epic1/'
-    username = 'XXX'
-    password = 'YYYYYY'
-    accept_format = 'application/json'
-    
-    debug_enabled = False
-    
-    prefix=username
-
-    ec = EpicClient(baseuri,username,password,accept_format,debug=debug_enabled)
-    
+class Credentials():
     """
-    print ec.createHandle(prefix + "/07cc0858-edb9-11e1-a27d-005056ae635a","/vzMPI/home/mpi-eudat/test.txt")
+        get credentials from different storages, right now irods or filesystem
+
+        Please store credentials in the following format, otherwise there are problems...
+        {
+        "baseuri": "https://epic.sara.nl/epic1/", 
+        "username": "XXX",
+        "password": "YYYYYYYY",
+        "accept_format": "application/json"
+        }
 
     """
+    def __init__(self,store, file):
+        self.store = store
+        self.file = file
+
+        self.debug = False
+        self.baseuri = 'https://epic.sara.nl/epic1/'
+        self.username = 'XXX'
+        self.prefix = self.username
+        self.password = 'YYYYYY'
+        self.accept_format = 'application/json'
+
+
+    def parse(self):        
+        if ((self.store!="os" and self.store!="irods") or self.file =="NULL"):
+            if self.debug: print "credential store or path not given/valid, using:%s %s %s" % (self.baseuri,self.username,self.accept_format)
+            return
+
+        if self.store=="os":
+            try:
+                filehandle=open(self.file,"r")
+                tmp=eval(filehandle.read())
+                filehandle.close()                
+            except Exception, e:
+                print "problem while getting credentials from filespace"
+                print "Error:", e
+        elif self.store=="irods":
+            try:
+                from irods import getRodsEnv,rcConnect,clientLogin,iRodsOpen
+                myEnv, status = getRodsEnv()
+                conn, errMsg = rcConnect(myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone())
+                if debug: print myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone()
+                status = clientLogin(conn)
+                test = iRodsOpen(conn, self.file, 'r')
+
+                tmp = eval(test.read())    
+                test.close()
+                conn.disconnect()
+            except Exception, e:
+                print "problem while getting credentials from irods"
+        else:
+            print "this should not happen..."
+
+        self.baseuri=tmp['baseuri']
+        self.username=tmp['username']
+        self.prefix = self.username
+        self.password=tmp['password']
+        self.accept_format=tmp['accept_format']
+        self.debug=tmp['debug']
+        if self.debug: print "credentials from %s:%s %s %s" % (self.store,self.baseuri,self.username,self.accept_format)
+
+################################################################################
+# EPIC Client Command Line Interface #
+################################################################################
+
+def search(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+
+    ec = EpicClient(credentials)
+    result = ec.searchHandle(credentials.prefix, args.key, args.value)
+
+    sys.stdout.write(str(result))
+
+def read(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+
+    ec = EpicClient(credentials)
+    if args.key == None:
+        result = ec.retrieveHandle(credentials.prefix, args.handle)
+    else:
+        result = ec.getValueFromHandle(args.handle,args.key)
+
+    sys.stdout.write(str(result))
+
+def create(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+    
+    uid = uuid.uuid1();
+    pid = credentials.username + "/" + str(uid)
+
+    ec = EpicClient(credentials)
+    result = ec.createHandle(pid,args.location)
+    
+    if result == None:
+        sys.stdout.write("error")
+    else:
+        sys.stdout.write(result)
+
+def modify(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+
+    ec = EpicClient(credentials)
+    result = ec.modifyHandle(args.handle,args.key,args.value)
+
+    sys.stdout.write(str(result))
+
+def delete(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+
+    ec = EpicClient(credentials)
+    result = ec.deleteHandle(args.handle)
+
+    sys.stdout.write(str(result))
+
+def relation(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+
+    ec = EpicClient(credentials)
+    result = ec.updateHandleWithLocation(args.ppid[:42],args.cpid[:42])
+    sys.stdout.write(str(result))
+
+def test(args):
+    credentials = Credentials(args.credstore,args.credpath)
+    credentials.parse();
+    
+    ec = EpicClient(credentials)
+    
+    print ""
+    print "Retrieving Value of FOO from " + credentials.prefix + "/NONEXISTING (should be None)"
+    print ec.getValueFromHandle(credentials.prefix,"FOO","NONEXISTING")
+    
+    print ""
+    print "Creating handle " + credentials.prefix + "/TEST_CR1 (should be True)"
+    print ec.createHandle(credentials.prefix + "/TEST_CR1","http://www.test.com/1") #,"335f4dea94ef48c644a3f708283f9c54"
+    
+    print ""
+    print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"
+    print ec.retrieveHandle(credentials.prefix +"/TEST_CR1")
+    
     print ""
     print "Retrieving handle by url"
-    print ec.searchHandle(prefix, "/vzMPI-REPLIX/bin/test.txt")
+    result = ec.searchHandle(credentials.prefix, "URL", "http://www.test.com/1")
+    print result
 
     print ""
-    print "Retrieving handle info from " + prefix + "/TESTHANDLE"
-    print ec.retrieveHandle(prefix,"TESTHANDLE")
+    print "Modifying handle info from " + credentials.prefix + "/TEST_CR1 (should be True)"
+    print ec.modifyHandle(credentials.prefix +"/TEST_CR1","uri","http://www.test.com/2")
+    
+    print ""
+    print "Retrieving Value of EMAIL from " + credentials.prefix + "/TEST_CR1 (should be None)"
+    print ec.getValueFromHandle("" + credentials.prefix +"/TEST_CR1","EMAIL")
 
     print ""
-    print "Retrieving handle info from " + prefix + "/NONEXISTING (should be None)"
-    print ec.retrieveHandle(prefix,"NONEXISTING")
-    
+    print "Adding new info to " + credentials.prefix + "/TEST_CR1 (should be True)"
+    print ec.modifyHandle(credentials.prefix + "/TEST_CR1","EMAIL","test@te.st")    
+
     print ""
-    print "Retrieving Value of EMAIL from " + prefix + "/TESTHANDLE"
-    print ec.getValueFromHandle("" + prefix +"/TESTHANDLE","EMAIL")
-    
-    print ""
-    print "Retrieving Value of FOO from " + prefix + "/TESTHANDLE (should be None)"
-    print ec.getValueFromHandle(prefix,"FOO","TESTHANDLE")
-    
-    print ""
-    print "Retrieving Value of FOO from " + prefix + "/NONEXISTING (should be None)"
-    print ec.getValueFromHandle(prefix,"FOO","NONEXISTING")
-    
-    print ""
-    print "Creating handle " + prefix + "/TEST_CR1 (should be True)"
-    print ec.createHandle(prefix + "/TEST_CR1","http://www.bsc.es") #,"335f4dea94ef48c644a3f708283f9c54"
-    
-    print ""
-    print "Retrieving handle info from " + prefix + "/TEST_CR1"
-    print ec.retrieveHandle(prefix +"/TEST_CR1")
-    
-    print ""
-    print "Modifying handle info from " + prefix + "/TEST_CR1 (should be True)"
-    print ec.modifyHandle(prefix +"/TEST_CR1","uri","http://www.bsc.es/FY")
-    
-    print ""
-    print "Adding new info to " + prefix + "/TEST_CR1 (should be True)"
-    print ec.modifyHandle(prefix + "/TEST_CR1","EMAIL","xavi.abellan@bsc.es")    
+    print "Retrieving Value of EMAIL from " + credentials.prefix + "/TEST_CR1 (should be test@te.st)"
+    print ec.getValueFromHandle("" + credentials.prefix +"/TEST_CR1","EMAIL")
 
     print ""
     print "Updating handle info with a new 10320/loc type location 846/157c344a-0179-11e2-9511-00215ec779a8"
     print "(should be True)"
-    print ec.updateHandleWithLocation(prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
+    print ec.updateHandleWithLocation(credentials.prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
 
     print ""
     print "Updating handle info with a new 10320/loc type location 846/157c344a-0179-11e2-9511-00215ec779a9"
     print "(should be True)"
-    print ec.updateHandleWithLocation(prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a9")
+    print ec.updateHandleWithLocation(credentials.prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a9")
     
     print ""
-    print "Retrieving handle info from " + prefix + "/TEST_CR1"
-    print ec.retrieveHandle(prefix + "/TEST_CR1")
+    print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"
+    print ec.retrieveHandle(credentials.prefix + "/TEST_CR1")
     
     print ""
-    print "Deleting EMAIL parameter from " + prefix + "/TEST_CR1 (should be True)"
-    print ec.modifyHandle(prefix + "/TEST_CR1","EMAIL",None)  
+    print "Deleting EMAIL parameter from " + credentials.prefix + "/TEST_CR1 (should be True)"
+    print ec.modifyHandle(credentials.prefix + "/TEST_CR1","EMAIL",None)  
+
+    print ""
+    print "Retrieving Value of EMAIL from " + credentials.prefix + "/TEST_CR1 (should be None)"
+    print ec.getValueFromHandle("" + credentials.prefix +"/TEST_CR1","EMAIL")
 
     print ""
     print "Updating handle info with a new 10320/loc type location 846/157c344a-0179-11e2-9511-00215ec779a8"
     print "(should be False)"
-    print ec.updateHandleWithLocation(prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
+    print ec.updateHandleWithLocation(credentials.prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
 
     print ""
     print "Removing 10320/loc type location 846/157c344a-0179-11e2-9511-00215ec779a8"
     print "(should be True)"
-    print ec.removeLocationFromHandle(prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
+    print ec.removeLocationFromHandle(credentials.prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
 
     print ""
     print "Removing 10320/loc type location 846/157c344a-0179-11e2-9511-00215ec779a8"
     print "(should be False)"
-    print ec.removeLocationFromHandle(prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
+    print ec.removeLocationFromHandle(credentials.prefix + "/TEST_CR1","846/157c344a-0179-11e2-9511-00215ec779a8")
     
     print ""
-    print "Retrieving handle info from " + prefix + "/TEST_CR1"
-    print ec.retrieveHandle(prefix + "/TEST_CR1")
+    print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"
+    print ec.retrieveHandle(credentials.prefix + "/TEST_CR1")
     
     print ""
-    print "Deleting " + prefix + "/TEST_CR1 (should be True)"
-    print ec.deleteHandle(prefix + "/TEST_CR1")  
+    print "Deleting " + credentials.prefix + "/TEST_CR1 (should be True)"
+    print ec.deleteHandle(credentials.prefix + "/TEST_CR1")  
     
     print ""
-    print "Deleting (again) " + prefix + "/TEST_CR1 (should be False)"
-    print ec.deleteHandle(prefix + "/TEST_CR1")  
+    print "Deleting (again) " + credentials.prefix + "/TEST_CR1 (should be False)"
+    print ec.deleteHandle(credentials.prefix + "/TEST_CR1")  
     
     print ""
-    print "Retrieving handle info from non existing " + prefix + "/TEST_CR1 (should be None)"
-    print ec.retrieveHandle(prefix + "/TEST_CR1")     
+    print "Retrieving handle info from non existing " + credentials.prefix + "/TEST_CR1 (should be None)"
+    print ec.retrieveHandle(credentials.prefix + "/TEST_CR1")   
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='EUDAT EPIC client API. Supports reading, querying, creating, modifying and deleting handle records.')
+    parser.add_argument("credstore",choices=['os','irods'],default="NULL",help="the used credential storage (os=filespace,irods=iRODS storage)")
+    parser.add_argument("credpath",default="NULL",help="path to the credentials")
+    """parser.add_argument("-d", "--debug", help="Show debug output")"""
+    
+    subparsers = parser.add_subparsers(title='Actions',description='Handle record management actions',help='additional help')
+
+    parser_create = subparsers.add_parser('create', help='creating handle records')
+    parser_create.add_argument("location", help="location to store in the new handle record")
+    parser_create.set_defaults(func=create)
+
+    parser_modify = subparsers.add_parser('modify', help='modifying handle records')
+    parser_modify.add_argument("handle", help="the handle value")
+    parser_modify.add_argument("key", help="the key of the field to change in the pid record")
+    parser_modify.add_argument("value", help="the new value to store in the pid record identified with the supplied key")
+    parser_modify.set_defaults(func=modify)
+
+    parser_delete = subparsers.add_parser('delete', help='Deleting handle records')
+    parser_delete.add_argument("handle", help="the handle value of the digital object instance to delete")
+    parser_delete.set_defaults(func=delete)
+
+    parser_read = subparsers.add_parser('read', help='Read handle record')
+    parser_read.add_argument("handle", help="the handle value")
+    parser_read.add_argument("--key", help="only read this key instead of the full handle record")
+    parser_read.set_defaults(func=read)
+
+    parser_search = subparsers.add_parser('search', help='Search for handle records')
+    parser_search.add_argument("key", choices=['URL'],help="the key to search")
+    parser_search.add_argument("value", help="the value to search")
+    parser_search.set_defaults(func=search)
+
+    parser_relation = subparsers.add_parser('relation', help='Add a (parent,child) relationship between the specified handle records')
+    parser_relation.add_argument("ppid", help="parent handle value")
+    parser_relation.add_argument("cpid", help="child handle value")
+    parser_relation.set_defaults(func=relation)
+
+    parser_test = subparsers.add_parser('test', help='Run test suite')
+    parser_test.set_defaults(func=test)
+
+    args = parser.parse_args()
+    args.func(args)

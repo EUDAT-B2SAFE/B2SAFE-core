@@ -1,11 +1,21 @@
 #include "../include/eudat.h"
 
 int 
-msiWriteToLog(msParam_t *in_msg, ruleExecInfo_t *rei) {
+msiWriteToLog(msParam_t *in_level, msParam_t *in_msg, ruleExecInfo_t *rei) {
+    char *level;
     char *msg;
-
+    
+    level = parseMspForStr(in_level);
     msg = parseMspForStr(in_msg);
-    rodsLog(LOG_NOTICE, "msiWriteToLog :: %s", msg);
+    
+    if(strcmp(level, "debug") == 0) {
+        rodsLog(LOG_DEBUG, "msiWriteToLog :: %s", msg);
+    } else if(strcmp(level, "error") == 0) {
+        rodsLog(LOG_ERROR, "msiWriteToLog :: %s", msg);
+    } else {
+        rodsLog(LOG_NOTICE, "msiWriteToLog :: %s", msg);
+    }
+    
 
     return 0;
 }

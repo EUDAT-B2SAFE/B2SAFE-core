@@ -1,4 +1,4 @@
 /* Service name			# args		Service function */
 { "msiBytesBufToStr",		2,		(funcPtr) msiBytesBufToStr },
-{ "msiWriteToLog",              1,              (funcPtr) msiWriteToLog },
+{ "msiWriteToLog",              2,              (funcPtr) msiWriteToLog },
 { "msiGetZoneNameFromPath",     2,              (funcPtr) msiGetZoneNameFromPath},

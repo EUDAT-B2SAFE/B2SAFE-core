@@ -11,6 +11,13 @@
 #                                                                              #
 ################################################################################
 
+getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug) {
+    *credStoreType="os";
+    *credStorePath="/srv/irods/current/modules/EUDAT/cmd/credentials_test";
+    *epicApi="https://epic.sara.nl/v2_test/handles/";
+    *epicDebug=2; 
+}
+
 #
 # Return the absolute path to the iRODS collection where all command files are stored.
 #   typically "<zone>/replicate". Make sure all users and remote users have write permissions here.
@@ -39,6 +46,27 @@ writeFile(*file, *contents) {
         msiDataObjCreate("*file", "forceFlag=", *filePointer);
                 msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
         msiDataObjClose(*filePointer, *outStatus);
+}
+
+#
+# Logging policies
+#
+
+logInfo(*msg) {
+    logWithLevel("info", *msg);
+}
+
+logDebug(*msg) {
+    logWithLevel("debug", *msg);
+}
+
+logError(*msg) {
+    logWithLevel("error", *msg);
+}
+
+logWithLevel(*level, *msg) {
+    msiWriteToLog(*level,"*msg");
+    #msiWriteRodsLog("startReplication(*commandFile,*pid,*source,*destination)", *status);
 }
 
 #
@@ -85,13 +113,13 @@ updateCommandName(*cmdPath, *status) {
 # Author: Willem Elbers, MPI-TLA
 #
 updateMonitor(*file) {
-        msiWriteRodsLog("updateMonitor(*file)", *status);
+        logInfo("updateMonitor(*file)");
         delay("<PLUSET>30s</PLUSET>") {
                 if(errorcode(msiObjStat(*file,*out)) >= 0) {
-			msiWriteRodsLog("*file exists", *status);
+			logInfo("*file exists");
                         processPIDCommandFile(*file);
                 } else {
-                        msiWriteRodsLog("*file does not exist yet", *status);
+                        logInfo("*file does not exist yet");
                 }
         }
 }
@@ -111,7 +139,7 @@ retrieveChecksum(*path, *checksum) {
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
     foreach   ( *B )    {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
-        msiWriteRodsLog(*checksum,*status);
+        logDebug(*checksum);
     }
     #use shell script to compute checksum if we cannot retrieve it from icat?
 }
@@ -134,8 +162,8 @@ retrieveChecksum(*path, *checksum) {
 # Author: Willem Elbers, MPI-TLA
 #
 triggerReplication(*commandFile,*pid,*source,*destination) {
-	msiWriteRodsLog("startReplication(*commandFile,*pid,*source,*destination)", *status);
-	writeFile("*commandFile","*pid,*source,*destination");
+	logInfo("startReplication(*commandFile,*pid,*source,*destination)");
+	writeFile("*commandFile","*pid;*source;*destination");
 }
 
 #
@@ -150,16 +178,16 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
 # Author: Willem Elbers, MPI-TLA
 #
 triggerCreatePID(*commandFile,*pid,*destination) {
-        msiWriteRodsLog("triggerCreatePID(*commandFile,*pid,*destination)", *status);
-        writeFile("*commandFile", "create,*pid,*destination");
+        logInfo("triggerCreatePID(*commandFile,*pid,*destination)");
+        writeFile("*commandFile", "create;*pid;*destination");
 }
 
 #
 # Author: Willem Elbers, MPI-TLA
 #
 triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
-        msiWriteRodsLog("triggerUpdateParentPID(*commandFile,*pid,*new_pid)", *status);
-        writeFile("*commandFile", "update,*pid,*new_pid");
+        logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
+        writeFile("*commandFile", "update;*pid;*new_pid");
 }
 
 ################################################################################
@@ -170,6 +198,9 @@ triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
 
 #
 # Process a .replicate file and perform the replication
+# format = "command1,command2,command2,..."
+#
+# command format = "source_pid;source_path;destination_path"
 #
 # Parameters:
 #	*cmdPath    [IN]    the path to the .replicate file
@@ -177,20 +208,26 @@ triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
 # Author: Willem Elbers, MPI-TLA
 #
 processReplicationCommandFile(*cmdPath) {
-	msiWriteRodsLog("processReplication(*cmdPath)", *status);
+	logDebug("processReplication(*cmdPath)");
 
 	readFile(*cmdPath, *out_STRING);	
 
-	*list = split(*out_STRING, ",");
-        if(size(*list)==3) {
-                *pid = elem(*list,0);
-                *source = elem(*list,1);
-                *destination = elem(*list,2);
-		doReplication(*pid,*source,*destination,*status);
-		updateCommandName(*cmdPath,*status);
-	} else {
-                msiWriteRodsLog("incorrect list", *status);
+        #TODO: properly manage status here
+
+        *status = 0;    
+        foreach(*out_STRING) {
+            *list = split(*out_STRING, ";");
+            if(size(*list)==3) {
+                    *pid = elem(*list,0);
+                    *source = elem(*list,1);
+                    *destination = elem(*list,2);
+                    doReplication(*pid,*source,*destination,*status);       
+            } else {
+                    logError("incorrect list");
+            }
         }
+
+        updateCommandName(*cmdPath,*status);
 }
 
 #
@@ -203,10 +240,10 @@ processReplicationCommandFile(*cmdPath) {
 # Author: Willem Elbers, MPI-TLA
 #
 processPIDCommandFile(*cmdPath) {
-	msiWriteRodsLog("processPID(*cmdPath)", *status);
+	logInfo("processPID(*cmdPath)");
 	
 	readFile(*cmdPath, *out_STRING);
-	*list = split(*out_STRING, ",");
+	*list = split(*out_STRING, ";");
 
     	if(size(*list)==3) {
                 *pidAction = elem(*list,0);
@@ -224,7 +261,7 @@ processPIDCommandFile(*cmdPath) {
                     updatePIDWithNewChild(elem(*list,1), elem(*list,2));
                 }
     	} else {
-    		msiWriteRodsLog("incorrect list", *status);
+    		logError("incorrect list");
     	}
 
 #	updateCommandName(*cmdPath,*status); 	
@@ -242,7 +279,7 @@ processPIDCommandFile(*cmdPath) {
 # Author: Willem Elbers, MPI-TLA
 #
 doReplication(*pid,*source,*destination,*status) {
-        msiWriteRodsLog("doReplication(*pid,*source,*destination)", *status);
+        logInfo("doReplication(*pid,*source,*destination)");
 
         #rsync object (make sure to supply "null" if dest resource should be the default one) 
         msiDataObjRsync(*source, "IRODS_TO_IRODS", "null", *destination, *rsyncStatus);
@@ -273,31 +310,45 @@ doReplication(*pid,*source,*destination,*status) {
 # Author: Willem Elbers, MPI-TLA
 #
 createPID(*rorPID, *path, *newPID) {
-	msiWriteRodsLog("create pid for *path and save *rorPID as ror", *status);
+	logInfo("create pid for *path and save *rorPID as ror");
 
-        #check if PID already exists  
-        msiExecCmd("searchHandle.py", *path, "null", "null", "null", *out);
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug);
+
+        #check if PID already exists
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py *credStoreType *credStorePath search URL *path");
+        }
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *path", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *existing_pid);
 
         if(*existing_pid == "empty") {
             # create PID
-            msiExecCmd("createHandle.py", *path, "null", "null", "null", *out);
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py *credStoreType *credStorePath create *path");
+            }
+            msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *path", "null", "null", "null", *out);
             msiGetStdoutInExecCmdOut(*out, *newPID);
-            msiWriteRodsLog("created handle = *newPID", *status);
+            logDebug("created handle = *newPID");
 
             # add RoR to PID record
-            msiExecCmd("modifyHandle.py","*newPID ROR https://epic.sara.nl/epic1/*rorPID", "null", "null", "null", *out2);
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID");
+            }
+            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID", "null", "null", "null", *out2);
             msiGetStdoutInExecCmdOut(*out2, *response2);
-            msiWriteRodsLog("modify handle response = *response2", *status);
+            logDebug("modify handle response = *response2");
 
             # add CHECKSUM to PID record
             retrieveChecksum(*path, *checksum);
-            msiExecCmd("modifyHandle.py","*newPID CHECKSUM *checksum", "null", "null", "null", *out3);
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
+            }
+            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
             msiGetStdoutInExecCmdOut(*out3, *response3);
-            msiWriteRodsLog("modify handle response = *response3", *status);
+            logDebug("modify handle response = *response3");
         } else {
             *newPID = *existing_pid;
-            msiWriteRodsLog("PID already exists (*newPID)", *status);
+            logInfo("PID already exists (*newPID)");
         }
 }
 
@@ -312,9 +363,13 @@ createPID(*rorPID, *path, *newPID) {
 # Modified by: Claudio Cacciari, CINECA
 #
 updatePIDWithNewChild(*parentPID, *childPID) {
-	msiWriteRodsLog("update parent pid (*parentPID) with new child (*childPID)", *status);
+	logInfo("update parent pid (*parentPID) with new child (*childPID)");
 
-	msiExecCmd("updateHandleLocations.py","*parentPID *childPID", "null", "null", "null", *out);
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug);
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *childPID");
+        }
+	msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *childPID", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *response);
-        msiWriteRodsLog("update handle location response = *response", *status);
+        logDebug("update handle location response = *response");
 }
