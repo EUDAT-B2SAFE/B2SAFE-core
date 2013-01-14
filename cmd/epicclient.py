@@ -279,7 +279,7 @@ class EpicClient():
 	else:
 	    self._debugMsg('modifyHandle', "Request completed")
 		    
-	if response.status < 200 and response.status >= 300:
+	if response.status < 200 or response.status >= 300:
 	    self._debugMsg('modifyHandle', "Not Modified: Response status: "+str(response.status))
 	    return False
 	    
@@ -312,7 +312,7 @@ class EpicClient():
 	else:
 	    self._debugMsg('deleteHandle', "Request completed")
 	    
-	if response.status < 200 and response.status >= 300:
+	if response.status < 200 or response.status >= 300:
 	    self._debugMsg('deleteHandle', "Not Deleted: Response status: "+str(response.status))
 	    return False
 	    
