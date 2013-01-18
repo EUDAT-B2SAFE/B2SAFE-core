@@ -80,8 +80,10 @@ logWithLevel(*level, *msg) {
 #
 readFile(*file, *contents) {
 	msiDataObjOpen("objPath=*file++++replNum=0++++openFlags=O_RDONLY",*S_FD);
-                msiDataObjRead(*S_FD,"1024",*R_BUF);
+                #msiDataObjRead(*S_FD,"1024",*R_BUF);
+                msiDataObjRead(*S_FD,null,*R_BUF);
                 msiBytesBufToStr(*R_BUF, *contents);
+                
         msiDataObjClose(*S_FD,*closeStatus);
 }
 
@@ -223,7 +225,7 @@ processReplicationCommandFile(*cmdPath) {
                     *destination = elem(*list,2);
                     doReplication(*pid,*source,*destination,*status);       
             } else {
-                    logError("incorrect list");
+                    logError("ignoring incorrect command: [*out_STRING]");
             }
         }
 
@@ -261,7 +263,7 @@ processPIDCommandFile(*cmdPath) {
                     updatePIDWithNewChild(elem(*list,1), elem(*list,2));
                 }
     	} else {
-    		logError("incorrect list");
+    		logError("ignoring incorrect command: [*out_STRING]");
     	}
 
 #	updateCommandName(*cmdPath,*status); 	
@@ -281,14 +283,22 @@ processPIDCommandFile(*cmdPath) {
 doReplication(*pid,*source,*destination,*status) {
         logInfo("doReplication(*pid,*source,*destination)");
 
+        #make sure the parent collections exist
+        msiSplitPath(*destination, *parent, *child);
+        msiCollCreate(*parent, "1", *collCreateStatus);
+
         #rsync object (make sure to supply "null" if dest resource should be the default one) 
         msiDataObjRsync(*source, "IRODS_TO_IRODS", "null", *destination, *rsyncStatus);
 
-        #trigger pid management in destination
-        getSharedCollection(*destination,*collectionPath); 
-        msiSplitPath(*destination, *parent, *child);
-	triggerCreatePID("*collectionPath*child.pid.create",*pid,*destination);
-	updateMonitor("*collectionPath*child.pid.update");
+        if(*pid != "null") {
+            #trigger pid management in destination
+            getSharedCollection(*destination,*collectionPath); 
+            msiSplitPath(*destination, *parent, *child);
+            triggerCreatePID("*collectionPath*child.pid.create",*pid,*destination);
+            updateMonitor("*collectionPath*child.pid.update");
+        } else {
+            logInfo("No pid management");
+        }
 }
 
 ################################################################################
