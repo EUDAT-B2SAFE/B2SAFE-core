@@ -632,7 +632,7 @@ def relation(args):
     credentials.parse();
 
     ec = EpicClient(credentials)
-    result = ec.updateHandleWithLocation(args.ppid[:42],args.cpid[:42])
+    result = ec.updateHandleWithLocation(args.ppid,args.cpid)
     sys.stdout.write(str(result))
 
 def test(args):
