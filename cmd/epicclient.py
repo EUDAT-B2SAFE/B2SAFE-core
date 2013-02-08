@@ -248,25 +248,25 @@ class EpicClient():
 	    
 	handle = simplejson.loads(handle_json)
 	KeyFound = False
-	for item in handle:
-	   if 'type' in item and item['type']==key:
-		KeyFound = True
-		self._debugMsg('modifyHandle', "Found key " + key + " value=" + str(item['parsed_data']) )
-		if value is None:
-		    del(item)
-		else:
-		   item['parsed_data']=value
-		   del item['data']
-		break;
-
-	if KeyFound is False:
-	    if value is None:
-		self._debugMsg('modifyHandle', "No value for Key " + key + " . Quiting")
-		return True
-	 		    
-	    self._debugMsg('modifyHandle', "Key " + key + " not found. Generating new hash")
-	    handleItem={'type': key, 'parsed_data' : value}
-	    handle.append(handleItem)
+	if value is None:
+	        handle[:] = [ d for d in handle if d.get('type') != key ]
+	else:    
+		for item in handle:
+		   if 'type' in item and item['type']==key:
+			KeyFound = True
+			self._debugMsg('modifyHandle', "Found key " + key + " value=" + str(item['parsed_data']) )
+			item['parsed_data']=value
+			del item['data']
+			break;
+	
+		if KeyFound is False:
+		    if value is None:
+			self._debugMsg('modifyHandle', "No value for Key " + key + " . Quiting")
+			return True
+		 		    
+		    self._debugMsg('modifyHandle', "Key " + key + " not found. Generating new hash")
+		    handleItem={'type': key, 'parsed_data' : value}
+		    handle.append(handleItem)
 			
 	handle_json = simplejson.dumps(handle)
 	self._debugMsg('modifyHandle', "JSON: " + str(handle_json))    
