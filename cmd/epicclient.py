@@ -249,11 +249,11 @@ class EpicClient():
 	handle = simplejson.loads(handle_json)
 	KeyFound = False
 	if value is None:
-        for item in handle:
-            if item.has_key('type') and item['type'] == key:
-                self._debugMsg('modifyHandle','Remove item ' + key)
-                handle.remove(item)
-                break
+		for item in handle:
+			if item.has_key('type') and item['type'] == key:
+				self._debugMsg('modifyHandle','Remove item ' + key)
+				handle.remove(item)
+				break
 	else:    
 		for item in handle:
 		   if item.has_key('type') and item['type']==key:
