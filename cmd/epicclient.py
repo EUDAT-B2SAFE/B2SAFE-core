@@ -249,15 +249,19 @@ class EpicClient():
 	handle = simplejson.loads(handle_json)
 	KeyFound = False
 	if value is None:
-	        handle[:] = [ d for d in handle if d.get('type') != key ]
+        for item in handle:
+            if item.has_key('type') and item['type'] == key:
+                self._debugMsg('modifyHandle','Remove item ' + key)
+                handle.remove(item)
+                break
 	else:    
 		for item in handle:
-		   if 'type' in item and item['type']==key:
+		   if item.has_key('type') and item['type']==key:
 			KeyFound = True
 			self._debugMsg('modifyHandle', "Found key " + key + " value=" + str(item['parsed_data']) )
 			item['parsed_data']=value
 			del item['data']
-			break;
+			break
 	
 		if KeyFound is False:
 		    if value is None:
