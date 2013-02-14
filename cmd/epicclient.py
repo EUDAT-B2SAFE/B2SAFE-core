@@ -102,7 +102,7 @@ class EpicClient():
             uri = self.cred.baseuri + prefix
         else:
             uri = self.cred.baseuri + '/' + prefix
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	
 	self._debugMsg('retrieveHandle',"URI " + uri)
 	hdrs = None
@@ -170,7 +170,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	self._debugMsg('createHandleWithLocation',"URI " + uri)
 	hdrs = {'If-None-Match': '*','Content-Type':'application/json'}
 
@@ -233,7 +233,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	
 	self._debugMsg('modifyHandle',"URI " + uri)
 	hdrs = {'Content-Type' : 'application/json'}
@@ -305,7 +305,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	self._debugMsg('deleteHandle',"DELETE URI " + uri)
 	
 	try:
@@ -339,7 +339,7 @@ class EpicClient():
 	else:
 	        uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 
 	loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
 	self._debugMsg('updateHandleWithLocation', "found 10320/LOC: " +str(loc10320))
@@ -387,7 +387,7 @@ class EpicClient():
 	else:
 	        uri = self.cred.baseuri + '/' + prefix
 	
-	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
+	if suffix != '': uri += "/" + suffix.partition("/")[2]
 
         loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
         if loc10320 is None:
