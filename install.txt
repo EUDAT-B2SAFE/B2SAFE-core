@@ -10,13 +10,13 @@ No dependencies, msiGetFormattedSystemTime is available out of the box
 
 Automatically using the irodssetup script:
 
-1.1 (< iRODS 3.2) enable the module "<irods>/modules/guinot/info.txt" 
+1.1 (< iRODS 3.1) enable the module "<irods>/modules/guinot/info.txt" 
 1.2. enable the module in "<irods>/modules/EUDAT-PID/info.txt"
 1.3. rerun the irodsssetup script
 
 Manually:
 
-1.1. (< iRODS 3.2) ./scripts/configure --enable-guinot
+1.1. (< iRODS 3.1) ./scripts/configure --enable-guinot
 1.2. ./scripts/configure --enable-EUDAT-PID
 1.3. make clean
 1.4. make
@@ -54,6 +54,7 @@ Manually:
 6.2 update the "getEpicApiParameters" rule in "./server/config/reConfigs/eudat.re"
     - Configure the credential storage type: "os": stored on the local filesystem or "irods": stored on de irods namespace.
     - Set the path to the credentials file
+    - set the correct serverID to include the fully qualified hostname. For instance: "irods://node.domain.com:1247"
     - Set the proper values in the credentials file (see ./cmd/credentials_example for an example)
 
 7. create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.

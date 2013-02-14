@@ -11,10 +11,11 @@
 #                                                                              #
 ################################################################################
 
-getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug) {
+getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) {
     *credStoreType="os";
     *credStorePath="/srv/irods/current/modules/EUDAT/cmd/credentials_test";
-    *epicApi="http://hdl.handle.net/"; 
+    *epicApi="http://hdl.handle.net/";
+    *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 }
 
@@ -80,8 +81,8 @@ logWithLevel(*level, *msg) {
 #
 readFile(*file, *contents) {
 	msiDataObjOpen("objPath=*file++++replNum=0++++openFlags=O_RDONLY",*S_FD);
-                #msiDataObjRead(*S_FD,"1024",*R_BUF);
-                msiDataObjRead(*S_FD,null,*R_BUF);
+                msiDataObjRead(*S_FD,"1024",*R_BUF);
+                #msiDataObjRead(*S_FD,null,*R_BUF);
                 msiBytesBufToStr(*R_BUF, *contents);
                 
         msiDataObjClose(*S_FD,*closeStatus);
@@ -322,21 +323,21 @@ doReplication(*pid,*source,*destination,*status) {
 createPID(*rorPID, *path, *newPID) {
 	logInfo("create pid for *path and save *rorPID as ror");
 
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug);
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
 
         #check if PID already exists
         if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath search URL *path");
+            logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
         }
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *path", "null", "null", "null", *out);
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *existing_pid);
 
         if(*existing_pid == "empty") {
             # create PID
             if(*epicDebug > 1) {
-                logDebug("epicclient.py *credStoreType *credStorePath create *path");
+                logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
             }
-            msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *path", "null", "null", "null", *out);
+            msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
             msiGetStdoutInExecCmdOut(*out, *newPID);
             logDebug("created handle = *newPID");
 
@@ -375,7 +376,7 @@ createPID(*rorPID, *path, *newPID) {
 updatePIDWithNewChild(*parentPID, *childPID) {
 	logInfo("update parent pid (*parentPID) with new child (*childPID)");
 
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *epicDebug);
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
         if(*epicDebug > 1) {
             logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *childPID");
         }
