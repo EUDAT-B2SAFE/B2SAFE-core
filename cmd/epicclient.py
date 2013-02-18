@@ -201,15 +201,19 @@ class EpicClient():
         """
         hdl = response['location']
 
-        self.updateHandleWithLocation(hdl,location)
-
 	self._debugMsg('hdl', hdl)
         if hdl.startswith(self.cred.baseuri):
-            return hdl[len(self.cred.baseuri):len(hdl)]
+            hdl = hdl[len(self.cred.baseuri):len(hdl)]
         elif hdl.startswith(self.cred.baseuri + '/'):
-            return hdl[len(self.cred.baseuri + '/'):len(hdl)]
+            hdl = hdl[len(self.cred.baseuri + '/'):len(hdl)]
    	
     	self._debugMsg('final hdl', hdl)
+
+	"""
+        update location. Use the previous created handle location
+        """
+	self.updateHandleWithLocation(hdl,location)
+
 	return hdl
 	
 	
@@ -606,7 +610,7 @@ def create(args):
     pid = credentials.username + "/" + str(uid)
 
     ec = EpicClient(credentials)
-    result = ec.createHandle(pid,args.location)
+    result = ec.createHandle(pid,args.location,args.checksum)
     
     if result == None:
         sys.stdout.write("error")
@@ -742,6 +746,7 @@ if __name__ == "__main__":
 
     parser_create = subparsers.add_parser('create', help='creating handle records')
     parser_create.add_argument("location", help="location to store in the new handle record")
+    parser_create.add_argument("--checksum", help="checksum to store in the new handle record")
     parser_create.set_defaults(func=create)
 
     parser_modify = subparsers.add_parser('modify', help='modifying handle records')
