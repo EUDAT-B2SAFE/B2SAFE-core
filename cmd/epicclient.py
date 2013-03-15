@@ -50,7 +50,7 @@ class EpicClient():
 	Parameters:
 	prefix: URI to the resource, or the prefix if suffix is not ''.
 	url: The URL to search for.
-	Returns the searched data field, or None if not found.
+	Returns the searched data field, or None if error, or empty if not found.
 	
 	"""
         if self.cred.baseuri.endswith('/'):
@@ -506,80 +506,99 @@ class LocationType():
 			self._debugMsg('addLocation', "an exception occurred, adding the new location: " +loc)
 			return False, None
 
-################################################################################
+###############################################################################
 # EPIC Client Credentials Class #
-################################################################################
-
+###############################################################################
+"""
+get credentials from different storages, right now 
+irods or filesystem. please store credentials in the 
+following format, otherwise there are problems...
+{
+    "baseuri": "https://epic_api_endpoint here", 
+    "username": "USER",
+    "prefix": "YYY",
+    "password": "ZZZZZZZ",
+    "accept_format": "application/json",
+    "debug": "False"
+}
+"""
 class Credentials():
+    
     """
-        get credentials from different storages, right now irods or filesystem
-
-        Please store credentials in the following format, otherwise there are problems...
-        {
-        "baseuri": "https://epic_api_endpoint here", 
-        "username": "XXX",
-        "password": "YYYYYYYY",
-        "accept_format": "application/json"
-        }
-
+    set variables to defaults.
+    last 5 variables overwritten during parse()
     """
-    def __init__(self,store, file):
+    def __init__(self, store, filename):
         self.store = store
-        self.file = file
-
+        self.filename = filename
         self.debug = False
-        """
-        The following default values should be set via the credentials files.
-        These example values will be overwritten
-        """
         self.baseuri = 'https://epic.sara.nl/v2_test/handles/'
-        self.username = 'XXX'
-        self.prefix = self.username
-        self.password = 'YYYYYY'
+        self.username = 'USER'
+        self.prefix = 'YYY'
+        self.password = 'ZZZZZ'
         self.accept_format = 'application/json'
 
-
+    """
+    parse credentials from json file on filespace/irods.
+    if you want to use irods you need embededpython!
+    """
     def parse(self):        
-        if ((self.store!="os" and self.store!="irods") or self.file =="NULL"):
-            if self.debug: print "credential store or path not given/valid, using:%s %s %s" % (self.baseuri,self.username,self.accept_format)
+        if ((self.store!="os" and self.store!="irods") 
+                                                or self.filename =="NULL"):
+            if self.debug: 
+                print "wrong cred store/path, using:%s %s %s" \
+                % (self.baseuri,self.username,self.accept_format)
             return
 
-        if self.store=="os":
+        if self.store == "os":
             try:
-                filehandle=open(self.file,"r")
-                tmp=eval(filehandle.read())
+                filehandle = open(self.filename,"r")
+                tmp = eval(filehandle.read())
                 filehandle.close()                
-            except Exception, e:
+            except Exception, err:
                 print "problem while getting credentials from filespace"
-                print "Error:", e
-        elif self.store=="irods":
+                print "Error:", err
+        elif self.store == "irods":
             try:
                 from irods import getRodsEnv,rcConnect,clientLogin,iRodsOpen
                 myEnv, status = getRodsEnv()
-                conn, errMsg = rcConnect(myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone())
-                if debug: print myEnv.getRodsHost(), myEnv.getRodsPort(), myEnv.getRodsUserName(), myEnv.getRodsZone()
+                conn, errMsg = rcConnect(myEnv.getRodsHost(), \
+                                         myEnv.getRodsPort(), \
+                                         myEnv.getRodsUserName(), \
+                                         myEnv.getRodsZone())
+                if debug: 
+                    print myEnv.getRodsHost(), myEnv.getRodsPort(), \
+                          myEnv.getRodsUserName(), myEnv.getRodsZone()
                 status = clientLogin(conn)
                 test = iRodsOpen(conn, self.file, 'r')
-
                 tmp = eval(test.read())    
                 test.close()
                 conn.disconnect()
-            except Exception, e:
+            except Exception, err:
                 print "problem while getting credentials from irods"
         else:
             print "this should not happen..."
 
-        self.baseuri=tmp['baseuri']
-        self.username=tmp['username']
-        self.prefix = self.username
-        self.password=tmp['password']
-        self.accept_format=tmp['accept_format']
-        self.debug=tmp['debug']
-        if self.debug: print "credentials from %s:%s %s %s" % (self.store,self.baseuri,self.username,self.accept_format)
-
-################################################################################
+        try:
+            self.baseuri = tmp['baseuri']
+            self.username = tmp['username']
+            try:
+                self.prefix = tmp['prefix']
+            except Exception, err:
+                self.prefix = self.username
+            self.password = tmp['password']
+            self.accept_format = tmp['accept_format']
+            self.debug = tmp['debug']
+        except Exception, err:
+            print "missing key-value-pair in credentials file"
+            
+        if self.debug: 
+            print "credentials from %s:%s %s %s %s" \
+                % (self.store, self.baseuri, self.username, \
+                   self.prefix, self.accept_format)
+###############################################################################
 # EPIC Client Command Line Interface #
-################################################################################
+###############################################################################
 
 def search(args):
     credentials = Credentials(args.credstore,args.credpath)
@@ -607,7 +626,7 @@ def create(args):
     credentials.parse();
     
     uid = uuid.uuid1();
-    pid = credentials.username + "/" + str(uid)
+    pid = credentials.prefix + "/" + str(uid)
 
     ec = EpicClient(credentials)
     result = ec.createHandle(pid,args.location,args.checksum)
