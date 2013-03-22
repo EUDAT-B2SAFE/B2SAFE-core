@@ -129,12 +129,13 @@ updateMonitor(*file) {
 
 #
 # Retrieve the checksum for an object stored in iRODS
+# And compute it using msiDataObjChksum if the object does not have any yet
 #
 # Parameters:
 #       *path       [IN]    the path of the object in iRODS
 #       *checksum   [OUT]   the checksum retrieved from the iCAT
 #
-# Author: Willem Elbers, MPI-TLA
+# Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
 retrieveChecksum(*path, *checksum) {
     *checksum = -1;
@@ -144,6 +145,10 @@ retrieveChecksum(*path, *checksum) {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
         logDebug(*checksum);
     }
+	#compute checksum using msiDataObjChksum if the object does not have any yet
+	if(*checksum == ""){
+		msiDataObjChksum(*path, "null", *checksum);
+	} 
     #use shell script to compute checksum if we cannot retrieve it from icat?
 }
 
@@ -312,13 +317,14 @@ doReplication(*pid,*source,*destination,*status) {
 #
 # Generate a new PID for a digital object.
 # Fields stored in the PID record: URL, ROR and CHECKSUM
+# adds a ROR field if (*rorPID != "empty") && (*rorPID != "none") && (*rorPID != "")
 #
 # Parameters:
 #   *rorPID     [IN]    the PID of the repository of record (RoR), should be stored with all child PIDs
 #   *path       [IN]    the path of the replica to store with the PID record
 #   *newPID     [OUT]   the pid generated for this replica 
 #
-# Author: Willem Elbers, MPI-TLA
+# Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
 createPID(*rorPID, *path, *newPID) {
 	logInfo("create pid for *path and save *rorPID as ror");
@@ -341,14 +347,6 @@ createPID(*rorPID, *path, *newPID) {
             msiGetStdoutInExecCmdOut(*out, *newPID);
             logDebug("created handle = *newPID");
 
-            # add RoR to PID record
-            if(*epicDebug > 1) {
-                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID");
-            }
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID", "null", "null", "null", *out2);
-            msiGetStdoutInExecCmdOut(*out2, *response2);
-            logDebug("modify handle response = *response2");
-
             # add CHECKSUM to PID record
             retrieveChecksum(*path, *checksum);
             if(*epicDebug > 1) {
@@ -357,11 +355,55 @@ createPID(*rorPID, *path, *newPID) {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
             msiGetStdoutInExecCmdOut(*out3, *response3);
             logDebug("modify handle response = *response3");
+
+	    if( (*rorPID != "empty") && (*rorPID != "none") && (*rorPID != "") ) {
+            	# add RoR to PID record
+            	if(*epicDebug > 1) {
+                	logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID");
+            	}
+            	msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID", "null", "null", "null", *out2);
+           	msiGetStdoutInExecCmdOut(*out2, *response2);
+            	logDebug("modify handle response = *response2");
+	    }
+
         } else {
             *newPID = *existing_pid;
             logInfo("PID already exists (*newPID)");
         }
 }
+
+#
+# addPIDWithChecksum is meant as a faster version of above createPID. 
+# It is better to use while injesting new files to iRODS which do not have PIDs yet.
+# Be careful: It does not check if the PID already exists. And it does not add ROR filed.
+# And it does not use retrieveChecksum, but computes checksum with msiDataObjChksum.
+# Parameters:
+#   *path       [IN]    the path of the replica to store with the PID record
+#   *newPID     [OUT]   the pid generated for this replica 
+#
+# Author: CINECA, edited and added by Elena Erastova, RZG
+#
+addPIDWithChecksum(*path, *newPID) {
+	logInfo("Add PID with CHECKSUM for *path");
+
+	getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID*path","null","null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *newPID);
+
+	# add CHECKSUM to PID record
+        msiDataObjChksum(*path, "null", *checksum);
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
+        }
+
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
+        msiGetStdoutInExecCmdOut(*out3, *response3);
+        logDebug("modify handle response = *response3");
+
+        logDebug("added handle =*newPID with checksum = *checksum");
+}
+
 
 #
 # Update a PID record.
