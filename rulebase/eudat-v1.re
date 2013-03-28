@@ -317,7 +317,7 @@ doReplication(*pid,*source,*destination,*status) {
 #
 # Generate a new PID for a digital object.
 # Fields stored in the PID record: URL, ROR and CHECKSUM
-# adds a ROR field if (*rorPID != "empty") && (*rorPID != "none") && (*rorPID != "")
+# adds a ROR field if (*rorPID != "None")
 #
 # Parameters:
 #   *rorPID     [IN]    the PID of the repository of record (RoR), should be stored with all child PIDs
@@ -356,7 +356,7 @@ createPID(*rorPID, *path, *newPID) {
             msiGetStdoutInExecCmdOut(*out3, *response3);
             logDebug("modify handle response = *response3");
 
-	    if( (*rorPID != "empty") && (*rorPID != "none") && (*rorPID != "") ) {
+	    if(*rorPID != "None") {
             	# add RoR to PID record
             	if(*epicDebug > 1) {
                 	logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID");
@@ -371,6 +371,60 @@ createPID(*rorPID, *path, *newPID) {
             logInfo("PID already exists (*newPID)");
         }
 }
+
+##
+# Generate a new PID for a digital object.
+# Fields stored in the PID record: URL, CHECKSUM
+#
+# griffin first writes an empty file with the same name to the destination and closes it; 
+# then it opens it and writes the contents of the actual file and closes it.
+# Which is why createPIDgriffin a PID without checksum on the first step.
+# And ut adds cheksum on the second "put", when the PID already exists.
+
+# Parameters:
+#   *path       [IN]    the path of the replica to store with the PID record
+#   *newPID     [OUT]   the pid generated for this replica 
+#
+# Author: CINECA, edited and added by Elena Erastova, RZG
+#
+
+
+createPIDgriffin(*path, *newPID) {
+	logInfo("create pid for *path");
+
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+
+        #check if PID already exists
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
+        }
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *existing_pid);
+
+        if(*existing_pid == "empty") {
+            # create PID
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
+            }
+            msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
+            msiGetStdoutInExecCmdOut(*out, *newPID);
+            logDebug("created handle = *newPID");
+
+        } else {
+            *newPID = *existing_pid;
+		
+	    # add CHECKSUM to PID record
+            msiDataObjChksum(*path, "null", *checksum);
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
+            }
+            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
+            msiGetStdoutInExecCmdOut(*out3, *response3);
+            logDebug("modify handle response = *response3");
+            logInfo("PID *newPID already exists - added checksum *checksum to PID *newPID");
+        }
+}
+
 
 #
 # addPIDWithChecksum is meant as a faster version of above createPID. 
