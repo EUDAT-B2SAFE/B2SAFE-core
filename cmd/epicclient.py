@@ -37,10 +37,9 @@ class EpicClient():
 	
 	
     def _debugMsg(self,method,msg):
-	"""Internal: Print a debug message if debug is enabled."""
-	
-	if self.debug: print "[",method,"]",msg
-
+        """Internal: Print a debug message if debug is enabled."""
+        if self.debug: 
+            print "[",method,"]",msg
     
     # Public methods
 	    
@@ -588,7 +587,8 @@ class Credentials():
                 self.prefix = self.username
             self.password = tmp['password']
             self.accept_format = tmp['accept_format']
-            self.debug = tmp['debug']
+            if tmp['debug'] == 'True':
+                self.debug=True
         except Exception, err:
             print "missing key-value-pair in credentials file"
             
