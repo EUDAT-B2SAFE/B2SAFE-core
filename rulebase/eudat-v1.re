@@ -264,7 +264,8 @@ processPIDCommandFile(*cmdPath) {
                     createPID(*pid, *destination, *new_pid);
                     getSharedCollection(*destination,*collectionPath);    		
                     msiSplitPath(*destination, *parent, *child);
-                    triggerUpdateParentPID("*collectionPath*child.pid.update", *pid, *new_pid);
+                    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+                    triggerUpdateParentPID("*collectionPath*child.pid.update", *pid, "*serverID*destination");
                 } else if(*pidAction=="update") {
                     updatePIDWithNewChild(elem(*list,1), elem(*list,2));
                 }
