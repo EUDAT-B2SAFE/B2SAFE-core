@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import httplib2
-import simplejson
-from xml.dom import minidom, Node
+from simplejson import loads as jsonloads 
+from simplejson import dumps as jsondumps
+from xml.dom import minidom
 
 import uuid
 import argparse
@@ -74,7 +75,7 @@ class EpicClient():
 	    return None
 
         if not content: return None
-	handle = simplejson.loads(content)
+	handle = jsonloads(content)
         if not handle:
             return 'empty'
         
@@ -133,7 +134,7 @@ class EpicClient():
 	
 	jsonhandle = self.retrieveHandle(prefix,suffix)
 	if not jsonhandle: return None
-	handle = simplejson.loads(jsonhandle)
+	handle = jsonloads(jsonhandle)
 	KeyFound = False
 	Value =''
 	for item in handle:
@@ -174,9 +175,9 @@ class EpicClient():
 	hdrs = {'If-None-Match': '*','Content-Type':'application/json'}
 
 	if checksum:
-	    new_handle_json = simplejson.dumps([{'type':'URL','parsed_data':location}, {'type':'CHECKSUM','parsed_data': checksum}])
+	    new_handle_json = jsondumps([{'type':'URL','parsed_data':location}, {'type':'CHECKSUM','parsed_data': checksum}])
 	else:
-	    new_handle_json = simplejson.dumps([{'type':'URL','parsed_data':location}])
+	    new_handle_json = jsondumps([{'type':'URL','parsed_data':location}])
 
 	    
 	try:
@@ -249,7 +250,7 @@ class EpicClient():
 	    self._debugMsg('modifyHandle', "Cannot modify an unexisting handle: " + uri)
 	    return False
 	    
-	handle = simplejson.loads(handle_json)
+	handle = jsonloads(handle_json)
 	KeyFound = False
 	if value is None:
 		for item in handle:
@@ -275,7 +276,7 @@ class EpicClient():
 		    handleItem={'type': key, 'parsed_data' : value}
 		    handle.append(handleItem)
 			
-	handle_json = simplejson.dumps(handle)
+	handle_json = jsondumps(handle)
 	self._debugMsg('modifyHandle', "JSON: " + str(handle_json))    
 	
 	try:
@@ -552,8 +553,8 @@ class Credentials():
         if self.store == "os":
             try:
                 filehandle = open(self.filename,"r")
-                tmp = eval(filehandle.read())
-                filehandle.close()                
+                tmp = jsonloads(filehandle.read())
+                filehandle.close() 
             except Exception, err:
                 print "problem while getting credentials from filespace"
                 print "Error:", err
@@ -570,7 +571,7 @@ class Credentials():
                           myEnv.getRodsUserName(), myEnv.getRodsZone()
                 status = clientLogin(conn)
                 test = iRodsOpen(conn, self.file, 'r')
-                tmp = eval(test.read())    
+                tmp = jsonloads(test.read())    
                 test.close()
                 conn.disconnect()
             except Exception, err:
