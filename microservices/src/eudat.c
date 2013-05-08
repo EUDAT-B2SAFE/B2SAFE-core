@@ -101,3 +101,25 @@ msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *
 
     return 0;
 }
+
+/*
+ * replace slash "/" symbol in string with an hyphen "_"
+ * Input: String with / as absolute address of file ex. /tempZone/DATA/file.txt
+ * Output: String with _ ex. _tempZone_DATA_file.txt
+ * TODO: is there any better Search-Function after slash in C-library ?
+ */
+int msiReplaceSlash(msParam_t *inPath, msParam_t *outPath, ruleExecInfo_t *rei)
+{
+    rei->status = 0;
+    char *strad =  parseMspForStr(inPath);
+    int length = strlen(strad)+1;
+    char *buffer = (char*) malloc(length);
+    snprintf(buffer, length, "%s", strad);
+
+    int i;
+    for (i = 0; i < length; buffer[i] = buffer[i] == '/' ? '_' : buffer[i], i++)
+
+    fillStrInMsParam (outPath, buffer);
+    free(buffer);
+    return rei->status;
+}

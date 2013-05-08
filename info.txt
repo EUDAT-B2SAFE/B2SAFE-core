@@ -1,5 +1,5 @@
-Name:		EUDAT micro-services
-Brief:		EUDAT Microservices
+Name:           EUDAT micro-services
+Brief:		    EUDAT Microservices
 Description:    Micro services required by the EUDAT infrastructure to support
                 the safe replication and PID management services
 
@@ -7,6 +7,6 @@ Description:    Micro services required by the EUDAT infrastructure to support
                 for more details.
 
 Enabled:        yes 
-Creator:	Willem Elbers - Max Planck Institute for Psycholinguistics, contact willem.elbers@mpi.nl
+Creator:        Willem Elbers - Max Planck Institute for Psycholinguistics, contact willem.elbers@mpi.nl
 Created:        August 2012	
-License:	GPL 3.0
+License:        GPL 3.0

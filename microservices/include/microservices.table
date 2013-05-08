@@ -1,5 +1,6 @@
-/* Service name			# args		Service function */
-{ "msiBytesBufToStr",		2,		(funcPtr) msiBytesBufToStr },
+/* Service name			        # args		    Service function */
+{ "msiBytesBufToStr",		    2,	          	(funcPtr) msiBytesBufToStr },
 { "msiWriteToLog",              2,              (funcPtr) msiWriteToLog },
 { "msiGetZoneNameFromPath",     2,              (funcPtr) msiGetZoneNameFromPath},
 { "msiGetFieldFromRodsObjStat", 3,              (funcPtr) msiGetFieldFromRodsObjStat},
+{ "msiReplaceSlash",            2,              (funcPtr) msiReplaceSlash},
