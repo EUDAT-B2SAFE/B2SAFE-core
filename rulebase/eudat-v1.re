@@ -429,7 +429,7 @@ createPIDgriffin(*path, *newPID) {
 # It is better to use while injesting new files to iRODS which do not have PIDs yet.
 # Be careful: It does not check if the PID already exists. And it does not add ROR filed.
 # And it does not use retrieveChecksum, but computes checksum with msiDataObjChksum.
-# Adds checksum after the PID is created by modifying it.
+# Adds checksum on the fly while creating the PID.
 # Parameters:
 #   *path       [IN]    the path of the replica to store with the PID record
 #   *newPID     [OUT]   the pid generated for this replica 
