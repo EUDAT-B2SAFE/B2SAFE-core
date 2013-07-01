@@ -102,7 +102,7 @@ class EpicClient():
             uri = self.cred.baseuri + prefix
         else:
             uri = self.cred.baseuri + '/' + prefix
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	
 	self._debugMsg('retrieveHandle',"URI " + uri)
 	hdrs = None
@@ -170,7 +170,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	self._debugMsg('createHandleWithLocation',"URI " + uri)
 	hdrs = {'If-None-Match': '*','Content-Type':'application/json'}
 
@@ -237,7 +237,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	
 	self._debugMsg('modifyHandle',"URI " + uri)
 	hdrs = {'Content-Type' : 'application/json'}
@@ -252,29 +252,25 @@ class EpicClient():
 	    
 	handle = jsonloads(handle_json)
 	KeyFound = False
-	if value is None:
-		for item in handle:
-			if item.has_key('type') and item['type'] == key:
-				self._debugMsg('modifyHandle','Remove item ' + key)
-				handle.remove(item)
-				break
-	else:    
-		for item in handle:
-		   if item.has_key('type') and item['type']==key:
-			KeyFound = True
-			self._debugMsg('modifyHandle', "Found key " + key + " value=" + str(item['parsed_data']) )
-			item['parsed_data']=value
-			del item['data']
-			break
-	
-		if KeyFound is False:
-		    if value is None:
-			self._debugMsg('modifyHandle', "No value for Key " + key + " . Quiting")
-			return True
-		 		    
-		    self._debugMsg('modifyHandle', "Key " + key + " not found. Generating new hash")
-		    handleItem={'type': key, 'parsed_data' : value}
-		    handle.append(handleItem)
+	for item in handle:
+	   if 'type' in item and item['type']==key:
+		KeyFound = True
+		self._debugMsg('modifyHandle', "Found key " + key + " value=" + str(item['parsed_data']) )
+		if value is None:
+		    del(item)
+		else:
+		   item['parsed_data']=value
+		   del item['data']
+		break;
+
+	if KeyFound is False:
+	    if value is None:
+		self._debugMsg('modifyHandle', "No value for Key " + key + " . Quiting")
+		return True
+	 		    
+	    self._debugMsg('modifyHandle', "Key " + key + " not found. Generating new hash")
+	    handleItem={'type': key, 'parsed_data' : value}
+	    handle.append(handleItem)
 			
 	handle_json = jsondumps(handle)
 	self._debugMsg('modifyHandle', "JSON: " + str(handle_json))    
@@ -309,7 +305,7 @@ class EpicClient():
         else:
             uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 	self._debugMsg('deleteHandle',"DELETE URI " + uri)
 	
 	try:
@@ -343,7 +339,7 @@ class EpicClient():
 	else:
 	        uri = self.cred.baseuri + '/' + prefix
 
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 
 	loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
 	self._debugMsg('updateHandleWithLocation', "found 10320/LOC: " +str(loc10320))
@@ -391,7 +387,7 @@ class EpicClient():
 	else:
 	        uri = self.cred.baseuri + '/' + prefix
 	
-	if suffix != '': uri += "/" + suffix.partition("/")[2]
+	if suffix != '': uri += "/" + suffix.lstrip(prefix+"/")
 
         loc10320 = self.getValueFromHandle(prefix,"10320/LOC",suffix)
         if loc10320 is None:
@@ -785,7 +781,7 @@ if __name__ == "__main__":
     parser_read.set_defaults(func=read)
 
     parser_search = subparsers.add_parser('search', help='Search for handle records')
-    parser_search.add_argument("key", choices=['URL'],help="the key to search")
+    parser_search.add_argument("key", choices=['URL','CHECKSUM'],help="the key to search")
     parser_search.add_argument("value", help="the value to search")
     parser_search.set_defaults(func=search)
 
