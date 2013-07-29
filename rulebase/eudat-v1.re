@@ -19,6 +19,10 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *epicDebug=2; 
 }
 
+getSearchWildcard(*wildc){
+    *wildc = "*";	
+}
+
 #
 # Return the absolute path to the iRODS collection where all command files are stored.
 #   typically "<zone>/replicate". Make sure all users and remote users have write permissions here.
@@ -148,7 +152,6 @@ retrieveChecksum(*path, *checksum) {
 	if(*checksum == ""){
 		msiDataObjChksum(*path, "null", *checksum);
 	} 
-    #use shell script to compute checksum if we cannot retrieve it from icat?
 }
 
 ################################################################################
@@ -169,28 +172,38 @@ retrieveChecksum(*path, *checksum) {
 # Author: Willem Elbers, MPI-TLA
 #
 triggerReplication(*commandFile,*pid,*source,*destination) {
-	logInfo("startReplication(*commandFile,*pid,*source,*destination)");
-	writeFile("*commandFile","*pid;*source;*destination");
+    logInfo("startReplication(*commandFile,*pid,*source,*destination)");
+    getRorPid(*pid, *ror);
+    if (*ror == "None"){
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+        *ror = "*epicApi"++"*pid";  
+    }
+    writeFile("*commandFile","*pid;*source;*destination;*ror");
 }
 
 #
-# Start a PID created by writing a .pid command file
+# Start a PID created by writing a .pid.create command file
 #
 # Parameters:
 #   *commandFile    [IN]    the absolute filename to store the command in
-# 	*pid            [IN]    pid of the digital object
-#	*source         [IN] 	source path of the object to replicate
+# 	*pid            [IN]    PID of the digital object
 # 	*destination    [IN] 	destination path of the object to replicate
+# 	*ror            [IN]    ROR of the original digital object
 #
 # Author: Willem Elbers, MPI-TLA
 #
-triggerCreatePID(*commandFile,*pid,*destination) {
+triggerCreatePID(*commandFile,*pid,*destination,*ror) {
     logInfo("triggerCreatePID(*commandFile,*pid,*destination)");
-    writeFile("*commandFile", "create;*pid;*destination");
+    writeFile("*commandFile", "create;*pid;*destination;*ror");
 }
 
 #
 # Author: Willem Elbers, MPI-TLA
+#
+# Parameters:
+#   *commandFile    [IN]    the absolute filename to store the command in
+# 	*pid            [IN]    PID of the digital object
+# 	*new_pid        [IN]    place of the replicated digital objekt.
 #
 triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
     logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
@@ -223,13 +236,21 @@ processReplicationCommandFile(*cmdPath) {
     *status = 0;    
     foreach(*out_STRING) {
         *list = split(*out_STRING, ";");
-        if(size(*list)==3) {
-            *pid = elem(*list,0);
-            *source = elem(*list,1);
-            *destination = elem(*list,2);
-            doReplication(*pid,*source,*destination,*status);       
-        } else {
+		if((size(*list)==4) || (size(*list)==3)){
+			*pid = elem(*list,0);
+			*source = elem(*list,1);
+			*destination = elem(*list,2);
+			if(size(*list)==4){
+				*ror = elem(*list,3);        	
+            }
+            else{
+	            *ror = "None";
+            }
+			doReplication(*pid,*source,*destination,*ror,*status);
+		}
+        else {
             logError("ignoring incorrect command: [*out_STRING]");
+            *status = -1;
         }
     }
     updateCommandName(*cmdPath,*status);
@@ -246,32 +267,39 @@ processReplicationCommandFile(*cmdPath) {
 #
 processPIDCommandFile(*cmdPath) {
 	logInfo("processPID(*cmdPath)");
-	
 	readFile(*cmdPath, *out_STRING);
 	*list = split(*out_STRING, ";");
 
-    if(size(*list)==3) {
+    if((size(*list)==4) || (size(*list)==3)){
         *pidAction = elem(*list,0);
         if(*pidAction == "create") {
-            *pid = elem(*list,1);
+            *parent = elem(*list,1);
             *destination = elem(*list,2);
-            #manage pid in this repository 
-            createPID(*pid, *destination, *new_pid);
-            getSharedCollection(*destination,*collectionPath);    		
-            getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-            # create .pid.update file based on absolute file path
-            msiReplaceSlash(*destination,*filepathslash);
-            triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *pid, "*serverID*destination");
+            if(size(*list)==4){
+				*ror = elem(*list,3);        	
+            }
+            else{
+	            *ror = "None";
+            }
+            #manage pid in this repository
+            createPID(*parent, *destination, *ror, *new_pid);
+            getSharedCollection(*destination,*collectionPath);
+            #create .pid.update file based on absolute file path
+            msiReplaceSlash(*destination,*filepathslash); 
+            triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
         } 
         else if(*pidAction=="update") {
-            updatePIDWithNewChild(elem(*list,1), elem(*list,2));
             *status = 0;
+            updatePIDWithNewChild(elem(*list,1), elem(*list,2));
             updateCommandName(*cmdPath,*status);
         }
-    } else {
-        logError("ignoring incorrect command: [*out_STRING]");
+        else {
+            logError("ignoring incorrect command: [*out_STRING]");
+        }
     }
-#	updateCommandName(*cmdPath,*status); 	
+    else {
+        logError("ignoring incorrect list");
+    }
 }
 
 #
@@ -281,12 +309,13 @@ processPIDCommandFile(*cmdPath) {
 #	*pid            [IN]    pid of the digital object
 #	*source			[IN]    source path of the object to replicate
 #	*destination	[IN]    destination path of the object to replicate
-#       *status         [OUT]   status, 0 = ok, <0 = error
+#	*ror	        [IN]    ROR of the digital object
+#   *status         [OUT]   status, 0 = ok, <0 = error
 #
 # Author: Willem Elbers, MPI-TLA
 #
-doReplication(*pid,*source,*destination,*status) {
-    logInfo("doReplication(*pid,*source,*destination)");
+doReplication(*pid, *source, *destination, *ror, *status) {
+    logInfo("doReplication(*pid, *source, *destination)");
 
     #make sure the parent collections exist
     msiSplitPath(*destination, *parent, *child);
@@ -300,9 +329,10 @@ doReplication(*pid,*source,*destination,*status) {
         getSharedCollection(*destination,*collectionPath);
         # create .pid.create file and monitor for .pid.update based on absolute file path
         msiReplaceSlash(*destination,*filepathslash);
-        triggerCreatePID("*collectionPath*filepathslash.pid.create",*pid,*destination);
+        triggerCreatePID("*collectionPath*filepathslash.pid.create", *pid, *destination, *ror);
         updateMonitor("*collectionPath*filepathslash.pid.update");
-    } else {
+    }
+    else {
         logInfo("No pid management");
     }
 }
@@ -317,28 +347,30 @@ doReplication(*pid,*source,*destination,*status) {
 #
 # Generate a new PID for a digital object.
 # Fields stored in the PID record: URL, ROR and CHECKSUM
-# adds a ROR field if (*rorPID != "None")
+# adds a ROR field if (*ror != "None")
 #
 # Parameters:
-#   *rorPID     [IN]    the PID of the repository of record (RoR), should be stored with all child PIDs
+#   *parent_pid [IN]    the PID of the digital object that was replicated to us (not necessarily the ROR)
 #   *path       [IN]    the path of the replica to store with the PID record
+#   *ror        [IN]    the ROR PID (absolute url) of the digital object that we want to store.
 #   *newPID     [OUT]   the pid generated for this replica 
 #
 # Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
-createPID(*rorPID, *path, *newPID) {
-	logInfo("create pid for *path and save *rorPID as ror");
-
+#createPID(*rorPID, *path, *newPID, *ror) {
+createPID(*parent_pid, *path, *ror, *newPID) {
+	logInfo("create pid for *path and save *ror as ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-
+	getSearchWildcard(*wildc);
+	
     #check if PID already exists
     if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
+        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
     }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path", "null", "null", "null", *out);
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *existing_pid);
 
-    if(*existing_pid == "empty") {
+    if((*existing_pid == "empty") || (*existing_pid == "None")) {
         # create PID
         if(*epicDebug > 1) {
             logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
@@ -356,16 +388,18 @@ createPID(*rorPID, *path, *newPID) {
         msiGetStdoutInExecCmdOut(*out3, *response3);
         logDebug("modify handle response = *response3");
 
-        if(*rorPID != "None") {
+		# add RoR to PID record if there is one defined
+        if(*ror != "None") {
             # add RoR to PID record
             if(*epicDebug > 1) {
-                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID");
+                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *ror");
             }
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *epicApi*rorPID", "null", "null", "null", *out2);
+            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *ror", "null", "null", "null", *out2);
             msiGetStdoutInExecCmdOut(*out2, *response2);
             logDebug("modify handle response = *response2");
         }
-    } else {
+    } 
+    else {
         *newPID = *existing_pid;
         logInfo("PID already exists (*newPID)");
     }
@@ -386,8 +420,6 @@ createPID(*rorPID, *path, *newPID) {
 #
 # Author: CINECA, edited and added by Elena Erastova, RZG
 #
-
-
 createPIDgriffin(*path, *newPID) {
 	logInfo("create pid for *path");
 
@@ -427,7 +459,7 @@ createPIDgriffin(*path, *newPID) {
 #
 # addPIDWithChecksum is meant as a faster version of above createPID. 
 # It is better to use while injesting new files to iRODS which do not have PIDs yet.
-# Be careful: It does not check if the PID already exists. And it does not add ROR filed.
+# Be careful: It does not check if the PID already exists. And it does not add ROR field.
 # And it does not use retrieveChecksum, but computes checksum with msiDataObjChksum.
 # Adds checksum on the fly while creating the PID.
 # Parameters:
@@ -437,21 +469,98 @@ createPIDgriffin(*path, *newPID) {
 # Author: CINECA, edited and added by Elena Erastova, RZG
 #
 addPIDWithChecksum(*path, *newPID) {
-	logInfo("Add PID with CHECKSUM for *path");
-
-	getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-
-	msiDataObjChksum(*path, "null", *checksum);
-
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID*path --checksum *checksum","null","null", "null", *out);
-
+    logInfo("Add PID with CHECKSUM for *path");
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    msiDataObjChksum(*path, "null", *checksum);
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID*path --checksum *checksum","null","null", "null", *out);
 	msiGetStdoutInExecCmdOut(*out, *newPID);
+    logDebug("added handle =*newPID with checksum = *checksum");
+}
 
-        logDebug("added handle =*newPID with checksum = *checksum");
+
+searchPID(*path, *existing_pid) {
+    logInfo("search pid for *path");
+    getSearchWildcard(*wildc);
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    #check if PID already exists
+    if(*epicDebug > 1) {
+        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
+    }
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *existing_pid);
+}
+
+searchPIDchecksum(*path, *existing_pid) {
+    logInfo("search pid for *path");
+    getSearchWildcard(*wildc);
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    #check if PID already exists
+    #msiDataObjChksum(*path, "null", *checksum);
+
+    *checksum = "";
+    msiSplitPath(*path,*parent,*child);
+    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
+    foreach   ( *B )    {
+        msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
+        #logDebug(*checksum);
+    }
+    logDebug("search by CHECKSUM inside = *checksum");
+
+    if(*checksum == "") {
+        *existing_pid ="empty";
+        logDebug("search by CHECKSUM inside if no checksum = *checksum");
+    }
+    else {
+        	msiExecCmd("epicclient.py", "*credStoreType *credStorePath search CHECKSUM *checksum", "null", "null", "null", *out);
+        	msiGetStdoutInExecCmdOut(*out, *existing_pid);
+		logDebug("search by CHECKSUM inside call search = *existing_pid");
+	}
+        
 }
 
 #
-# Update a PID record.
+# check whether two files are available and identical, if thats not the case replicate from source to destination
+#
+# Parameters:
+#   *source         [IN]     source of the file
+#   *destination    [IN]     destination of the file
+#   *commandFile    [IN]     name of the replicate file.
+#
+# TODO: use our known solution for .replicate file names to make them more unique?
+
+CheckReplicas(*source, *destination, *commandFile) {
+    logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
+
+    #msiDataObjChksum(*source, "null", *checksum0);
+    #msiDataObjChksum(*destination, "null", *checksum1);
+
+    *checksum0 = "";
+    msiSplitPath(*source,*parentS,*childS);
+    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
+    foreach   ( *BS )    {
+        msiGetValByKey(*BS,"DATA_CHECKSUM", *checksum0);
+        logInfo("checksum0 = *checksum0");
+    }
+
+    *checksum1 = "";
+    msiSplitPath(*destination,*parentD,*childD);
+    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
+    foreach   ( *BD )    {
+        msiGetValByKey(*BD,"DATA_CHECKSUM", *checksum1);
+        logInfo("checksum1 = *checksum1");
+    }
+
+    if(*checksum0 != *checksum1) {
+        searchPID(*source, *pid);
+        logInfo("*checksum0 != *checksum1, existing_pid = *pid");
+        logInfo("replication from *source to *destination");
+        getSharedCollection(*source,*collectionPath);
+        triggerReplication("*collectionPath*commandFile",*pid,*source,*destination);
+    }
+}
+
+#
+# Update a PID record with a new child.
 #
 # Parameters:
 #       *parentPID  [IN]    PID of the record that will be updated
@@ -464,9 +573,23 @@ updatePIDWithNewChild(*parentPID, *childPID) {
 	logInfo("update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *childPID");
+        logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *epicApi*childPID");
     }
-	msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *childPID", "null", "null", "null", *out);
+	msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *epicApi*childPID", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *response);
     logDebug("update handle location response = *response");
+}
+
+#
+# get the ROR entry for a PID
+#
+# Parameters:
+#   *pid    [IN]     PID that you want to get the ROR for
+#   *ror    [OUT]    ROR for *pid
+#
+getRorPid(*pid, *ror) {
+	logInfo("get RoR from (*pid)");
+	getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+	msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", "null", "null", "null", *out);
+	msiGetStdoutInExecCmdOut(*out, *ror);
 }
