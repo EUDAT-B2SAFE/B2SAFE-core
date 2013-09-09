@@ -234,18 +234,25 @@ processReplicationCommandFile(*cmdPath) {
 
     #TODO: properly manage status here
     *status = 0;    
-    foreach(*out_STRING) {
-        *list = split(*out_STRING, ";");
-		if((size(*list)==4) || (size(*list)==3)){
-			*pid = elem(*list,0);
-			*source = elem(*list,1);
-			*destination = elem(*list,2);
-			if(size(*list)==4){
-				*ror = elem(*list,3);        	
-            }
-            else{
-	            *ror = "None";
-            }
+	# make an array of the string
+	*out_ARRAY = split(*out_STRING, "\n")
+    foreach(*out_STRING1 in *out_ARRAY) {
+		logInfo("The line is : (*out_STRING1)");
+        *list = split(*out_STRING1, ";");
+
+		# assign values from array to parameters
+		*ror = "None";
+		*counter=0;
+		foreach (*item_LIST in *list) {
+			if      ( *counter == 0 ) { *pid         = *item_LIST ; }
+			else if ( *counter == 1 ) { *source      = *item_LIST ; }
+			else if ( *counter == 2 ) { *destination = *item_LIST ; }
+			else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+			*counter = *counter + 1;	
+		}
+		*list_size = *counter ;
+
+    	if ((*list_size==4) || (*list_size==3)){
 			doReplication(*pid,*source,*destination,*ror,*status);
 		}
         else {
@@ -270,17 +277,21 @@ processPIDCommandFile(*cmdPath) {
 	readFile(*cmdPath, *out_STRING);
 	*list = split(*out_STRING, ";");
 
-    if((size(*list)==4) || (size(*list)==3)){
-        *pidAction = elem(*list,0);
+	# assign values from array to parameters
+	*ror = "None";
+	*counter=0;
+	foreach (*item_LIST in *list) {
+		if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
+		else if ( *counter == 1 ) { *parent      = *item_LIST ; }
+		else if ( *counter == 2 ) { *destination = *item_LIST ; }
+		else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+		*counter = *counter + 1;	
+	}
+	*list_size = *counter ;
+
+	# process command/action
+    if ((*list_size==4) || (*list_size==3)){
         if(*pidAction == "create") {
-            *parent = elem(*list,1);
-            *destination = elem(*list,2);
-            if(size(*list)==4){
-				*ror = elem(*list,3);        	
-            }
-            else{
-	            *ror = "None";
-            }
             #manage pid in this repository
             createPID(*parent, *destination, *ror, *new_pid);
             getSharedCollection(*destination,*collectionPath);
@@ -290,7 +301,7 @@ processPIDCommandFile(*cmdPath) {
         } 
         else if(*pidAction=="update") {
             *status = 0;
-            updatePIDWithNewChild(elem(*list,1), elem(*list,2));
+            updatePIDWithNewChild(*parent, *destination);
             updateCommandName(*cmdPath,*status);
         }
         else {
