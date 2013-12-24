@@ -5,6 +5,7 @@ from simplejson import loads as jsonloads
 from simplejson import dumps as jsondumps
 from xml.dom import minidom
 
+import base64
 import uuid
 import argparse
 import sys
@@ -61,7 +62,9 @@ class EpicClient():
 	self._debugMsg('searchHandle',"URI " + uri)
 	
 	hdrs = None
-	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format}
+	auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
+	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format,
+                                        'Authorization': 'Basic ' + auth }
 	try:
 	    response, content = self.http.request(uri,method='GET',headers=hdrs)
 	except:
@@ -106,7 +109,9 @@ class EpicClient():
 	
 	self._debugMsg('retrieveHandle',"URI " + uri)
 	hdrs = None
-	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format}
+	auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
+	if self.cred.accept_format: hdrs = {'Accept': self.cred.accept_format,
+                                        'Authorization': 'Basic ' + auth }
 	try:
 	    response, content = self.http.request(uri,method='GET',headers=hdrs)
 	except:
@@ -172,7 +177,9 @@ class EpicClient():
 
 	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	self._debugMsg('createHandleWithLocation',"URI " + uri)
-	hdrs = {'If-None-Match': '*','Content-Type':'application/json'}
+	auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
+	hdrs = {'If-None-Match': '*','Content-Type':'application/json',
+             'Authorization': 'Basic ' + auth }
 
 	if checksum:
 	    new_handle_json = jsondumps([{'type':'URL','parsed_data':location}, {'type':'CHECKSUM','parsed_data': checksum}])
@@ -240,7 +247,9 @@ class EpicClient():
 	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	
 	self._debugMsg('modifyHandle',"URI " + uri)
-	hdrs = {'Content-Type' : 'application/json'}
+	auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
+	hdrs = {'Content-Type' : 'application/json',
+            'Authorization': 'Basic ' + auth }
 	
 	if not key: return False
 	
@@ -313,9 +322,11 @@ class EpicClient():
 
 	if suffix != '': uri += "/" + suffix.partition("/")[2]
 	self._debugMsg('deleteHandle',"DELETE URI " + uri)
+	auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
+	hdrs = {'Authorization': 'Basic ' + auth }
 	
 	try:
-	    response, content = self.http.request(uri,method='DELETE')
+	    response, content = self.http.request(uri,method='DELETE',headers=hdrs)
 	except:
 	    self._debugMsg('deleteHandle', "An Exception iccurred during deletion of " + uri)
 	    return False
