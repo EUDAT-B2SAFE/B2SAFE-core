@@ -515,6 +515,7 @@ addPIDWithChecksum(*path, *newPID) {
 
 #check for PID
 searchPID(*path, *existing_pid) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
     getEpicClientCredentials(*epicCredentials);
     if (*epicCredentials != '') {
         logInfo("search pid for *path");
