@@ -20,9 +20,6 @@ int
 msiGetZoneNameFromPath(msParam_t *inPath, msParam_t *outZoneName, ruleExecInfo_t *rei);
 
 int
-msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *rei);
-
-int
 msiReplaceSlash(msParam_t *inPath, msParam_t *outPath, ruleExecInfo_t *rei);
 
 #endif	/* EUDAT_H */

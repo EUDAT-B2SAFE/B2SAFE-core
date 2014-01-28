@@ -1,26 +1,23 @@
 *** Dependencies ***
 
-< iRODS 3.1
-This module uses the msiGetFormattedSystemTime microservice from the guinot module.
-
->= iRODS 3.1
-No dependencies, msiGetFormattedSystemTime is available out of the box
-
 *** Installation ***
 
-Automatically using the irodssetup script:
+This Setup describes the procedure to enable the BE2SAFE module for iRODS 3.3.
+For this we removed the _msiBytesBufToStr_ from our module because it was copied, and build into core 3.3.
 
-1.1 (< iRODS 3.1) enable the module "<irods>/modules/guinot/info.txt" 
-1.2. enable the module in "<irods>/modules/EUDAT-PID/info.txt"
-1.3. rerun the irodsssetup script
+Enable the module,
+
+Automatically:
+
+1.1. enable the module in "<irods>/modules/BE2SAFE/info.txt"
+1.2. rerun the irodssetup script
 
 Manually:
 
-1.1. (< iRODS 3.1) ./scripts/configure --enable-guinot
-1.2. ./scripts/configure --enable-EUDAT-PID
-1.3. make clean
-1.4. make
-
+1.1. <irods>/scripts/configure --enable-BE2SAFE
+1.2. make clean
+1.3. make
+1.4 <irods>/irodsctl restart
 
 2. create a symbolic link to the eudat rulebase
 	cd <irods>
@@ -61,8 +58,22 @@ Manually:
         - defaults to "<zone>/replicate"
         - make sure all users involved in the replication can write in this collection.
 
-8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually
+8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually and with "iexecmd epicclient.py"
 8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/EUDAT-PID/rules
+
+DATACENTER only:
+
+If you have more then one community connected to your iRODS, you have to control the access to the epicclient.py script (or everyone connected to it is allowed to modify every PID). For this functionality you need at least iRODS 3.3 (because of the acPreProcForExecCmd hook).
+
+9.1 create credential files per community
+9.2 in core.re substitude acPreProcForExecCmd (*cmd){} with:
+acPreProcForExecCmd(*cmd) { 
+    execEudatAclFilter(*cmd)
+}
+9.3 in eudat.re you have to modify the filter execEudatAclFilter (we use whitelisting for access to the epicclient.py script)
+9.4 modify getEpicClientCredentials, there you have to define the credentials to use for the PID workflow.
+
+We use a redirection to keep the core.re as basic as possible and to implement our logic in eudat.re, of course you can copy&paste the content from eudat.re/execEudatAclFilter to core.re
 
 
 *** Command files ***

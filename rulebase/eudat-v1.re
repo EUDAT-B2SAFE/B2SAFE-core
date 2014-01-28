@@ -19,8 +19,22 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *epicDebug=2; 
 }
 
-getSearchWildcard(*wildc){
+getSearchWildcard(*wildc) {
     *wildc = "*";	
+}
+
+# here we create a mapping to make sure that the user uses the correct prefix 
+# for the request (pid.create, search)
+getEpicClientCredentials(*epicCredentials) {
+    if (($userNameClient == 'manager') && ($rodsZoneClient == 'COMMUNITY')) {
+        *epicCredentials = '/home/irods/epicv2_844.ini';
+    }
+    else if (($userNameClient == 'rods') && ($rodsZoneClient == 'COMMUNITY')) {
+        *epicCredentials = '/home/irods/epicv2_846.ini';
+    }
+    else {
+        *epicCredentials = '';
+    }
 }
 
 #
@@ -122,7 +136,7 @@ updateMonitor(*file) {
     logInfo("updateMonitor(*file)");
     delay("<PLUSET>1m</PLUSET>") {
         if(errorcode(msiObjStat(*file,*out)) >= 0) {
-			logInfo("*file exists");
+            logInfo("*file exists");
             processPIDCommandFile(*file);
         } else {
             logInfo("*file does not exist yet");
@@ -148,10 +162,10 @@ retrieveChecksum(*path, *checksum) {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
         logDebug(*checksum);
     }
-	#compute checksum using msiDataObjChksum if the object does not have any yet
-	if(*checksum == ""){
-		msiDataObjChksum(*path, "null", *checksum);
-	} 
+    #compute checksum using msiDataObjChksum if the object does not have any yet
+    if(*checksum == ""){
+        msiDataObjChksum(*path, "null", *checksum);
+    } 
 }
 
 ################################################################################
@@ -164,10 +178,10 @@ retrieveChecksum(*path, *checksum) {
 # Start a replication by writing a .replicate command file
 #
 # Parameters:
-#   *commandFile    [IN]    the absolute filename to store the command in
-# 	*pid            [IN]    pid of the digital object
-#	*source         [IN] 	source path of the object to replicate
-# 	*destination    [IN] 	destination path of the object to replicate
+#     *commandFile    [IN]    the absolute filename to store the command in
+#     *pid            [IN]    pid of the digital object
+#     *source         [IN]     source path of the object to replicate
+#     *destination    [IN]     destination path of the object to replicate
 #
 # Author: Willem Elbers, MPI-TLA
 #
@@ -201,9 +215,9 @@ triggerCreatePID(*commandFile,*pid,*destination,*ror) {
 # Author: Willem Elbers, MPI-TLA
 #
 # Parameters:
-#   *commandFile    [IN]    the absolute filename to store the command in
-# 	*pid            [IN]    PID of the digital object
-# 	*new_pid        [IN]    place of the replicated digital objekt.
+#     *commandFile    [IN]    the absolute filename to store the command in
+#     *pid            [IN]    PID of the digital object
+#     *new_pid        [IN]    place of the replicated digital objekt.
 #
 triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
     logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
@@ -223,38 +237,37 @@ triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
 # command format = "source_pid;source_path;destination_path"
 #
 # Parameters:
-#	*cmdPath    [IN]    the path to the .replicate file
+#    *cmdPath    [IN]    the path to the .replicate file
 #
 # Author: Willem Elbers, MPI-TLA
 #
 processReplicationCommandFile(*cmdPath) {
-	logDebug("processReplication(*cmdPath)");
-
-	readFile(*cmdPath, *out_STRING);	
+    logDebug("processReplication(*cmdPath)");
+    readFile(*cmdPath, *out_STRING);
 
     #TODO: properly manage status here
     *status = 0;    
-	# make an array of the string
-	*out_ARRAY = split(*out_STRING, "\n")
+    # make an array of the string
+    *out_ARRAY = split(*out_STRING, "\n")
     foreach(*out_STRING1 in *out_ARRAY) {
-		logInfo("The line is : (*out_STRING1)");
+        logInfo("The line is : (*out_STRING1)");
         *list = split(*out_STRING1, ";");
 
-		# assign values from array to parameters
-		*ror = "None";
-		*counter=0;
-		foreach (*item_LIST in *list) {
-			if      ( *counter == 0 ) { *pid         = *item_LIST ; }
-			else if ( *counter == 1 ) { *source      = *item_LIST ; }
-			else if ( *counter == 2 ) { *destination = *item_LIST ; }
-			else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-			*counter = *counter + 1;	
-		}
-		*list_size = *counter ;
+        # assign values from array to parameters
+        *ror = "None";
+        *counter=0;
+        foreach (*item_LIST in *list) {
+            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
+            else if ( *counter == 1 ) { *source      = *item_LIST ; }
+            else if ( *counter == 2 ) { *destination = *item_LIST ; }
+            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+            *counter = *counter + 1;    
+        }
+        *list_size = *counter ;
 
-    	if ((*list_size==4) || (*list_size==3)){
-			doReplication(*pid,*source,*destination,*ror,*status);
-		}
+        if ((*list_size==4) || (*list_size==3)){
+            doReplication(*pid,*source,*destination,*ror,*status);
+        }
         else {
             logError("ignoring incorrect command: [*out_STRING]");
             *status = -1;
@@ -273,23 +286,23 @@ processReplicationCommandFile(*cmdPath) {
 # Author: Willem Elbers, MPI-TLA
 #
 processPIDCommandFile(*cmdPath) {
-	logInfo("processPID(*cmdPath)");
-	readFile(*cmdPath, *out_STRING);
-	*list = split(*out_STRING, ";");
+    logInfo("processPID(*cmdPath)");
+    readFile(*cmdPath, *out_STRING);
+    *list = split(*out_STRING, ";");
 
-	# assign values from array to parameters
-	*ror = "None";
-	*counter=0;
-	foreach (*item_LIST in *list) {
-		if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
-		else if ( *counter == 1 ) { *parent      = *item_LIST ; }
-		else if ( *counter == 2 ) { *destination = *item_LIST ; }
-		else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-		*counter = *counter + 1;	
-	}
-	*list_size = *counter ;
+    # assign values from array to parameters
+    *ror = "None";
+    *counter=0;
+    foreach (*item_LIST in *list) {
+        if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
+        else if ( *counter == 1 ) { *parent      = *item_LIST ; }
+        else if ( *counter == 2 ) { *destination = *item_LIST ; }
+        else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+        *counter = *counter + 1;    
+    }
+    *list_size = *counter ;
 
-	# process command/action
+    # process command/action
     if ((*list_size==4) || (*list_size==3)){
         if(*pidAction == "create") {
             #manage pid in this repository
@@ -317,11 +330,11 @@ processPIDCommandFile(*cmdPath) {
 # Start a replication
 #
 # Parameters:
-#	*pid            [IN]    pid of the digital object
-#	*source			[IN]    source path of the object to replicate
-#	*destination	[IN]    destination path of the object to replicate
-#	*ror	        [IN]    ROR of the digital object
-#   *status         [OUT]   status, 0 = ok, <0 = error
+#    *pid            [IN]    pid of the digital object
+#    *source         [IN]    source path of the object to replicate
+#    *destination    [IN]    destination path of the object to replicate
+#    *ror            [IN]    ROR of the digital object
+#    *status         [OUT]   status, 0 = ok, <0 = error
 #
 # Author: Willem Elbers, MPI-TLA
 #
@@ -370,42 +383,41 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #
 #createPID(*rorPID, *path, *newPID, *ror) {
 createPID(*parent_pid, *path, *ror, *newPID) {
-	logInfo("create pid for *path and save *ror as ror");
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-	getSearchWildcard(*wildc);
-	
+    logInfo("create pid for *path and save *ror as ror");
     #check if PID already exists
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
-    }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *existing_pid);
+    searchPID(*path, *existing_pid)
 
-    if((*existing_pid == "empty") || (*existing_pid == "None")) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    getEpicClientCredentials(*epicCredentials)
+
+    if (*epicCredentials == '') { 
+        failmsg(-1, "Have no credentials available, cannot create PID and have to fail!")
+    }
+    else if((*existing_pid == "empty") || (*existing_pid == "None")) {
         # create PID
         if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
+            logDebug("epicclient.py os *epicCredentials create *serverID*path");
         }
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
+        msiExecCmd("epicclient.py", "os *epicCredentials create *serverID*path", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *newPID);
         logDebug("created handle = *newPID");
 
         # add CHECKSUM to PID record
         retrieveChecksum(*path, *checksum);
         if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
+            logDebug("epicclient.py os *epicCredentials modify *newPID CHECKSUM *checksum");
         }
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
+        msiExecCmd("epicclient.py", "os *epicCredentials modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
         msiGetStdoutInExecCmdOut(*out3, *response3);
         logDebug("modify handle response = *response3");
 
-		# add RoR to PID record if there is one defined
+        # add RoR to PID record if there is one defined
         if(*ror != "None") {
             # add RoR to PID record
             if(*epicDebug > 1) {
-                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *ror");
+                logDebug("epicclient.py os *epicCredentials modify *newPID ROR *ror");
             }
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *ror", "null", "null", "null", *out2);
+            msiExecCmd("epicclient.py", "os *epicCredentials modify *newPID ROR *ror", "null", "null", "null", *out2);
             msiGetStdoutInExecCmdOut(*out2, *response2);
             logDebug("modify handle response = *response2");
         }
@@ -432,37 +444,43 @@ createPID(*parent_pid, *path, *ror, *newPID) {
 # Author: CINECA, edited and added by Elena Erastova, RZG
 #
 createPIDgriffin(*path, *newPID) {
-	logInfo("create pid for *path");
+    logInfo("create pid for *path");
 
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    getEpicClientCredentials(*epicCredentials)
 
-    #check if PID already exists
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
+    if (*epicCredentials != '') {
+        #check if PID already exists
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py os *epicCredentials search URL *serverID*path");
+        }
+        msiExecCmd("epicclient.py", "os *epicCredentials search URL *serverID*path", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *existing_pid);
+
+        if(*existing_pid == "empty") {
+            # create PID
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py os *epicCredentials create *serverID*path");
+            }
+            msiExecCmd("epicclient.py", "os *epicCredentials create *serverID*path", "null", "null", "null", *out);
+            msiGetStdoutInExecCmdOut(*out, *newPID);
+            logDebug("created handle = *newPID");
+        } else {
+            *newPID = *existing_pid;
+
+            # add CHECKSUM to PID record
+            msiDataObjChksum(*path, "null", *checksum);
+            if(*epicDebug > 1) {
+                logDebug("epicclient.py os *epicCredentials modify *newPID CHECKSUM *checksum");
+            }
+            msiExecCmd("epicclient.py","os *epicCredentials modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
+            msiGetStdoutInExecCmdOut(*out3, *response3);
+            logDebug("modify handle response = *response3");
+            logInfo("PID *newPID already exists - added checksum *checksum to PID *newPID");
+        }
     }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *existing_pid);
-
-    if(*existing_pid == "empty") {
-        # create PID
-        if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
-        }
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
-        msiGetStdoutInExecCmdOut(*out, *newPID);
-        logDebug("created handle = *newPID");
-    } else {
-        *newPID = *existing_pid;
-		
-        # add CHECKSUM to PID record
-        msiDataObjChksum(*path, "null", *checksum);
-        if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
-        }
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
-        msiGetStdoutInExecCmdOut(*out3, *response3);
-        logDebug("modify handle response = *response3");
-        logInfo("PID *newPID already exists - added checksum *checksum to PID *newPID");
+    else {
+        failmsg(-1, "Have no credentials available, cannot create new PID and have to fail!")
     }
 }
 
@@ -481,24 +499,35 @@ createPIDgriffin(*path, *newPID) {
 #
 addPIDWithChecksum(*path, *newPID) {
     logInfo("Add PID with CHECKSUM for *path");
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    msiDataObjChksum(*path, "null", *checksum);
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID*path --checksum *checksum","null","null", "null", *out);
-	msiGetStdoutInExecCmdOut(*out, *newPID);
-    logDebug("added handle =*newPID with checksum = *checksum");
+    getEpicClientCredentials(*epicCredentials)
+
+    if (*epicCredentials != '') {
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+        msiDataObjChksum(*path, "null", *checksum);
+        msiExecCmd("epicclient.py", "os *epicCredentials create *serverID*path --checksum *checksum","null","null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *newPID);
+        logDebug("added handle =*newPID with checksum = *checksum");
+    }
+    else {
+        failmsg(-1, "Have no credentials available, cannot create new PID and have to fail!")
+    }
 }
 
-
+#check for PID
 searchPID(*path, *existing_pid) {
-    logInfo("search pid for *path");
-    getSearchWildcard(*wildc);
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    #check if PID already exists
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
+    getEpicClientCredentials(*epicCredentials);
+    if (*epicCredentials != '') {
+        logInfo("search pid for *path");
+        getSearchWildcard(*wildc);
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py os *epicCredentials search URL *wildc*path");
+        }
+        msiExecCmd("epicclient.py", "os *epicCredentials search URL *wildc*path", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *existing_pid);
     }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *existing_pid);
+    else {
+        failmsg(-1, "Have no epicclient available, cannot search for PID and have to fail!");
+    }
 }
 
 searchPIDchecksum(*path, *existing_pid) {
@@ -509,7 +538,7 @@ searchPIDchecksum(*path, *existing_pid) {
     #msiDataObjChksum(*path, "null", *checksum);
 
     *checksum = "";
-    msiSplitPath(*path,*parent,*child);
+    msiSplitPath(*path, *parent, *child);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
     foreach   ( *B )    {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
@@ -522,11 +551,16 @@ searchPIDchecksum(*path, *existing_pid) {
         logDebug("search by CHECKSUM inside if no checksum = *checksum");
     }
     else {
-        	msiExecCmd("epicclient.py", "*credStoreType *credStorePath search CHECKSUM *checksum", "null", "null", "null", *out);
-        	msiGetStdoutInExecCmdOut(*out, *existing_pid);
-		logDebug("search by CHECKSUM inside call search = *existing_pid");
-	}
-        
+        getEpicClientCredentials(*epicCredentials)
+        if (*epicCredentials != '') {
+            msiExecCmd("epicclient.py", "os *epicCredentials search CHECKSUM *checksum", "null", "null", "null", *out);
+            msiGetStdoutInExecCmdOut(*out, *existing_pid);
+            logDebug("search by CHECKSUM inside call search = *existing_pid");
+        }
+        else {
+            failmsg(-1, "Have no epicclient available, cannot search PID checksum and have to fail!");
+        }
+    } 
 }
 
 #
@@ -581,14 +615,22 @@ CheckReplicas(*source, *destination, *commandFile) {
 # Modified by: Claudio Cacciari, CINECA
 #
 updatePIDWithNewChild(*parentPID, *childPID) {
-	logInfo("update parent pid (*parentPID) with new child (*childPID)");
+    logInfo("update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *epicApi*childPID");
+    getEpicClientCredentials(*epicCredentials)
+    if (*epicCredentials != '') {
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py os *epicCredentials relation *parentPID *epicApi*childPID");
+        }
+        logInfo("get RoR from (*pid)");
+        msiExecCmd("epicclient.py", "os *epicCredentials relation *parentPID *epicApi*childPID", "null", "null", "null", *response);
+        msiGetStdoutInExecCmdOut(*out, *response);
+        logDebug("update handle location response = *response");
+        msiGetStdoutInExecCmdOut(*out, *ror);
     }
-	msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *epicApi*childPID", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *response);
-    logDebug("update handle location response = *response");
+    else {
+        failmsg(-1, "Have no credentials available, cannot update PID with new child and have to fail!");
+    }
 }
 
 #
@@ -599,8 +641,47 @@ updatePIDWithNewChild(*parentPID, *childPID) {
 #   *ror    [OUT]    ROR for *pid
 #
 getRorPid(*pid, *ror) {
-	logInfo("get RoR from (*pid)");
-	getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-	msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", "null", "null", "null", *out);
-	msiGetStdoutInExecCmdOut(*out, *ror);
+    getEpicClientCredentials(*epicCredentials)
+    if (*epicCredentials != '') {
+        logInfo("get RoR from (*pid)");
+        msiExecCmd("epicclient.py", "os *epicCredentials read *pid --key ROR", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *ror);
+    }
+    else {
+        failmsg(-1, "Have no credentials available, cannot get a RoR and have to fail!");
+    }
+}
+
+#
+# check which credentials the user is allowed to use, if he is not (unknown) then fail.
+# all arguments are a passthrough from acPreProcForExecCmd
+# Parameters:
+#   *cmd    [IN]  the name of the script that the user wants to execute
+#   *args   [IN]  the arguments given to the script (one long string...)
+#   *addr   [IN]  address of the server where to execute the script.
+#   *hint   [IN]  parameter given to iexecmd
+execEudatAclFilter (*cmd, *args, *addr, *hint) {
+    if (*cmd == 'epicclient.py') {
+        *arglist = split(*args, " ");
+        *credpath = '';
+        *counter = 0;
+        foreach (*item in *arglist) {
+            if ( *counter == 1 ) { 
+                *credpath = *item;
+                break;
+            }
+            *counter = *counter + 1;
+        }
+        getEpicClientCredentials(*epicCredentials)
+        # whitelisting
+        if ( *epicCredentials == '') {
+            failmsg(-1, "Error, no credentials associated with this user");
+        }
+        else if (($userNameClient == 'manager') && ($rodsZoneClient == 'COMMUNITY') && (*credpath == *epicCredentials)) { }
+        else if (($userNameClient == 'rods') && ($rodsZoneClient == 'COMMUNITY') && (*credpath == *epicCredentials)) { }
+        else {
+            failmsg(-1, "We are not able to make sure that the user $userNameClient is a allowed to execute *cmd with arguments *args");
+        }
+        writeLine("serverLog", "Script *cmd arguments *args on server *addr from user $userNameClient with zone $rodsZoneClient accessed");
+    }
 }

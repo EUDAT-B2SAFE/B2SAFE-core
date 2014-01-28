@@ -1,0 +1,14 @@
+--- iRODS/server/config/reConfigs/core.re	2013-07-11 18:38:45.000000000 +0200
++++ tmp/iRODS/server/config/reConfigs/core.re	2014-01-23 15:40:02.050738582 +0100
+@@ -676,8 +676,9 @@
+ acPostProcForDataObjRead(*ReadBuffer) { }
+ # 55) acPreProcForExecCmd - Rule for pre processing when remotely executing a command
+ #     in server/bin/cmd 
+-#     parameter contains the command to be executed
+-acPreProcForExecCmd(*cmd) { }
++#     parameter contains the command to be executed, arguments, execution address, hint path.
++#     if a parameter is not provided, then it is the empty string
++acPreProcForExecCmd(*cmd, *args, *addr, *hint) { }
+ # ----------------------------------------------------------------------------
+ # These rules are for testing only
+ #acDataObjCreate {acSetCreateConditions; acDOC; }

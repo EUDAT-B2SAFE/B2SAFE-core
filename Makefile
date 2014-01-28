@@ -10,7 +10,7 @@ include $(buildDir)/config/common.mk
 #
 # Directories
 #
-MSBaseDir =		$(modulesDir)/EUDAT-PID
+MSBaseDir =		$(modulesDir)/BE2SAFE
 MSObjDir =		$(MSBaseDir)/microservices/obj
 MSSrcDir =		$(MSBaseDir)/microservices/src
 MSIncDir =		$(MSBaseDir)/microservices/include
