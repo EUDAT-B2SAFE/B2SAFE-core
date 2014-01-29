@@ -1,3 +1,4 @@
+#!/home/proirod1/.pythonbrew/pythons/Python-2.7/bin/python 
 #!/usr/bin/env python
 #
 #   epicclient.py
@@ -274,7 +275,7 @@ class EpicClient(object):
         handle = simplejson.loads(handle_json)
         KeyFound = False
 
-        if value is "" or None:
+        if value is "" or None or '':
             for item in handle:
                 if item.has_key('type') and item['type'] == key:
                     self._debugMsg('modifyHandle','Remove item ' + key)
@@ -298,8 +299,8 @@ class EpicClient(object):
                     # FIXME what is the reason for returning True here?
                     return True
 
-                self._debugMsg('modifyHandle', "Key " + key + " not found. "
-                                               "Generating new hash")
+                self._debugMsg('modifyHandle', "Key " + key +
+                                               " not found. Generating new hash")
                 handleItem = {'type': key, 'parsed_data': value}
                 handle.append(handleItem)
 

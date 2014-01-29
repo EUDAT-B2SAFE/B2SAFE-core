@@ -370,10 +370,10 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #
 #createPID(*rorPID, *path, *newPID, *ror) {
 createPID(*parent_pid, *path, *ror, *newPID) {
-	logInfo("create pid for *path and save *ror as ror");
+    logInfo("create pid for *path and save *ror as ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-	getSearchWildcard(*wildc);
-	
+    getSearchWildcard(*wildc);
+
     #check if PID already exists
     if(*epicDebug > 1) {
         logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
@@ -424,7 +424,7 @@ createPID(*parent_pid, *path, *ror, *newPID) {
 # then it opens it and writes the contents of the actual file and closes it.
 # Which is why createPIDgriffin a PID without checksum on the first step.
 # And ut adds cheksum on the second "put", when the PID already exists.
-
+#
 # Parameters:
 #   *path       [IN]    the path of the replica to store with the PID record
 #   *newPID     [OUT]   the pid generated for this replica 
