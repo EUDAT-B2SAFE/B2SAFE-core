@@ -291,17 +291,17 @@ class EpicClient(object):
                     del item['data']
                     break
 
-        if KeyFound is False:
-            if value is None:
-                self._debugMsg('modifyHandle', "No value for Key " + key +
-                                               " . Quitting")
-                # FIXME what is the reason for returning True here?
-                return True
+            if KeyFound is False:
+                if value is None:
+                    self._debugMsg('modifyHandle', "No value for Key " + key +
+                                                   " . Quitting")
+                    # FIXME what is the reason for returning True here?
+                    return True
 
-            self._debugMsg('modifyHandle', "Key " + key +
-                                           " not found. Generating new hash")
-            handleItem = {'type': key, 'parsed_data': value}
-            handle.append(handleItem)
+                self._debugMsg('modifyHandle', "Key " + key + " not found. "
+                                               "Generating new hash")
+                handleItem = {'type': key, 'parsed_data': value}
+                handle.append(handleItem)
 
         handle_json = simplejson.dumps(handle)
         self._debugMsg('modifyHandle', "JSON: " + str(handle_json))
