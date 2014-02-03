@@ -1017,7 +1017,7 @@ EUDATfileInPath(*path,*subColl) {
 }
 
 #
-# Rule: Set Restriction to other User, define as GROUP
+# Rule: setup permission for other User from other Zone, defined as GROUP
 # Arguments:
 #	*path		[IN] the full iRODS path of the object
 #   *otherUser	[IN] name of user who will be appended into GROUP
@@ -1091,7 +1091,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                                 *action = elem(*subargs,2);
                                 if (*action == "read" || *action == "search" || *action == "relation" || *action == "test" || *action == "create") {
                                         writeLine("serverLog","--- NOTICE action *action on PID");
-
+										
                                 } else if (*action == "modify" || *action == "delete") {
                                         writeLine("serverLog","--- WARNUNG action *action on PID");
                                         *pid = elem(*subargs,3);
