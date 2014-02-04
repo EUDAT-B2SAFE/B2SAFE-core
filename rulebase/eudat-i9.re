@@ -1091,7 +1091,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                                 *action = elem(*subargs,2);
                                 if (*action == "read" || *action == "search" || *action == "relation" || *action == "test" || *action == "create") {
                                         writeLine("serverLog","--- NOTICE action *action on PID");
-										
+										*status = "true";
                                 } else if (*action == "modify" || *action == "delete") {
                                         writeLine("serverLog","--- WARNUNG action *action on PID");
                                         *pid = elem(*subargs,3);
@@ -1113,8 +1113,8 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                                                 writeLine("serverLog","Identity of user $userNameClient from Zone $rodsZoneClient is confirmed as OWNER of DATA, script will be executed");
                                         } else {
                                         	
-												*user = "$userNameClient"++"#"++"$rodsZoneClient";
-												*e = SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = 'GROUP' AND META_DATA_ATTR_VALUE = '*user' AND COLL_NAME = '*collname' AND DATA_NAME = '*dataname';													
+												*user = "$userNameClient"++"#"++"$rodsZoneClient";																									
+												*e = SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = 'GROUP' AND COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
 												foreach (*f in *e) {
 													msiGetValByKey(*f,"META_DATA_ATTR_VALUE",*otherUser);
 													if (*otherUser == *user) {
