@@ -1117,7 +1117,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 											msiSplitPath(*pathDataObject,*collname,*dataname);													
 										    
 										    # ------------- Check the existence of Data Object in iCAT, 
-										    # ------------- if it exists in iCAT, continue check dataOwner. If it NOT exist in iCAT, continue deliver CREATE right. 
+										    # ------------- if it exists in iCAT, continue check dataOwner. If it's NOT exist in iCAT, continue deliver CREATE right. 
 										    # ------------- Base on rule EUDATfileInPath of Giacomo -----------------
 										    
 										    *t = bool("false");	
@@ -1125,7 +1125,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 										    *y = SELECT count(DATA_NAME) WHERE COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
 										    foreach(*x in *y) {
 										         msiGetValByKey(*x,"DATA_NAME",*num);
-										         if(*num == '1') {										         
+										         if(*num == '1') {										         	 										         
 										             *t = bool("true");
 										             writeLine("serverLog"," Confirmed that DATA already existed under Coll_Name *collname with name *dataname");
 										         }   
@@ -1133,8 +1133,11 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 										    # -----------------------------------------------------------------------
 										    
 										    if (*t == bool("false")) {										    	
-										    	writeLine("serverLog","Identity of user $userNameClient from $rodsZoneClient create PID without replication of data, moreover script will be executed");
+										    	writeLine("serverLog","Identity of user $userNameClient from $rodsZoneClient create PID without replication of data, script will be executed");
+										    	
+										    	# SHOULD USER BE ALLOWED TO CREATE PID WITHOUT REPLICATION ? If yes, *status = true. Otherwise, set *status = false.
 										    	*status = "true";
+										    	
 										    } else {
 										       		writeLine("serverLog","EUDATfileInPath -> found file *dataname in collection *collname. Begin to check identity of user");
 										    										    									    
@@ -1148,7 +1151,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 												    if ($userNameClient == *owner && $rodsZoneClient == *zone) {			
 														writeLine("serverLog","User $userNameClient from *zone is confirmed as DataOwner of DataObject, action creating PID keeps going");	
 																
-														# Check whether this data Object already has one PID (in iCAT). If yes, fail. Create second PID with one MARK, otherwise, create first PID.
+														# Check whether this data Object already has one PID (in iCAT). If yes, fail. 
 														# ------------- Base on rule EUDATfileInPath of Giacomo -----------------
 																													
 														*h = "META_DATA_ATTR_NAME = 'PID' AND COLL_NAME = '*collname' AND DATA_NAME = '*dataname'";
