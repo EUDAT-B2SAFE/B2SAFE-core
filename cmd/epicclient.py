@@ -674,6 +674,11 @@ class Credentials(object):
 # EPIC Client Command Line Interface #
 ###############################################################################
 
+def replaceHash(args):
+    s = args.a
+    result = s.replace('#','*').replace('%','*').replace('&','*')
+    sys.stdout.write(str(result))
+
 def search(args):
     '''perform search action'''
 
@@ -932,6 +937,12 @@ if __name__ == "__main__":
                                        description='Handle record management '
                                                    'actions',
                                        help='additional help')
+
+    parser_replaceHash = subparsers.add_parser('replaceHash',
+											   help='')
+    parser_replaceHash.add_argument("a", help="")
+    parser_replaceHash.set_defaults(func=replaceHash)
+
     parser_create = subparsers.add_parser('create',
                                           help='creating handle records')
     parser_create.add_argument("location", help="location to store in "

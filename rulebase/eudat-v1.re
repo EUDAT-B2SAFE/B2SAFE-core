@@ -292,6 +292,11 @@ processPIDCommandFile(*cmdPath) {
 	# process command/action
     if ((*list_size==4) || (*list_size==3)){
         if(*pidAction == "create") {
+			if(*ror=="None") {
+				*ror = *parent;
+				*parent = "None";
+				logInfo("ror = *ror, parent = *parent");
+			}	
             #manage pid in this repository
             createPID(*parent, *destination, *ror, *new_pid);
             getSharedCollection(*destination,*collectionPath);
@@ -370,16 +375,11 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #
 #createPID(*rorPID, *path, *newPID, *ror) {
 createPID(*parent_pid, *path, *ror, *newPID) {
-    logInfo("create pid for *path and save *ror as ror");
+	logInfo("create pid for *path and save *ror as ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    getSearchWildcard(*wildc);
-
+	
     #check if PID already exists
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
-    }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *existing_pid);
+    searchPID(*path, *existing_pid);
 
     if((*existing_pid == "empty") || (*existing_pid == "None")) {
         # create PID
@@ -400,15 +400,56 @@ createPID(*parent_pid, *path, *ror, *newPID) {
         logDebug("modify handle response = *response3");
 
 		# add RoR to PID record if there is one defined
+	
+		if((*ror == "None") && (*parent_pid != "None")) {
+			*ror = *parent_pid;
+            *parent_pid = "None";
+		}		
+
         if(*ror != "None") {
-            # add RoR to PID record
+        	# add RoR to PID record
             if(*epicDebug > 1) {
-                logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *ror");
+               	logDebug("epicclient.py *credStoreType *credStorePath modify *newPID EUDAT/ROR *ror");
             }
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID ROR *ror", "null", "null", "null", *out2);
-            msiGetStdoutInExecCmdOut(*out2, *response2);
-            logDebug("modify handle response = *response2");
+	
+			*list0 = split(*ror, "/");
+			*first = elem(*list0,0);
+			if(*first=="http:")
+			{	
+				msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *ror", "null", "null", "null", *out4);
+				msiGetStdoutInExecCmdOut(*out4, *response4);
+	      		logDebug("modify handle response = *response4")
+			}
+			else
+			{	
+				msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *epicApi*ror", "null", "null", "null", *out2);
+				msiGetStdoutInExecCmdOut(*out2, *response2);
+           		logDebug("modify handle response = *response2");
+			}
         }
+
+        if(*parent_pid != "None") {
+        	# add PPID to PID record
+            if(*epicDebug > 1) {
+               	logDebug("epicclient.py *credStoreType *credStorePath modify *newPID EUDAT/PPID *parent_pid");
+            }
+	
+			*list0 = split(*parent, "/");
+			*first = elem(*list0,0);
+			if(*first=="http:")
+			{	
+				msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *parent_pid", "null", "null", "null", *out44);
+				msiGetStdoutInExecCmdOut(*out44, *response44);
+           		logDebug("modify handle response = *response44")
+			}
+			else
+			{	
+				msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *epicApi*parent_pid", "null", "null", "null", *out22);
+				msiGetStdoutInExecCmdOut(*out22, *response22);
+           		logDebug("modify handle response = *response22");
+			}
+        }
+
     } 
     else {
         *newPID = *existing_pid;
@@ -488,45 +529,88 @@ addPIDWithChecksum(*path, *newPID) {
     logDebug("added handle =*newPID with checksum = *checksum");
 }
 
-
+#
+# searchPID searching fo a PID using URL replacing "#", "%" and "&" with "*"
+# (uses replaceHash in epicclient.py)
+# Parameters:
+#   *path       	[IN]    the path of the replica
+#   *existing_pid	[OUT]   existing PID 
+#
+# Author: Elena Erastova, RZG
+#
 searchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
-    getSearchWildcard(*wildc);
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     #check if PID already exists
     if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *wildc*path");
+        logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
     }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *wildc*path", "null", "null", "null", *out);
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", "null", "null", "null", *out1);
+    msiGetStdoutInExecCmdOut(*out1, *path1);
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path1", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *existing_pid);
 }
 
-searchPIDchecksum(*path, *existing_pid) {
-    logInfo("search pid for *path");
-    getSearchWildcard(*wildc);
+#
+# searchPIDROR searching fo a PID using EUDAT/ROR
+# Parameters:
+#   *ror       		[IN]    the ROR of the replica
+#   *existing_pid	[OUT]   existing PID 
+#
+# Author: Elena Erastova, RZG
+#
+searchPIDROR(*ror, *existing_pid) {
+    logInfo("search pid for *ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     #check if PID already exists
-    #msiDataObjChksum(*path, "null", *checksum);
-
-    *checksum = "";
-    msiSplitPath(*path,*parent,*child);
-    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
-    foreach   ( *B )    {
-        msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
-        #logDebug(*checksum);
+    if(*epicDebug > 1) {
+        logInfo("epicclient.py *credStoreType *credStorePath search EUDAT/ROR *ror");
     }
-    logDebug("search by CHECKSUM inside = *checksum");
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search EUDAT/ROR *ror", "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *existing_pid);
+}
 
-    if(*checksum == "") {
-        *existing_pid ="empty";
-        logDebug("search by CHECKSUM inside if no checksum = *checksum");
-    }
-    else {
-        	msiExecCmd("epicclient.py", "*credStoreType *credStorePath search CHECKSUM *checksum", "null", "null", "null", *out);
-        	msiGetStdoutInExecCmdOut(*out, *existing_pid);
-		logDebug("search by CHECKSUM inside call search = *existing_pid");
+#
+# searchPIDchecksum searching fo a PID using CHECKSUM
+# Parameters:
+#   *path       	[IN]    the path of the replica
+#   *existing_pid	[OUT]   existing PID 
+#
+# Author: Elena Erastova, RZG
+#
+searchPIDchecksum(*path, *existing_pid) {
+    logInfo("search pid for *path");
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    #check if PID already exists
+	#msiDataObjChksum(*path, "null", *checksum);
+	
+	*checksum = "";
+	msiSplitPath(*path,*parent,*child);
+	msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
+	foreach   ( *B )    {
+		msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
+		#logDebug(*checksum);
 	}
-        
+	logInfo("search by CHECKSUM inside = *checksum");
+	
+	if(*checksum == "") {
+		*existing_pid ="empty";
+		logInfo("search by CHECKSUM inside if no checksum = *checksum");
+	}
+	else {
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath search CHECKSUM *checksum", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *existing_pid);
+		logInfo("existing_pid = *existing_pid");
+		msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *existing_pid --key URL", "null", "null", "null", *out);
+		msiGetStdoutInExecCmdOut(*out, *URL);
+		msiSplitPath(*URL,*parent1,*child1);
+		if("*serverID*parent" != *parent1) {
+			*existing_pid ="empty";
+			logInfo("parent  = *serverID*parent ; parent1 = *parent1");
+		}
+				
+		logInfo("search by CHECKSUM inside call search = *existing_pid");
+	}
 }
 
 #
@@ -601,6 +685,6 @@ updatePIDWithNewChild(*parentPID, *childPID) {
 getRorPid(*pid, *ror) {
 	logInfo("get RoR from (*pid)");
 	getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-	msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", "null", "null", "null", *out);
+	msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR", "null", "null", "null", *out);
 	msiGetStdoutInExecCmdOut(*out, *ror);
 }
