@@ -423,7 +423,7 @@ createPID(*parent_pid, *path, *ror, *newPID) {
 	
 	# Add PID into iCAT
 	writeLine("serverLog","Begin to SAVE PID into field AVU -PID- of iCAT *path with PID = *newPID");
-	EUDATiPIDcreate2(*newPID,*path)
+	EUDATiPIDcreate2(*newPID,*path);
         #msiSetReplComment("null",*path,0,*newPID);
 	
         writeLine("serverLog","---> PID's saved in iCAT with AVU PID");
