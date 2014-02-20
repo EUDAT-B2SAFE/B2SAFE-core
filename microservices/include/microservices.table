@@ -1,5 +1,7 @@
 /* Service name			        # args		    Service function */
+#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
 { "msiBytesBufToStr",		    2,	          	(funcPtr) msiBytesBufToStr },
+#endif /* ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3) */
 { "msiWriteToLog",              2,              (funcPtr) msiWriteToLog },
 { "msiGetZoneNameFromPath",     2,              (funcPtr) msiGetZoneNameFromPath},
 { "msiGetFieldFromRodsObjStat", 3,              (funcPtr) msiGetFieldFromRodsObjStat},

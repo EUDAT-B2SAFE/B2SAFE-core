@@ -70,6 +70,8 @@ msiGetZoneNameFromPath(msParam_t *inPath, msParam_t *outZoneName, ruleExecInfo_t
     return 0;
 }
 
+#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
+
 int
 msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *rei) {
     rsComm_t *rsComm;
@@ -101,6 +103,9 @@ msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *
 
     return 0;
 }
+
+#endif /* ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 ) */
+
 
 /*
  * replace slash "/" symbol in string with an hyphen "_"

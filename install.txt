@@ -11,20 +11,20 @@ No dependencies, msiGetFormattedSystemTime is available out of the box
 Automatically using the irodssetup script:
 
 1.1 (< iRODS 3.1) enable the module "<irods>/modules/guinot/info.txt" 
-1.2. enable the module in "<irods>/modules/EUDAT-PID/info.txt"
+1.2. enable the module in "<irods>/modules/B2SAFE/info.txt"
 1.3. rerun the irodsssetup script
 
 Manually:
 
 1.1. (< iRODS 3.1) ./scripts/configure --enable-guinot
-1.2. ./scripts/configure --enable-EUDAT-PID
+1.2. ./scripts/configure --enable-B2SAFE
 1.3. make clean
 1.4. make
 
 
 2. create a symbolic link to the eudat rulebase
 	cd <irods>
-	ln -s <absolute-irods-path>/modules/EUDAT-PID/rulebase/eudat-v1.re ./server/config/reConfigs/eudat.re
+	ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/eudat-v1.re ./server/config/reConfigs/eudat.re
 
 3. edit <irods>/server/config/server.config and append ",eudat" to "reRuleSet" 
 	(make sure to include the comma and no spaces)
@@ -47,7 +47,7 @@ Manually:
 
 6.1 install the python scripts
 	cd <irods>
-        ln -s <absolute-irods-path>/modules/EUDAT-PID/cmd/* ./server/bin/cmd/
+        ln -s <absolute-irods-path>/modules/B2SAFE/cmd/* ./server/bin/cmd/
         check permissions on the scripts and make sure they are executable by the irods user
             e.g.chmod u+x cmd/*
 
@@ -62,7 +62,7 @@ Manually:
         - make sure all users involved in the replication can write in this collection.
 
 8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually
-8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/EUDAT-PID/rules
+8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/B2SAFE/rules
 
 
 *** Command files ***
