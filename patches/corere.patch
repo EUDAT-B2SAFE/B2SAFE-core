@@ -8,7 +8,11 @@
 -acPreProcForExecCmd(*cmd) { }
 +#     parameter contains the command to be executed, arguments, execution address, hint path.
 +#     if a parameter is not provided, then it is the empty string
-+acPreProcForExecCmd(*cmd, *args, *addr, *hint) { }
++acPreProcForExecCmd(*cmd, *args, *addr, *hint) {
++	if (*cmd != "authZ.manager.py") {
++               getEUDATAuthZ("$userNameClient#$rodsZoneClient", *cmd, *args, *response);
++       }
++}
  # ----------------------------------------------------------------------------
  # These rules are for testing only
  #acDataObjCreate {acSetCreateConditions; acDOC; }
