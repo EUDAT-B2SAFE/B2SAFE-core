@@ -1,0 +1,10 @@
+{
+"assertion 1":
+	{ "subject":
+		[ "testuser#testzone" ],
+	  "action":
+		[ "read" ],
+	  "target":
+		[ "path/to/*" ]
+	}
+}
