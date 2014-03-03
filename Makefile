@@ -16,7 +16,7 @@ RODS_MINOR_VERSION := $(shell echo ${RodsVersion} | sed -e s/[0-9]*\.// )
 #
 # Directories
 #
-MSBaseDir =		$(modulesDir)/B2SAFE
+MSBaseDir =		$(modulesDir)/BE2SAFE
 MSObjDir =		$(MSBaseDir)/microservices/obj
 MSSrcDir =		$(MSBaseDir)/microservices/src
 MSIncDir =		$(MSBaseDir)/microservices/include

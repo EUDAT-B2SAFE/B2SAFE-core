@@ -1,30 +1,27 @@
 *** Dependencies ***
 
-< iRODS 3.1
-This module uses the msiGetFormattedSystemTime microservice from the guinot module.
-
->= iRODS 3.1
-No dependencies, msiGetFormattedSystemTime is available out of the box
-
 *** Installation ***
 
-Automatically using the irodssetup script:
+This Setup describes the procedure to enable the BE2SAFE module for iRODS 3.3
 
-1.1 (< iRODS 3.1) enable the module "<irods>/modules/guinot/info.txt" 
-1.2. enable the module in "<irods>/modules/B2SAFE/info.txt"
-1.3. rerun the irodsssetup script
+Enable the module,
+
+Automatically:
+
+1.1. enable the module in "<irods>/modules/BE2SAFE/info.txt"
+1.2. rerun the irodssetup script
 
 Manually:
 
-1.1. (< iRODS 3.1) ./scripts/configure --enable-guinot
-1.2. ./scripts/configure --enable-B2SAFE
-1.3. make clean
-1.4. make
+1.1. <irods>/scripts/configure --enable-BE2SAFE
+1.2. make clean
+1.3. make
+1.4 <irods>/irodsctl restart
 
 
 2. create a symbolic link to the eudat rulebase
 	cd <irods>
-	ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/eudat-v1.re ./server/config/reConfigs/eudat.re
+	ln -s <absolute-irods-path>/modules/BE2SAFE/rulebase/eudat-v1.re ./server/config/reConfigs/eudat.re
 
 3. edit <irods>/server/config/server.config and append ",eudat" to "reRuleSet" 
 	(make sure to include the comma and no spaces)
@@ -47,7 +44,7 @@ Manually:
 
 6.1 install the python scripts
 	cd <irods>
-        ln -s <absolute-irods-path>/modules/B2SAFE/cmd/* ./server/bin/cmd/
+        ln -s <absolute-irods-path>/modules/BE2SAFE/cmd/* ./server/bin/cmd/
         check permissions on the scripts and make sure they are executable by the irods user
             e.g.chmod u+x cmd/*
 
@@ -61,9 +58,12 @@ Manually:
         - defaults to "<zone>/replicate"
         - make sure all users involved in the replication can write in this collection.
 
-8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually
-8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/B2SAFE/rules
+8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually and with "iexecmd epicclient.py"
+8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/BE2SAFE/rules
 
+DATACENTER only:
+
+it is necessary to configure the authz.map.json file in order to allow user to execute rules, which calls external scripts.
 
 *** Command files ***
 

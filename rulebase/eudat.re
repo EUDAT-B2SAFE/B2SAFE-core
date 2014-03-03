@@ -13,15 +13,53 @@
 
 getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) {
     *credStoreType="os";
-    *credStorePath="/srv/irods/current/modules/EUDAT/cmd/credentials_test";
+    *credStorePath="/srv/irods/current/modules/BE2SAFE/cmd/credentials_test";
     *epicApi="http://hdl.handle.net/";
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
+
+    getEUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
 }
 
-#getSearchWildcard(*wildc){
-#    *wildc = "*";   
+getAuthZParameters(*authZMapPath) {
+    *authZMapPath="/srv/irods/current/modules/BE2SAFE/cmd/authz.map.json";
+}
+
+#getSearchWildcard(*wildc) {
+#    *wildc = "*";	
 #}
+
+#
+# Return a boolean value:
+#   True, if the authorization request matches against, at least
+#   one assertion listed in the authz.amp.json file
+#   False otherwise.
+#
+# Parameters:
+#   *user           [IN]    a username, related to the user who request a permission
+#   *action         [IN]    the action, which the user would like to perform
+#   *target         [IN]    the target of the action
+#   *response       [OUT]   True or False depending on authorization rights
+#
+# Author: Claudio Cacciari, Cineca
+#
+getEUDATAuthZ(*user, *action, *target, *response) {
+    getAuthZParameters(*authZMapPath);
+    logInfo("checking authorization for *user to perform: *action *target");
+    msiExecCmd("authZ.manager.py", "*authZMapPath check *user '*action' '*target'",
+               "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *response);
+    if (*response == "False") {
+        # here should be placed specific authorization rules 
+        # EUDATsetFilterACL(*action, *target, null, null, *status);
+        # if (*status == "false") {}
+        logInfo("authorization denied");
+        msiExit("-1", "user is not allowed to perform the requested action");
+    }
+    else {
+        logInfo("authorization granted");
+    }
+}
 
 #
 # Return the absolute path to the iRODS collection where all command files are stored.
@@ -298,7 +336,7 @@ processPIDCommandFile(*cmdPath) {
                 logInfo("ror = *ror, parent = *parent");
             }
             #manage pid in this repository
-            createPID(*parent, *destination, *ror, *new_pid);
+            createPID(*parent, *destination, *ror, *new_pid, "null");
             getSharedCollection(*destination,*collectionPath);
             #create .pid.update file based on absolute file path
             msiReplaceSlash(*destination,*filepathslash); 
@@ -400,12 +438,12 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #   *parent_pid [IN]    the PID of the digital object that was replicated to us (not necessarily the ROR)
 #   *path       [IN]    the path of the replica to store with the PID record
 #   *ror        [IN]    the ROR PID (absolute url) of the digital object that we want to store.
+#   *iCATCache  [IN]    the boolean flag to enable creation of PID in the iCAT 
 #   *newPID     [OUT]   the pid generated for this replica 
 #
 # Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
-#createPID(*rorPID, *path, *newPID, *ror) {
-createPID(*parent_pid, *path, *ror, *newPID) {
+createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
     logInfo("create pid for *path and save *ror as ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
 
@@ -420,6 +458,14 @@ createPID(*parent_pid, *path, *ror, *newPID) {
         msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *newPID);
         logDebug("created handle = *newPID");
+
+        if (*iCATCache == "True") {
+            # Add PID into iCAT
+            writeLine("serverLog","Begin to SAVE PID into field AVU -PID- of iCAT *path with PID = *newPID");
+            EUDATiPIDcreate2(*newPID,*path);
+            #msiSetReplComment("null",*path,0,*newPID);
+            writeLine("serverLog","---> PID's saved in iCAT with AVU PID");
+        }
 
         # add CHECKSUM to PID record
         retrieveChecksum(*path, *checksum);
@@ -785,6 +831,23 @@ EUDATiPIDcreate(*PID) {
     msiGetObjType($objPath, *objType);
     msiAssociateKeyValuePairsToObj(*Keyval, $objPath, *objType);
     msiWriteRodsLog("EUDATiPIDcreate -> Added PID = *PID to metadata of $objPath", *status);
+}
+
+#
+# The function write iPID given ePID.
+#
+# Arguments:
+#   *PID             [IN] ePID
+#   *PATH	     [IN] path of logical data object		
+#
+# Author: Giacomo Mariani, CINECA; Edited: Long Phan, Juelich
+#
+EUDATiPIDcreate2(*PID,*path) {
+    msiAddKeyVal(*Keyval,"PID", "*PID");
+    writeKeyValPairs('serverLog', *Keyval, " is : ");
+    msiGetObjType(*path,*objType);
+    msiAssociateKeyValuePairsToObj(*Keyval, *path, *objType);
+    msiWriteRodsLog("EUDATiPIDcreate -> Added PID = *PID to metadata of *path", *status);
 }
 
 #
