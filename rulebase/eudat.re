@@ -336,7 +336,7 @@ processPIDCommandFile(*cmdPath) {
                 logInfo("ror = *ror, parent = *parent");
             }
             #manage pid in this repository
-            createPID(*parent, *destination, *ror, *new_pid, null);
+            createPID(*parent, *destination, *ror, *new_pid, "null");
             getSharedCollection(*destination,*collectionPath);
             #create .pid.update file based on absolute file path
             msiReplaceSlash(*destination,*filepathslash); 
@@ -443,8 +443,7 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #
 # Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
-#createPID(*rorPID, *path, *ror, *newPID, *iCATCache) {
-createPID(*parent_pid, *path, *ror, *newPID) {
+createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
     logInfo("create pid for *path and save *ror as ror");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
 
