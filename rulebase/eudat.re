@@ -649,11 +649,8 @@ searchPIDchecksum(*path, *existing_pid) {
 #
 # TODO: use our known solution for .replicate file names to make them more unique?
 
-CheckReplicas(*source, *destination, *commandFile) {
+CheckReplicas(*source, *destination) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
-
-    #msiDataObjChksum(*source, "null", *checksum0);
-    #msiDataObjChksum(*destination, "null", *checksum1);
 
     *checksum0 = "";
     msiSplitPath(*source,*parentS,*childS);
@@ -676,7 +673,8 @@ CheckReplicas(*source, *destination, *commandFile) {
         logInfo("*checksum0 != *checksum1, existing_pid = *pid");
         logInfo("replication from *source to *destination");
         getSharedCollection(*source,*collectionPath);
-        triggerReplication("*collectionPath*commandFile",*pid,*source,*destination);
+        msiReplaceSlash(*destination,*filepathslash);
+        triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
     }
 }
 
