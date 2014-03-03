@@ -7,6 +7,12 @@ include $(buildDir)/config/platform.mk
 include $(buildDir)/config/directories.mk
 include $(buildDir)/config/common.mk
 
+# generate the iRods version
+RodsVersion := $(shell grep RODS_REL_VERSION ${buildDir}/lib/core/include/rodsVersion.h | sed -e s/.*\"rods// | sed -e s/\"// )
+RODS_MAYOR_VERSION := $(shell echo ${RodsVersion} | sed -e s/\.[0-9]// )
+RODS_MINOR_VERSION := $(shell echo ${RodsVersion} | sed -e s/[0-9]*\.// )
+
+ 
 #
 # Directories
 #
@@ -28,7 +34,7 @@ OBJECTS =  $(EUDAT_OBJECTS)
 INCLUDE_FLAGS =	-I$(MSIncDir)
 
 INCLUDES +=	$(INCLUDE_FLAGS) $(LIB_INCLUDES) $(SVR_INCLUDES)
-CFLAGS_OPTIONS := -DRODS_SERVER $(CFLAGS) $(MY_CFLAG)
+CFLAGS_OPTIONS := -DRODS_SERVER $(CFLAGS) $(MY_CFLAG) -DRODS_MAYOR_VERSION=$(RODS_MAYOR_VERSION) -DRODS_MINOR_VERSION=$(RODS_MINOR_VERSION)
 CFLAGS =	$(CFLAGS_OPTIONS) $(INCLUDES) $(MODULE_CFLAGS)
 
 .PHONY: all rules microservices server client clean
