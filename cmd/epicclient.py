@@ -1,4 +1,3 @@
-#!/home/proirod1/.pythonbrew/pythons/Python-2.7/bin/python 
 #!/usr/bin/env python
 #
 #   epicclient.py
