@@ -468,7 +468,7 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         }
 
         # add CHECKSUM to PID record
-        retrieveChecksum(*path, *checksum);
+        retrieveChecksum(*path, *checksum) ::: msiDataObjChksum(*path, "null", *checksum);
         if(*epicDebug > 1) {
             logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
         }
