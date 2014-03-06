@@ -21,7 +21,7 @@ Manually:
 
 2. create a symbolic link to the eudat rulebase
 	cd <irods>
-	ln -s <absolute-irods-path>/modules/BE2SAFE/rulebase/eudat-v1.re ./server/config/reConfigs/eudat.re
+	ln -s <absolute-irods-path>/modules/BE2SAFE/rulebase/eudat.re ./server/config/reConfigs/eudat.re
 
 3. edit <irods>/server/config/server.config and append ",eudat" to "reRuleSet" 
 	(make sure to include the comma and no spaces)
@@ -53,11 +53,26 @@ Manually:
     - Set the path to the credentials file
     - set the correct serverID to include the fully qualified hostname. For instance: "irods://node.domain.com:1247"
     - Set the proper values in the credentials file (see ./cmd/credentials_example for an example)
+    - Set the proper values in ./cmd/authz.map.json
 
 7. create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.
         - defaults to "<zone>/replicate"
         - make sure all users involved in the replication can write in this collection.
 
+8.0.1 change "#!/home/proirod1/.pythonbrew/pythons/Python-2.7/bin/python" in epicclient.py to yout python installation
+8.0.2 install httplib2, simplejson and pylint:
+	httplib2
+	download from http://code.google.com/p/httplib2
+	python setup.py install
+
+	simplejson
+	download from http://pypi.python.org/pypi/simplejson/
+	python setup.py install
+
+	ubuntu: apt-get install python-httplib2 python-simplejson
+
+	ubuntu: apt-get install pylint
+  
 8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually and with "iexecmd epicclient.py"
 8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/BE2SAFE/rules
 
