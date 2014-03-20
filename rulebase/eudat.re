@@ -693,8 +693,6 @@ searchPIDchecksum(*path, *existing_pid) {
 #   *destination    [IN]     destination of the file
 #   *commandFile    [IN]     name of the replicate file.
 #
-# TODO: use our known solution for .replicate file names to make them more unique?
-
 CheckReplicas(*source, *destination) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
 
@@ -721,6 +719,7 @@ CheckReplicas(*source, *destination) {
         getSharedCollection(*source,*collectionPath);
         msiReplaceSlash(*destination,*filepathslash);
         triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
+        EUDATeiPIDeiChecksumMgmt2(*source,bool("true"),bool("true"));
     }
 }
 
@@ -1017,6 +1016,25 @@ EUDATeCHECKSUMupdate(*PID) {
     msiGetStdoutInExecCmdOut(*out, *response);
     msiWriteRodsLog("EUDATeCHECKSUMupdate -> modify handle response = *response", *status);
 }
+#
+# This function update the checksum field of the PID of the object
+#
+# Arguments:
+#   *PID                [IN] The PID associated to $objPath
+#   *path               [IN] Object path
+#
+# Author: Giacomo Mariani, CINECA
+# Added: Elena Erastova, RZG
+#
+EUDATeCHECKSUMupdate2(*PID,*path) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+    msiWriteRodsLog("EUDATeCHECKSUMupdate -> modify checksum related to PID *PID", *status);
+    msiDataObjChksum(*path, "null", *checksum);
+    msiWriteRodsLog("EUDATeCHECKSUMupdate -> created checksum = *checksum", *status);
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID CHECKSUM *checksum", "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *response);
+    msiWriteRodsLog("EUDATeCHECKSUMupdate -> modify handle response = *response", *status);
+}
 
 #
 # This function update the URL field of the PID of $objPath
@@ -1132,3 +1150,71 @@ EUDATfileInPath(*path,*subColl) {
     }
     *b;
 } 
+#
+# This function creates a PID for *source and stores its value and the object checksum in the iCAT if it does ot exist.
+# Otherwhise the function modifies the PID.
+#
+# Arguments:
+#   *source          [IN]    Path of the source file
+#   *ePIDcheck       [IN]    Specify wheter you want to search for ePID (bool("true")) or not
+#   *iCATuse         [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
+#
+# Author: Giacomo Mariani, CINECA
+# Edited: Elena Erastova, RZG
+#
+EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse) {
+    msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> Look if the PID is in the iCAT", *status);
+    # Search for iPID and, if it exists, enter the if below
+    if (EUDATiFieldVALUEretrieve(*source, "PID", *oldPID))
+    {
+        msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> Update PID with CHECKSUM for: *oldPID, $userNameClient, *source", *status);
+        EUDATeCHECKSUMupdate2(*oldPID,*source);                           # Update the eCHECKSUM.
+    }
+    # iPID does not exist
+    else
+    {
+        # If *ePIDcheck look for ePID
+        *oldPID = "empty";
+        if ((*ePIDcheck) && (*iCATuse)) {
+            msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID registered in iCAT. Looking on the EPIC server.", *status);
+            getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+            # Get ePID looking for one between: URL and CHECKSUM.
+            #msiDataObjChksum(*source, "null", *checksum);
+            EUDATePIDsearch("URL", "*serverID"++"*source", *oldPID)
+           }
+        # If ePID does not exist create both ePID and iPID
+        if ( *oldPID == "empty" ) then
+            {
+            msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet", *status);
+            EUDATePIDcreate(*source, *newPID);                  # Create ePID
+            if (*iCATuse) {EUDATiPIDcreate2(*newPID,*source)};            # Create iPID
+            }
+        else
+        {
+            msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *oldPID", *status);
+            EUDATeCHECKSUMupdate2(*oldPID,*source);                       # Update eCHECKSUM
+            if (*iCATuse) {EUDATiPIDcreate2(*oldPID,*source)};            # Create iPID
+        }
+    }
+}
+#This function walks through the collection. For each object in the collection 
+#it creates a PID and stores its value and the object checksum in the iCAT if it does ot exist.
+# Otherwhise the function modify the PID.
+#
+# Arguments:
+#   *sourceColl      [IN]    Source colection path
+#   *ePIDcheck       [IN]    Specify wheter you want to search for ePID (bool("true")) or not
+#   *iCATuse         [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
+#   *minTime         [IN]    Specify the minimum age of the digital before looking for ePID
+#
+# Author: Elena Erastova, RZG
+#
+EUDATeiPIDeiChecksumMgmtColl(*sourceColl,*ePIDcheck, *iCATuse) {
+    *Work=``{
+        msiGetObjectPath(*File,*source,*status);
+        msiWriteRodsLog("EUDATeiPIDeiChecksumMgmtColl: File *source", *status);
+        EUDATeiPIDeiChecksumMgmt2(*source,bool(*ePIDcheck), bool(*iCATuse));
+        }``;
+        msiCollectionSpider(*sourceColl,*File,*Work,*Status);
+}
+
