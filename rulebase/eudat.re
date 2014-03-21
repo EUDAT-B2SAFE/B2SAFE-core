@@ -317,6 +317,7 @@ processPIDCommandFile(*cmdPath) {
 
     # assign values from array to parameters
     *ror = "None";
+    *parent = "None";
     *counter=0;
     foreach (*item_LIST in *list) {
         if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
@@ -686,17 +687,18 @@ searchPIDchecksum(*path, *existing_pid) {
 }
 
 #
-# check whether two files are available and identical, if thats not the case replicate from source to destination
+# Check whether two files are available and identical, if this is not the case replicate from source to destination
 #
 # Parameters:
 #   *source         [IN]     source of the file
 #   *destination    [IN]     destination of the file
-#   *ePIDcheck      [IN]    Specify wheter you want to search for ePID (bool("true")) or not
-#   *iCATuse        [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
+#   *ePIDcheck       [IN]    Specify wheter you want to search for ePID (bool("true")) or not
+#   *iCATuse         [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
+#
+# Author: Elena Erastova, RZG
 #
 CheckReplicas(*source, *destination, *ePIDcheck, *iCATuse) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
-
     *checksum0 = "";
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
@@ -704,7 +706,6 @@ CheckReplicas(*source, *destination, *ePIDcheck, *iCATuse) {
         msiGetValByKey(*BS,"DATA_CHECKSUM", *checksum0);
         logInfo("checksum0 = *checksum0");
     }
-
     *checksum1 = "";
     msiSplitPath(*destination,*parentD,*childD);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
@@ -712,7 +713,6 @@ CheckReplicas(*source, *destination, *ePIDcheck, *iCATuse) {
         msiGetValByKey(*BD,"DATA_CHECKSUM", *checksum1);
         logInfo("checksum1 = *checksum1");
     }
-
     if(*checksum0 != *checksum1) {
         searchPID(*source, *pid);
         logInfo("*checksum0 != *checksum1, existing_pid = *pid");
@@ -720,7 +720,10 @@ CheckReplicas(*source, *destination, *ePIDcheck, *iCATuse) {
         getSharedCollection(*source,*collectionPath);
         msiReplaceSlash(*destination,*filepathslash);
         triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
-        EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse);
+        if((*ePIDcheck) && (*iCATuse)) {
+            EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse);
+            EUDATiRORupdate2(*source);
+        }
     }
 }
 
@@ -757,6 +760,13 @@ getRorPid(*pid, *ror) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *ror);
+    if(*ror=="None") {
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *existing_pid --key ROR", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *ror);
+        if(*ror=="None") {
+            msiWriteRodsLog("getRorPID -> NO ROR for *existing_pid ", *status);
+        }
+    }
 }
 
 #
@@ -1187,7 +1197,7 @@ EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse) {
         if ( *oldPID == "empty" ) then
             {
             msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet", *status);
-            EUDATePIDcreate(*source, *newPID);                  # Create ePID
+            EUDATePIDcreate(*source, *newPID);                            # Create ePID
             if (*iCATuse) {EUDATiPIDcreate2(*newPID,*source)};            # Create iPID
             }
         else
@@ -1198,6 +1208,7 @@ EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse) {
         }
     }
 }
+
 #This function walks through the collection. For each object in the collection 
 #it creates a PID and stores its value and the object checksum in the iCAT if it does ot exist.
 # Otherwhise the function modify the PID.
@@ -1206,7 +1217,6 @@ EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse) {
 #   *sourceColl      [IN]    Source colection path
 #   *ePIDcheck       [IN]    Specify wheter you want to search for ePID (bool("true")) or not
 #   *iCATuse         [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
-#   *minTime         [IN]    Specify the minimum age of the digital before looking for ePID
 #
 # Author: Elena Erastova, RZG
 #
@@ -1214,8 +1224,46 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl,*ePIDcheck, *iCATuse) {
     *Work=``{
         msiGetObjectPath(*File,*source,*status);
         msiWriteRodsLog("EUDATeiPIDeiChecksumMgmtColl: File *source", *status);
-        EUDATeiPIDeiChecksumMgmt2(*source,bool(*ePIDcheck), bool(*iCATuse));
+        EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck, *iCATuse);
+        if(*iCATuse) {
+            EUDATiRORupdate2(*source);
+        }
         }``;
         msiCollectionSpider(*sourceColl,*File,*Work,*Status);
+}
+
+#
+# Add the ROR field of the PID of the object to iCAT
+#
+# Arguments:
+#   *path               [IN] Object path
+#
+# Author: Elena Erastova, RZG
+#
+EUDATiRORupdate2(*path) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+    msiWriteRodsLog("EUDATiRORupdate -> modify ROR in iCAT related to to the object *path", *status);
+    searchPID(*path, *existing_pid);
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *existing_pid --key ROR", "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *ror);
+    *objType="-d";
+    if(*ror=="None") {
+        msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *existing_pid --key EUDAT/ROR", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *ror);
+        if(*ror=="None") {
+            msiWriteRodsLog("EUDATiRORupdate -> NO ROR for *existing_pid ", *status);
+        }
+        else {
+            *KVString="EUDAT/ROR=*ror";
+            msiString2KeyValPair(*KVString,*KVPair);
+            msiAssociateKeyValuePairsToObj(*KVPair,*source,*objType);
+        }
+    }
+    else {
+        *KVString="EUDAT/ROR=*ror";
+        msiString2KeyValPair(*KVString,*KVPair);
+        msiAssociateKeyValuePairsToObj(*KVPair,*source,*objType);
+    }
+    msiWriteRodsLog("EUDATiRORupdate -> saved ROR *ror for PID *existing_pid ", *status);
 }
 
