@@ -692,8 +692,8 @@ searchPIDchecksum(*path, *existing_pid) {
 # Parameters:
 #   *source         [IN]     source of the file
 #   *destination    [IN]     destination of the file
-#   *ePIDcheck       [IN]    Specify wheter you want to search for ePID (bool("true")) or not
-#   *iCATuse         [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
+#   *ePIDcheck      [IN]     specify wheter you want to update checksum field ePID (bool("true")) or not
+#   *iCATuse        [IN]     specify wheter you want to save PID and ROR in iCAT (bool("true")) or not
 #
 # Author: Elena Erastova, RZG
 #
