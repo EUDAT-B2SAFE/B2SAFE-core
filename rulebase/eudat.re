@@ -691,9 +691,10 @@ searchPIDchecksum(*path, *existing_pid) {
 # Parameters:
 #   *source         [IN]     source of the file
 #   *destination    [IN]     destination of the file
-#   *commandFile    [IN]     name of the replicate file.
+#   *ePIDcheck      [IN]    Specify wheter you want to search for ePID (bool("true")) or not
+#   *iCATuse        [IN]    Specify wheter you want to use the iCAT (bool("true")) or not
 #
-CheckReplicas(*source, *destination) {
+CheckReplicas(*source, *destination, *ePIDcheck, *iCATuse) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
 
     *checksum0 = "";
@@ -719,7 +720,7 @@ CheckReplicas(*source, *destination) {
         getSharedCollection(*source,*collectionPath);
         msiReplaceSlash(*destination,*filepathslash);
         triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
-        EUDATeiPIDeiChecksumMgmt2(*source,bool("true"),bool("true"));
+        EUDATeiPIDeiChecksumMgmt2(*source,*ePIDcheck,*iCATuse);
     }
 }
 
