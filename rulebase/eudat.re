@@ -25,10 +25,55 @@ getAuthZParameters(*authZMapPath) {
     *authZMapPath="/srv/irods/current/modules/BE2SAFE/cmd/authz.map.json";
 }
 
-#getSearchWildcard(*wildc) {
-#    *wildc = "*";	
-#}
+getLogParameters(*logConfPath) {
+    *logConfPath="/srv/irods/current/modules/BE2SAFE/cmd/log.manager.conf";
+}
 
+#
+#It manages the writing and reading of log messages to/from external log services.
+#
+#Return
+# no response is expected
+#
+# Parameters:
+#   *message        [IN]    the message to be logged
+#   *level          [IN]    the logging level 
+#
+# Author: Claudio Cacciari, Cineca
+#
+EUDATLog(*message, *level) {
+    getLogParameters(*logConfPath);
+    logInfo("logging message '*message'");
+    msiExecCmd("log.manager.py", "*logConfPath log *level *message",
+               "null", "null", "null", *out);
+}
+
+#
+#It implements a FIFO queue for messages to/from external log services.
+#
+#Return
+# no response is expected for action "push"
+# The first message of the queue for action "pop"
+#
+# Parameters:
+#   *action         [IN]    the queueing action, which the user would like to perform
+#                           [ push | pop ]
+#   *message        [IN/OUT]the message to be queued or read
+#
+# Author: Claudio Cacciari, Cineca
+#
+EUDATQueue(*action, *message) {
+    getLogParameters(*logConfPath);
+    if (*action == 'pop') {
+        *message = "";
+    }
+    logInfo("logging action '*action' for message '*message'");
+    msiExecCmd("log.manager.py", "*logConfPath *action *message",
+               "null", "null", "null", *out);
+    if (*action == 'pop') {
+        msiGetStdoutInExecCmdOut(*out, *message);
+    }
+}
 #
 # Return a boolean value:
 #   True, if the authorization request matches against, at least
@@ -164,6 +209,8 @@ updateMonitor(*file) {
             processPIDCommandFile(*file);
         } else {
             logInfo("*file does not exist yet");
+            # save *source of failed_transfered data object into fail_log 
+            processErrorUpdatePID(*file);
         }
     }
 }
