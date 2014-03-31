@@ -143,6 +143,16 @@ def pop(args):
     print message
     queue.close()
     
+def queuesize(args):
+    '''get the current size of the queue'''
+    
+    logManager = LogManager(args.conffilepath, args.debug)
+    logManager.initializeQueue()
+    queue = logManager.getQueue()
+    length = str(len(queue))
+    print length
+    queue.close()
+    
 def test(args):
     '''do a series of tests'''
     
@@ -230,6 +240,10 @@ if __name__ == "__main__":
     
     parser_read = subparsers.add_parser('pop', help='pop a message')
     parser_read.set_defaults(func=pop)
+
+    parser_read = subparsers.add_parser('queuesize', help='get the lenght '
+                                                          'of the queue')
+    parser_read.set_defaults(func=queuesize)
 
     parser_test = subparsers.add_parser('test', help='Run test suite')
     parser_test.set_defaults(func=test)
