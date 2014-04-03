@@ -81,6 +81,7 @@ catchErrorSize(*source,*destination) {
     
 }
 
+
 #
 # Process error update PID at Parent_PID. Error update PID will be processed during replication_workflow, called by updateMonitor
 # Save path of transferred data object into fail_log
@@ -89,18 +90,70 @@ catchErrorSize(*source,*destination) {
 # TODO: Need Test
 # TODO: to be updated with the new logging mechanism
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, Juelich, Elena Erastova, RZG
 #
-processErrorUpdatePID(*path_of_transfered_file) {
+processErrorUpdatePID(*updfile) {
 		
-	setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
-	
-	logInfo("Error update PID at *path_of_transfered_file failed, logged in ICAT at *logFailedFilePath");
-	*status_transfer_success = bool("false");
-	updateLogging(*status_transfer_success,*path_of_transfered_file);
-		
-	# Check the existence of file .replicate.$ftime.success at /replicate/ with 
-	# EUDATfileInPath(*logStatisticFilePath,*collection)
+    setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
+    logInfo("Error update PID at *path_of_transfered_file failed, logged in ICAT at *logFailedFilePath");
+    *status_transfer_success = bool("false");
+    
+    # Compose a name of a .replicate.time.sucess file in the local zone
+    *list = split(*updfile, ".");
+    *counter = 0;
+    foreach (*item_LIST in *list) {
+        *counter = *counter + 1;
+    }
+    *size = *counter;
+    *counter = 0;
+    *repfile = elem(*list,0);
+    foreach (*item_LIST in *list) {
+        if ((*counter != 0) && (*counter != (*size - 1)) && (*counter != (*size - 2))) {
+            *repfile = "*repfile.*item_LIST";
+        }
+        *counter = *counter + 1;
+    }
+    *repfile=*repfile++".replicate";
+    *list1 = split(*updfile, "_");
+    *remoteZoneName = "/"++elem(*list1,0);
+    
+    # Check if the remote zone is available
+    if (errorcode(msiObjStat(*remoteZoneName,*out)) != 0) {
+            logInfo("processErrorUpdatePID: remote zone *remoteZoneName is not available");
+    }
+    else {
+	# Look for a .replicate.time.sucess file in the local zone
+        *coll = "/"++$rodsZoneProxy++"/replicate";
+        msiExecStrCondQuery("SELECT DATA_NAME WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%'" ,*BS);
+        foreach ( *BS ) {
+            msiGetValByKey(*BS,"DATA_NAME", *dataName);
+        }
+        *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%' AND DATA_NAME like '%success';
+        foreach(*c in *d) {
+            msiGetValByKey(*c,"DATA_NAME",*num);
+        }
+        if(*num == "0") {
+            *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile';
+            foreach(*c in *d) {
+                msiGetValByKey(*c,"DATA_NAME",*num);
+            }
+            if(*num == "0") {
+                logInfo("processErrorUpdatePID: replication went wrong, no .replicate file exists");
+            }
+            else if(*num == "1") {
+            *cause = "replication went wrong but file *dataName exists";
+            readReplicationCommandFile(*coll++"/"++*dataName,*pid,*path_of_transfered_file,*target_transfered_file,*ror);
+            updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
+            }
+        }
+        else if(*num == "1") {
+            *cause = "replication went ok: file *dataName exists but *updfile does not exist";
+            *openFile = *coll++"/"++*dataName;
+            readReplicationCommandFile(*openFile,*pid,*path_of_transfered_file,*target_transfered_file,*ror);
+            *status_transfer_success = bool("true");
+            updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
+        }
+    }
 }
 
 #
