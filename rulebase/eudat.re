@@ -349,6 +349,36 @@ processReplicationCommandFile(*cmdPath) {
 }
 
 #
+# Read a .replicate file and perform the replication
+# format = "command1,command2,command2,..."
+#
+# command format = "source_pid;source_path;destination_path"
+#
+# Parameters:
+#   *cmdPath    [IN]    the path to the .replicate file
+#
+# Author: Willem Elbers, MPI-TLA
+# Edited: Elena Erastova, RZG
+#
+readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
+    readFile(*cmdPath, *out_STRING);
+    *out_ARRAY = split(*out_STRING, "\n")
+    foreach(*out_STRING1 in *out_ARRAY) {
+        *list = split(*out_STRING1, ";");
+        # assign values from array to parameters
+        *ror = "None";
+        *counter=0;
+        foreach (*item_LIST in *list) {
+            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
+            else if ( *counter == 1 ) { *source      = *item_LIST ; }
+            else if ( *counter == 2 ) { *destination = *item_LIST ; }
+            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+            *counter = *counter + 1;
+        }
+    }
+}
+
+#
 # Process a .pid file and perform the appropriate action
 #   supported actions: create, update
 #
