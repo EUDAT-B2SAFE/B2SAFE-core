@@ -26,7 +26,7 @@ updateLogging(*status_transfer_success, *path_of_transfered_file,
     if (*status_transfer_success == bool("false")) {
         EUDATQueue("push", *message);
         *level = "ERROR";
-    }
+    } 
     EUDATLog(*message, *level);
 }
 
@@ -71,7 +71,7 @@ checkError(*path_of_transfered_file,*target_of_transfered_file) {
 # Author: Long Phan, Juelich
 #
 getCollectionName(*path_of_collection,*Collection_Name){
-	*list = split("*path_of_collection","/");
+		*list = split("*path_of_collection","/");
     	#writeLine("serverLog",size(*list));
     	*s = size(*list) - 1;
     	#writeLine("serverLog",elem(*list,*s));
@@ -118,14 +118,14 @@ tranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
             triggerReplication("*sharedCollection*controlfilename.replicate",*pid,
                                 *path_of_transfered_file,*target_of_transfered_file);			
             writeLine("serverLog","Perform the last checksum and checksize of transfered data object");		
-	    checkError(*path_of_transfered_file,*target_of_transfered_file);	
-	} else {
-	    writeLine("serverLog","Action is canceled. Error is caught in function catchErrorDataOwner"); 
-	    # Update fail_log				
-	    *status_transfer_success = bool("false");
-	    updateLogging(*status_transfer_success,*path_of_transfered_file,
-                          *target_of_transfered_file, "no access permission");
-	}			
+	    	checkError(*path_of_transfered_file,*target_of_transfered_file); 	 
+	    		
+		} else {
+		    writeLine("serverLog","Action is canceled. Error is caught in function catchErrorDataOwner"); 
+		    # Update fail_log				
+		    *status_transfer_success = bool("false");
+		    updateLogging(*status_transfer_success,*path_of_transfered_file,*target_of_transfered_file, "no access permission");
+		}			
     }		
 }
 
@@ -134,24 +134,52 @@ tranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
 # according to the format: cause::path_of_transfer_file::target_of_transfer_file.
 # It can potentially be a never-ending loop.
 #
-#TODO: add an escape clause based on the "cause" of the failure.
-#      If the original cause has not been fixed then skip the transfer.
+# TODO: add an escape clause based on the "cause" of the failure.
+#      If the original cause has not been fixed then skip the transfer. -> fixed with loop on limit of queuesize.
+# TODO: got problem with broken-pipe when transfer real-data from fail-log. NEED MORE TESTS. 
 #
 # Author: Long Phan, Juelich
-# Modified by Claudio Cacciari, Cineca
+# Modified by Claudio Cacciari, Cineca; Long Phan, Juelich
 #
 transferUsingFailLog() {
 	
-    *message = "";
+	# get size of queue-log before transfer.    
+    EUDATQueue("queuesize", *l);
+    writeLine("serverLog","BEFORE TRANSFER: Length of Queue = *l");
+    
     EUDATQueue("pop", *message);
     logInfo("looking for failed transfer: *message");
-    while (*message != "None") {
+
+    *i = 0;
+
+    while (*message != "None" && *i < int(*l)) {
+        writeLine("serverLog","------------> TRANSFER *i");
+
         *list = split("*message","::");
-        *path_of_transfer_file = elem(*list,0);
+
+        *path_of_transfer_file   = elem(*list,0);
         *target_of_transfer_file = elem(*list,1);
- 	tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);
-        EUDATQueue("pop", *message);
-    }		    
+
+        # *flag = elem(*list,2);
+        # *cause = elem(*list,3);
+
+        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                           
+        *i = *i + 1;
+        if (*i < int(*l)) {
+                EUDATQueue("pop", *message);
+        }
+    }
+
+    writeLine("serverLog","CHECK i = *i");    
+    # get size of queue-log after transfer. 
+    EUDATQueue("queuesize", *la);
+    writeLine("serverLog","AFTER TRANSFER: Length of Queue = *la");
+    if (*l == int(*la)) {
+        writeLine("serverLog","Transfer Data Objects got problems. No Data Objects have been transfered");
+    } else {
+        writeLine("serverLog","There are *la Data Objects in Queue-log");
+    }
+	  
 }
 
 
