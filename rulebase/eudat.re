@@ -64,13 +64,13 @@ EUDATLog(*message, *level) {
 #
 EUDATQueue(*action, *message) {
     getLogParameters(*logConfPath);
-    if (*action == 'pop') {
+    if (*action == 'pop' || *action == 'queuesize') {
         *message = "";
     }
     logInfo("logging action '*action' for message '*message'");
     msiExecCmd("log.manager.py", "*logConfPath *action *message",
                "null", "null", "null", *out);
-    if (*action == 'pop') {
+    if (*action == 'pop' || *action == 'queuesize') {
         msiGetStdoutInExecCmdOut(*out, *message);
     }
 }
