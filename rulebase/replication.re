@@ -196,6 +196,8 @@ transferUsingFailLog() {
 # Parameters:
 #	*path_of_transfered_collection		[IN] path of transfered collection in iRODS
 #	*target_of_transfered_collection	[IN] destination of replication in iRODS
+#
+# TODO: NEED TEST WITH NEW LOGGING_MECHANISM
 # 
 # Author: Long Phan, Juelich
 #
@@ -282,6 +284,8 @@ transferCollection(*path_of_transfered_collection,*target_of_transfered_collecti
 #	*path_of_transfered_collection		[IN] path of transfered collection in iRODS
 #	*target_of_transfered_collection	[IN] destination of replication in iRODS
 # 
+# TODO: NEED TEST WITH NEW LOGGING_MECHANISM
+#
 # Author: Long Phan, Juelich
 #
 transferCollectionStressMemory(*path_of_transfered_collection,*target_of_transfered_collection){
@@ -347,6 +351,8 @@ transferCollectionStressMemory(*path_of_transfered_collection,*target_of_transfe
 # Parameters:
 #	*path_of_transfered_collection		[IN] path of transfered collection in iRODS
 #	*target_of_transfered_collection	[IN] destination of replication in iRODS
+#
+# TODO: NEED UPDATE WITH NEW LOGGING_MECHANISMUS
 # 
 # Author: Long Phan, Juelich
 #
@@ -447,6 +453,8 @@ transferCollectionAVU(*path_of_transfered_collection,*target_of_transfered_colle
 #	*path_of_transfered_collection		[IN] path of transfered collection in iRODS
 #	*target_of_transfered_collection	[IN] destination of replication in iRODS
 # 
+# TODO: NEED TEST WITH NEW LOGGING_MECHANISM
+#
 # Author: Long Phan, Juelich
 #
 transferCollectionWithoutRecursion(*path_of_transfered_collection,*target_of_transfered_collection) {
