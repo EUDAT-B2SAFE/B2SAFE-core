@@ -94,8 +94,8 @@ catchErrorSize(*source,*destination) {
 #
 processErrorUpdatePID(*updfile) {
 		
-    setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
-    logInfo("Error update PID at *path_of_transfered_file failed, logged in ICAT at *logFailedFilePath");
+    #setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
+    #logInfo("Error update PID at *path_of_transfered_file failed, logged in ICAT at *logFailedFilePath");
     *status_transfer_success = bool("false");
     
     # Compose a name of a .replicate.time.sucess file in the local zone
