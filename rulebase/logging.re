@@ -1,25 +1,20 @@
-#
-# Logging Module: are used for Transferring/ replication
-#
 
 #
-# Create one Log_File and save it into common log_path to get an overview 
-# on status of Collection (Size, count of data objects, collection owner, location, date) 
-# This function is optional and can be called independently to support observing status of replication
-# Result after that will be saved into a file (named collection_name.log) 
-# and stays in the same path of log_files.
+# Show status of Collection (Size, count of data objects, collection owner, location, date) and save it  
+# This function is optional and run independently to support observing status of replication
+# Result will be saved into a file in iRODS *logStatisticFilePath
 # 
 # TODO additional feature: only data objects of User on Session ($userNameClient 
 #      and $rodsZoneClient) at *path_of_collection will be recorded in case collection 
 #      contains data of many people.
-# TODO to be updated with the new logging mechanism
 #
 # Parameter:
 # 	*path_of_collection		[IN]	Path of collection in iRODS (ex. /COMMUNITY/DATA)
+#	*logStatisticFilePath	[IN]	Path of statistic file in iRODS
 #
 # Author: Long Phan, Juelich
 #
-createLogStatusCollection(*path_of_collection) {
+getStatCollection(*path_of_collection, *logStatisticFilePath) {
 
 		# --- create optional content of logfile for collection ---
 		*contents = "------------- Log Information of Collection *path_of_collection --------------- \n";
@@ -35,15 +30,9 @@ createLogStatusCollection(*path_of_collection) {
 		
 		msiGetSystemTime(*time,"human");		
 		*contents = *contents ++ "Date.Time: *time \n\n";
-		
-		setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
+				
 		msiSplitPath(*logStatisticFilePath, *coll, *name);
-		
-		# --- get Collection from path *path_of_collection ---		
-		getCollectionName(*path_of_collection,*Collection_Name);		
-    	*path_of_logfile = "*coll" ++ "/" ++ "*Collection_Name" ++ ".log";   	
-    	writeLine("serverLog",*path_of_logfile);
-		
+						
 		# -------------- record *contents of collection and all sub_collection from *path_of_collection -----------------------
 			*wildcard = "%";
 			
@@ -86,12 +75,12 @@ createLogStatusCollection(*path_of_collection) {
 				if (*ContInxOld > 0) {msiGetMoreRows(*GenQInp,*GenQOut,*ContInxNew);}
 			}
 				
-			#writeLine("stdout","In *path_of_collection \n---- Number of files : *count \n" ++ "---- Capacity: *sum \n");	
+			#writeLine("stdout","In *logStatisticFilePath \n---- Number of files : *count \n" ++ "---- Capacity: *sum \n");	
 				
-			*contents = *contents ++ "\nIn *path_of_collection \n---- Number of files : *count \n" ++ "---- Capacity: *sum \n";
+			*contents = *contents ++ "\nIn *logStatisticFilePath \n---- Number of files : *count \n" ++ "---- Capacity: *sum \n";
 		# ---------------------------------------------------------------------------------------------------------------------											
-		
-		writeFile(*path_of_logfile, *contents);
+		writeLine("stdout","*contents");
+		writeFile(*logStatisticFilePath, *contents);
 								
 }
 

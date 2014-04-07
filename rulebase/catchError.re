@@ -160,6 +160,10 @@ processErrorUpdatePID(*updfile) {
 # Catch error Data Owner if user is not owner of Data from *path
 # (Reference: https://www.irods.org/index.php/iRODS_Error_Codes or /iRODS/lib/core/include/rodsErrorTable.h)
 #
+# Parameters:
+#	*path			[IN] path source of data object
+#	*status			[OUT] status of data object ('true' = DATA OWNER or false = NO ACCESS PERMISSION)
+#
 # Author: Long Phan, Juelich
 #
 catchErrorDataOwner(*path,*status){
