@@ -139,8 +139,22 @@ def pop(args):
     logManager = LogManager(args.conffilepath, args.debug)
     logManager.initializeQueue()
     queue = logManager.getQueue()
-    message = queue.pop()
-    print message
+
+    if args.number:
+        i = 0
+        messages = []
+        while (i < int(args.number)):
+            message = queue.pop()
+            if message is not None:
+                messages.append(message)
+            else:
+                break
+            i += 1
+        print messages
+    else:
+        message = queue.pop()
+        print message
+        
     queue.close()
     
 def queuesize(args):
@@ -227,23 +241,24 @@ if __name__ == "__main__":
                                                    'actions',
                                        help='additional help')
 
-    parser_read = subparsers.add_parser('log', help='log a message')
-    parser_read.add_argument("level", help='the value of the log level')
-    parser_read.add_argument("message", nargs='+', 
-                             help='the message to be logged')
-    parser_read.set_defaults(func=log)
-    
-    parser_read = subparsers.add_parser('push', help='push a message')
-    parser_read.add_argument("message", nargs='+', 
-                             help='the message to be queued')
-    parser_read.set_defaults(func=push)
-    
-    parser_read = subparsers.add_parser('pop', help='pop a message')
-    parser_read.set_defaults(func=pop)
+    parser_log = subparsers.add_parser('log', help='log a message')
+    parser_log.add_argument("level", help='the value of the log level')
+    parser_log.add_argument("message", nargs='+', 
+                            help='the message to be logged')
+    parser_log.set_defaults(func=log)
 
-    parser_read = subparsers.add_parser('queuesize', help='get the lenght '
+    parser_push = subparsers.add_parser('push', help='push a message')
+    parser_push.add_argument("message", nargs='+', 
+                             help='the message to be queued')
+    parser_push.set_defaults(func=push)
+
+    parser_pop = subparsers.add_parser('pop', help='pop a message')
+    parser_pop.add_argument("-n", "--number", help="pop a number of elements")
+    parser_pop.set_defaults(func=pop)
+
+    parser_queue = subparsers.add_parser('queuesize', help='get the lenght '
                                                           'of the queue')
-    parser_read.set_defaults(func=queuesize)
+    parser_queue.set_defaults(func=queuesize)
 
     parser_test = subparsers.add_parser('test', help='Run test suite')
     parser_test.set_defaults(func=test)

@@ -24,7 +24,7 @@ updateLogging(*status_transfer_success, *path_of_transfered_file,
     *message = "*path_of_transfered_file::*target_transfered_file::" ++
                "*status_transfer_success::*cause";
     if (*status_transfer_success == bool("false")) {
-        EUDATQueue("push", *message);
+        EUDATQueue("push", *message, 0);
         *level = "ERROR";
     } 
     EUDATLog(*message, *level);
@@ -49,9 +49,9 @@ checkError(*path_of_transfered_file,*target_of_transfered_file) {
         *status_transfer_success = bool("false");
     } else if (catchErrorSize(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
         *cause = "different size";
-		*status_transfer_success = bool("false");
-	} 
-	if (*status_transfer_success == bool("false")) {
+	*status_transfer_success = bool("false");
+    } 
+    if (*status_transfer_success == bool("false")) {
         logInfo("replication from *path_of_transfered_file to *target_of_transfered_file failed: *cause");
     } else {
         logInfo("replication from *path_of_transfered_file to *target_of_transfered_file succeeded");
@@ -118,63 +118,48 @@ tranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
             triggerReplication("*sharedCollection*controlfilename.replicate",*pid,
                                 *path_of_transfered_file,*target_of_transfered_file);			
             writeLine("serverLog","Perform the last checksum and checksize of transfered data object");		
-	    	checkError(*path_of_transfered_file,*target_of_transfered_file); 	 
-	    		
-		} else {
-		    writeLine("serverLog","Action is canceled. Error is caught in function catchErrorDataOwner"); 
-		    # Update fail_log				
-		    *status_transfer_success = bool("false");
-		    updateLogging(*status_transfer_success,*path_of_transfered_file,*target_of_transfered_file, "no access permission");
-		}			
+	    checkError(*path_of_transfered_file,*target_of_transfered_file); 	 	    		
+	} else {
+	    writeLine("serverLog","Action is canceled. Error is caught in function catchErrorDataOwner"); 
+	    # Update fail_log				
+	    *status_transfer_success = bool("false");
+	    updateLogging(*status_transfer_success,*path_of_transfered_file,*target_of_transfered_file, "no access permission");
+	}			
     }		
 }
 
 #
 # Transfer all data object saved in the logging system,
 # according to the format: cause::path_of_transfer_file::target_of_transfer_file.
-# It can potentially be a never-ending loop.
 #
-# TODO: add an escape clause based on the "cause" of the failure.
-#      If the original cause has not been fixed then skip the transfer. -> fixed with loop on limit of queuesize.
-# TODO: got problem with broken-pipe when transfer real-data from fail-log. NEED MORE TESTS. 
+# Parameters:
+#   *buffer_length    [IN] max number of failed transfer to process.
+#                          It has to be > 1.
 #
 # Author: Long Phan, Juelich
 # Modified by Claudio Cacciari, Cineca; Long Phan, Juelich
 #
-transferUsingFailLog() {
+transferUsingFailLog(*buffer_length) {
 	
-	# get size of queue-log before transfer.    
-    EUDATQueue("queuesize", *l);
-    writeLine("serverLog","BEFORE TRANSFER: Length of Queue = *l");
+    # get size of queue-log before transfer.    
+    EUDATQueue("queuesize", *l, 0);
+    EUDATQueue("pop", *messages, *buffer_length);
     
-    EUDATQueue("pop", *message);
-    logInfo("looking for failed transfer: *message");
+    *msg_list = split("*messages",",");
 
-    *i = 0;
-
-    while (*message != "None" && *i < int(*l)) {
-        writeLine("serverLog","------------> TRANSFER *i");
-
+    foreach (*message in *msg_list) { 
+        *message = triml(*message, "'");
+        *message = trimr(*message, "'");
         *list = split("*message","::");
-
         *path_of_transfer_file   = elem(*list,0);
         *target_of_transfer_file = elem(*list,1);
-
-        # *flag = elem(*list,2);
-        # *cause = elem(*list,3);
-
         tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                           
-        *i = *i + 1;
-        if (*i < int(*l)) {
-                EUDATQueue("pop", *message);
-        }
     }
 
-    writeLine("serverLog","CHECK i = *i");    
     # get size of queue-log after transfer. 
-    EUDATQueue("queuesize", *la);
+    EUDATQueue("queuesize", *la, 0);
     writeLine("serverLog","AFTER TRANSFER: Length of Queue = *la");
-    if (*l == int(*la)) {
+    if (int(*l) == int(*la)) {
         writeLine("serverLog","Transfer Data Objects got problems. No Data Objects have been transfered");
     } else {
         writeLine("serverLog","There are *la Data Objects in Queue-log");

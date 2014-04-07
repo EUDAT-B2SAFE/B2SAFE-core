@@ -4,10 +4,9 @@
 #                                                                              #
 ################################################################################
 
-
 ################################################################################
 #                                                                              #
-# Utility functions                                                            #
+# Site specific functions                                                      #
 #                                                                              #
 ################################################################################
 
@@ -28,6 +27,12 @@ getAuthZParameters(*authZMapPath) {
 getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/BE2SAFE/cmd/log.manager.conf";
 }
+
+################################################################################
+#                                                                              #
+# Utility functions                                                            #
+#                                                                              #
+################################################################################
 
 #
 #It manages the writing and reading of log messages to/from external log services.
@@ -58,26 +63,37 @@ EUDATLog(*message, *level) {
 # Parameters:
 #   *action         [IN]    the queueing action, which the user would like to perform
 #                           [ push | pop ]
-#   *message        [IN/OUT]the message to be queued or read
+#   *message        [IN/OUT]the message to be queued or read.
+#                           It can be a comma separated list of strings, each between single apices.
+#   *number         [IN]    the number of elements to be extracted
 #
 # Author: Claudio Cacciari, Cineca
 #
-EUDATQueue(*action, *message) {
+EUDATQueue(*action, *message, *number) {
     getLogParameters(*logConfPath);
+    *options = "";
     if (*action == 'pop' || *action == 'queuesize') {
         *message = "";
     }
+    if (*action == 'pop' && *number > 1) {
+        *options = "-n "++str(*number);
+    }
     logInfo("logging action '*action' for message '*message'");
-    msiExecCmd("log.manager.py", "*logConfPath *action *message",
+    msiExecCmd("log.manager.py", "*logConfPath *action *options *message",
                "null", "null", "null", *out);
     if (*action == 'pop' || *action == 'queuesize') {
         msiGetStdoutInExecCmdOut(*out, *message);
     }
+    if (*action == 'pop' && *number > 1) {
+        *message = triml(*message, "[");
+        *message = trimr(*message, "]");
+    }
 }
+
 #
 # Return a boolean value:
 #   True, if the authorization request matches against, at least
-#   one assertion listed in the authz.amp.json file
+#   one assertion listed in the authz.map.json file
 #   False otherwise.
 #
 # Parameters:
@@ -102,6 +118,9 @@ getEUDATAuthZ(*user, *action, *target, *response) {
         msiExit("-1", "user is not allowed to perform the requested action");
     }
     else {
+        # here should be placed specific authorization rules 
+        # EUDATsetFilterACL(*action, *target, null, null, *status);
+        # if (*status == "true") {}
         logInfo("authorization granted");
     }
 }
@@ -134,27 +153,6 @@ writeFile(*file, *contents) {
     msiDataObjCreate("*file", "forceFlag=", *filePointer);
     msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
     msiDataObjClose(*filePointer, *outStatus);
-}
-
-#
-# Logging policies
-#
-
-logInfo(*msg) {
-    logWithLevel("info", *msg);
-}
-
-logDebug(*msg) {
-    logWithLevel("debug", *msg);
-}
-
-logError(*msg) {
-    logWithLevel("error", *msg);
-}
-
-logWithLevel(*level, *msg) {
-    msiWriteToLog(*level,"*msg");
-    #msiWriteRodsLog("startReplication(*commandFile,*pid,*source,*destination)", *status);
 }
 
 #
@@ -194,6 +192,29 @@ updateCommandName(*cmdPath, *status) {
 }
 
 #
+# Logging policies
+#
+
+logInfo(*msg) {
+    logWithLevel("info", *msg);
+}
+
+logDebug(*msg) {
+#    logWithLevel("debug", *msg);
+# replaced "debug" with "info" to print even without
+# changing the log level of iRODS
+     logWithLevel("info", *msg);
+}
+
+logError(*msg) {
+    logWithLevel("error", *msg);
+}
+
+logWithLevel(*level, *msg) {
+    msiWriteToLog(*level,"*msg");
+}
+
+#
 # Monitor the specified pid command file
 #
 # Parameters:
@@ -226,16 +247,22 @@ updateMonitor(*file) {
 # Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
 #
 retrieveChecksum(*path, *checksum) {
+    *debugFlag = bool("false");
     *checksum = -1;
     msiSplitPath(*path,*parent,*child);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
-    foreach   ( *B )    {
+    foreach ( *B ) {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
-        logDebug(*checksum);
+        if (debugFlag == bool("true")) {
+            logInfo("[retrieveChecksum] stored checksum: *checksum");
+        }
     }
     #compute checksum using msiDataObjChksum if the object does not have any yet
-    if(*checksum == ""){
+    if (*checksum == "") {
         msiDataObjChksum(*path, "null", *checksum);
+        if (debugFlag == bool("true")) {
+            logInfo("[retrieveChecksum] computed checksum: *checksum");
+        }
     } 
 }
 
@@ -313,18 +340,15 @@ triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
 # Author: Willem Elbers, MPI-TLA
 #
 processReplicationCommandFile(*cmdPath) {
-    logDebug("processReplication(*cmdPath)");
+    logInfo("processReplication(*cmdPath)");
 
     readFile(*cmdPath, *out_STRING);    
 
     #TODO: properly manage status here
     *status = 0;    
-    # make an array of the string
     *out_ARRAY = split(*out_STRING, "\n")
     foreach(*out_STRING1 in *out_ARRAY) {
-        logInfo("The line is : (*out_STRING1)");
         *list = split(*out_STRING1, ";");
-
         # assign values from array to parameters
         *ror = "None";
         *counter=0;
@@ -388,11 +412,10 @@ readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
 # Author: Willem Elbers, MPI-TLA
 #
 processPIDCommandFile(*cmdPath) {
-	logInfo("processPID(*cmdPath)");
-	readFile(*cmdPath, *out_STRING);
-	*list = split(*out_STRING, ";");
+    logInfo("processPID(*cmdPath)");
+    readFile(*cmdPath, *out_STRING);
+    *list = split(*out_STRING, ";");
 
-    # assign values from array to parameters
     *ror = "None";
     *parent = "None";
     *counter=0;
@@ -486,7 +509,6 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 # List of the function:
 #
 # createPID(*parent_pid, *path, *ror, *newPID)
-# createPIDgriffin(*path, *newPID)
 # addPIDWithChecksum(*path, *newPID)
 # searchPID(*path, *existing_pid)
 # searchPIDchecksum(*path, *existing_pid)
@@ -494,7 +516,7 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 # updatePIDWithNewChild(*parentPID, *childPID)
 # getRorPid(*pid, *ror)
 # EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime)
-# EUDATiPIDcreate(*PID)
+# EUDATiPIDcreate(*path, *PID)
 # EUDATiCHECKSUMretrieve(*path, *checksum)
 # EUDATiCHECKSUMget(*path, *checksum)
 # EUDATiPIDretrieve(*path, *PID)
@@ -535,14 +557,16 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         }
         msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *newPID);
-        logDebug("created handle = *newPID");
+	if(*epicDebug > 1) {
+            logDebug("created handle = *newPID");
+	}
 
-        if (*iCATCache == "True") {
+        if (*iCATCache == bool("true")) {
             # Add PID into iCAT
-            writeLine("serverLog","Begin to SAVE PID into field AVU -PID- of iCAT *path with PID = *newPID");
-            EUDATiPIDcreate2(*newPID,*path);
+            logInfo("Begin to SAVE PID into field AVU -PID- of iCAT *path with PID = *newPID");
+            EUDATiPIDcreate(*path, *newPID);
             #msiSetReplComment("null",*path,0,*newPID);
-            writeLine("serverLog","---> PID's saved in iCAT with AVU PID");
+            logInfo("---> PID's saved in iCAT with AVU PID");
         }
 
         # add CHECKSUM to PID record
@@ -552,7 +576,9 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         }
         msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
         msiGetStdoutInExecCmdOut(*out3, *response3);
-        logDebug("modify handle response = *response3");
+	if(*epicDebug > 1) {
+            logDebug("modify handle response = *response3");
+	}
     }
     else {
         *newPID = *existing_pid;
@@ -577,12 +603,16 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         if(*first=="http:") {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *ror", "null", "null", "null", *out4);
             msiGetStdoutInExecCmdOut(*out4, *response4);
-            logDebug("modify handle response = *response4")
+	    if(*epicDebug > 1) {
+            	logDebug("modify handle response = *response4")
+	    }
         }
         else {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *epicApi*ror", "null", "null", "null", *out2);
             msiGetStdoutInExecCmdOut(*out2, *response2);
-            logDebug("modify handle response = *response2");
+	    if(*epicDebug > 1) {
+            	logDebug("modify handle response = *response2");
+	    }
         }
     }
 
@@ -597,73 +627,21 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         if(*first=="http:") {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *parent_pid", "null", "null", "null", *out44);
             msiGetStdoutInExecCmdOut(*out44, *response44);
-            logDebug("modify handle response = *response44")
+	    if(*epicDebug > 1) {
+            	logDebug("modify handle response = *response44")
+	    }
         }
         else {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *epicApi*parent_pid", "null", "null", "null", *out22);
             msiGetStdoutInExecCmdOut(*out22, *response22);
-            logDebug("modify handle response = *response22");
+	    if(*epicDebug > 1) {
+	        logDebug("modify handle response = *response22");
+	    }
         }
     }
 }
 
-##
-# Generate a new PID for a digital object.
-# Fields stored in the PID record: URL, CHECKSUM
 #
-# griffin first writes an empty file with the same name to the destination and closes it; 
-# then it opens it and writes the contents of the actual file and closes it.
-# Which is why createPIDgriffin a PID without checksum on the first step.
-# And ut adds cheksum on the second "put", when the PID already exists.
-#
-# Parameters:
-#   *path       [IN]    the path of the replica to store with the PID record
-#   *newPID     [OUT]   the pid generated for this replica 
-#
-# Author: CINECA, edited and added by Elena Erastova, RZG
-#
-createPIDgriffin(*path, *newPID) {
-    logInfo("create pid for *path");
-
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-
-    #check if PID already exists
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath search URL *serverID*path");
-    }
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath search URL *serverID*path", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *existing_pid);
-
-    if(*existing_pid == "empty") {
-        # create PID
-        if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath create *serverID*path");
-        }
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath create *serverID*path", "null", "null", "null", *out);
-        msiGetStdoutInExecCmdOut(*out, *newPID);
-        logDebug("created handle = *newPID");
-    } else {
-        *newPID = *existing_pid;
-        
-        # add CHECKSUM to PID record
-        msiDataObjChksum(*path, "null", *checksum);
-        if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID CHECKSUM *checksum");
-        }
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID CHECKSUM *checksum", "null", "null", "null", *out3);
-        msiGetStdoutInExecCmdOut(*out3, *response3);
-        logDebug("modify handle response = *response3");
-        logInfo("PID *newPID already exists - added checksum *checksum to PID *newPID");
-    }
-}
-
-
-#
-# addPIDWithChecksum is meant as a faster version of above createPID. 
-# It is better to use while injesting new files to iRODS which do not have PIDs yet.
-# Be careful: It does not check if the PID already exists. And it does not add ROR field.
-# And it does not use retrieveChecksum, but computes checksum with msiDataObjChksum.
-# Adds checksum on the fly while creating the PID.
 # Parameters:
 #   *path       [IN]    the path of the replica to store with the PID record
 #   *newPID     [OUT]   the pid generated for this replica 
@@ -671,12 +649,7 @@ createPIDgriffin(*path, *newPID) {
 # Author: CINECA, edited and added by Elena Erastova, RZG
 #
 addPIDWithChecksum(*path, *newPID) {
-    logInfo("Add PID with CHECKSUM for *path");
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    msiDataObjChksum(*path, "null", *checksum);
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID*path --checksum *checksum","null","null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *newPID);
-    logDebug("added handle =*newPID with checksum = *checksum");
+	createPID("None", *path, "None", *newPID, bool("false"))
 }
 
 #
@@ -714,7 +687,7 @@ searchPIDROR(*ror, *existing_pid) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     #check if PID already exists
     if(*epicDebug > 1) {
-        logInfo("epicclient.py *credStoreType *credStorePath search EUDAT/ROR *ror");
+        logDebug("epicclient.py *credStoreType *credStorePath search EUDAT/ROR *ror");
     }
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath search EUDAT/ROR *ror", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *existing_pid);
@@ -739,7 +712,6 @@ searchPIDchecksum(*path, *existing_pid) {
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child'" ,*B);
     foreach   ( *B )    {
         msiGetValByKey(*B,"DATA_CHECKSUM", *checksum);
-        #logDebug(*checksum);
     }
     logInfo("search by CHECKSUM inside = *checksum");
     
@@ -806,7 +778,9 @@ updatePIDWithNewChild(*parentPID, *childPID) {
     }
     msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *epicApi*childPID", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *response);
-    logDebug("update handle location response = *response");
+    if(*epicDebug > 1) {
+    	logDebug("update handle location response = *response");
+    }
 }
 
 #
@@ -874,13 +848,13 @@ EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime) {
             { 
             msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet", *status);
             EUDATePIDcreate($objPath, *newPID);                  # Create ePID
-            if (*iCATuse) {EUDATiPIDcreate(*newPID)};            # Create iPID
+            if (*iCATuse) {EUDATiPIDcreate($objPath, *newPID)};            # Create iPID
         }
         else
         {
             msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *oldPID", *status);  
             EUDATeCHECKSUMupdate(*oldPID);                       # Update eCHECKSUM
-            if (*iCATuse) {EUDATiPIDcreate(*oldPID)};            # Create iPID
+            if (*iCATuse) {EUDATiPIDcreate($objPath, *oldPID)};            # Create iPID
         }
     }
 }
@@ -896,27 +870,10 @@ EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime) {
 #
 # Author: Giacomo Mariani, CINECA
 #
-EUDATiPIDcreate(*PID) {
+EUDATiPIDcreate(*path, *PID) {
     msiAddKeyVal(*Keyval,"PID", "*PID");
     writeKeyValPairs('serverLog', *Keyval, " is : ");
-    msiGetObjType($objPath, *objType);
-    msiAssociateKeyValuePairsToObj(*Keyval, $objPath, *objType);
-    msiWriteRodsLog("EUDATiPIDcreate -> Added PID = *PID to metadata of $objPath", *status);
-}
-
-#
-# The function write iPID given ePID.
-#
-# Arguments:
-#   *PID             [IN] ePID
-#   *PATH	     [IN] path of logical data object		
-#
-# Author: Giacomo Mariani, CINECA; Edited: Long Phan, Juelich
-#
-EUDATiPIDcreate2(*PID,*path) {
-    msiAddKeyVal(*Keyval,"PID", "*PID");
-    writeKeyValPairs('serverLog', *Keyval, " is : ");
-    msiGetObjType(*path,*objType);
+    msiGetObjType(*path, *objType);
     msiAssociateKeyValuePairsToObj(*Keyval, *path, *objType);
     msiWriteRodsLog("EUDATiPIDcreate -> Added PID = *PID to metadata of *path", *status);
 }
@@ -1258,14 +1215,14 @@ EUDATeiPIDeiChecksumMgmt2(*source, *pid) {
             {
             msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet", *status);
             EUDATePIDcreate(*source, *pid);                            # Create ePID
-            EUDATiPIDcreate2(*pid,*source);                            # Create iPID
+            EUDATiPIDcreate(*source, *pid);                            # Create iPID
             }
         # ePID exists. Edit checksum in the ePID and create iPID
         else
         {
             msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *pid", *status);
             EUDATeCHECKSUMupdate2(*pid,*source);                       # Update eCHECKSUM
-            EUDATiPIDcreate2(*pid,*source);                            # Create iPID
+            EUDATiPIDcreate(*source, *pid);                            # Create iPID
         }
     }
 }
