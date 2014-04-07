@@ -99,7 +99,9 @@ processErrorUpdatePID(*updfile) {
     *status_transfer_success = bool("false");
     
     # Compose a name of a .replicate.time.sucess file in the local zone
-    *list = split(*updfile, ".");
+    *list3 = split(*updfile, "/");
+    *updfile1 = elem(*list3,2);
+    *list = split(*updfile1, ".");
     *counter = 0;
     foreach (*item_LIST in *list) {
         *counter = *counter + 1;
@@ -115,23 +117,26 @@ processErrorUpdatePID(*updfile) {
     }
     *repfile=*repfile++".replicate";
     *list1 = split(*updfile, "_");
-    *remoteZoneName = "/"++elem(*list1,0);
-    
+    *l2 = elem(*list1,0);
+    *list2 = split(*l2, "/");
+    *remoteZoneName = "/"++elem(*list2,0)++"/replicate";
+
     # Check if the remote zone is available
     if (errorcode(msiObjStat(*remoteZoneName,*out)) != 0) {
             logInfo("processErrorUpdatePID: remote zone *remoteZoneName is not available");
     }
     else {
-	# Look for a .replicate.time.sucess file in the local zone
+        # Look for a .replicate.time.sucess file in the local zone
         *coll = "/"++$rodsZoneProxy++"/replicate";
         msiExecStrCondQuery("SELECT DATA_NAME WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%'" ,*BS);
         foreach ( *BS ) {
             msiGetValByKey(*BS,"DATA_NAME", *dataName);
         }
-        *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%' AND DATA_NAME like '%success';
+        *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%success';
         foreach(*c in *d) {
             msiGetValByKey(*c,"DATA_NAME",*num);
         }
+
         if(*num == "0") {
             *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile';
             foreach(*c in *d) {
