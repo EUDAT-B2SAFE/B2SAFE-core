@@ -137,7 +137,7 @@ tranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
 #                          It has to be > 1.
 #
 # Author: Long Phan, Juelich
-# Modified by Claudio Cacciari, Cineca; Long Phan, Juelich
+# Modified by Claudio Cacciari, Cineca;
 #
 transferUsingFailLog(*buffer_length) {
 	
@@ -147,14 +147,31 @@ transferUsingFailLog(*buffer_length) {
     
     *msg_list = split("*messages",",");
 
-    foreach (*message in *msg_list) { 
+#    foreach (*message in *msg_list) { 
+#        *message = triml(*message, "'");
+#        *message = trimr(*message, "'");
+#        *list = split("*message","::");
+#        *path_of_transfer_file   = elem(*list,0);
+#        *target_of_transfer_file = elem(*list,1);
+#        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                           
+#    }
+
+	
+    foreach (*message in *msg_list) {
         *message = triml(*message, "'");
         *message = trimr(*message, "'");
         *list = split("*message","::");
-        *path_of_transfer_file   = elem(*list,0);
-        *target_of_transfer_file = elem(*list,1);
-        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                           
+
+        *counter = 0;
+        foreach (*item_LIST in *list) {
+                if (*counter == 0) {*path_of_transfer_file = *item_LIST; }
+                else if (*counter == 1) {*target_of_transfer_file = *item_LIST; }
+                *counter = *counter + 1;
+                if (*counter == 2) {break;}
+        }
+        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                          # writeLine("serverLog","*path_of_transfer_file vs *target_of_transfer_file");
     }
+	
 
     # get size of queue-log after transfer. 
     EUDATQueue("queuesize", *la, 0);
@@ -171,6 +188,10 @@ transferUsingFailLog(*buffer_length) {
 ####################################################################################
 # Collection replication management                                                #
 ####################################################################################
+
+# 																												  # 				
+# The following functions need more tests. After testing, these will be considered to move to next release  	  #	
+###################################################################################################################
 
 #
 # Transfer Collection

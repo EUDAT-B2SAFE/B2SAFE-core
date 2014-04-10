@@ -346,7 +346,7 @@ processReplicationCommandFile(*cmdPath) {
 
     #TODO: properly manage status here
     *status = 0;    
-    *out_ARRAY = split(*out_STRING, "\n")
+    *out_ARRAY = split(*out_STRING, "\n");
     foreach(*out_STRING1 in *out_ARRAY) {
         *list = split(*out_STRING1, ";");
         # assign values from array to parameters
@@ -386,7 +386,7 @@ processReplicationCommandFile(*cmdPath) {
 #
 readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
     readFile(*cmdPath, *out_STRING);
-    *out_ARRAY = split(*out_STRING, "\n")
+    *out_ARRAY = split(*out_STRING, "\n");
     foreach(*out_STRING1 in *out_ARRAY) {
         *list = split(*out_STRING1, ";");
         # assign values from array to parameters
@@ -649,7 +649,7 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
 # Author: CINECA, edited and added by Elena Erastova, RZG
 #
 addPIDWithChecksum(*path, *newPID) {
-	createPID("None", *path, "None", *newPID, bool("false"))
+	createPID("None", *path, "None", *newPID, bool("false"));
 }
 
 #
@@ -750,7 +750,7 @@ searchPIDchecksum(*path, *existing_pid) {
 #
 checkReplicas(*source, *destination) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
-    if (catchErrorChecksum(*source, *destination) == bool("false")) {
+    if (catchErrorChecksum(*source, *destination) == bool("false") || catchErrorSize(*source, *destination) == bool("false")) {
         EUDATeiPIDeiChecksumMgmt2(*source, *pid);
         EUDATiRORupdate2(*source, *pid);
         logInfo("replication from *source to *destination");
@@ -840,7 +840,7 @@ EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime) {
                 getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
                 # Get ePID looking for one between: URL and CHECKSUM.
                 #msiDataObjChksum($objPath, "null", *checksum);
-                EUDATePIDsearch("URL", "*serverID"++"$objPath", *oldPID)
+                EUDATePIDsearch("URL", "*serverID"++"$objPath", *oldPID);
             }
         }
         # If ePID does not exist create both ePID and iPID
@@ -988,7 +988,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATePIDcreate(*path, *PID) {
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     msiWriteRodsLog("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path", *status);
     msiDataObjChksum(*path, "null", *checksum);
     msiWriteRodsLog("EUDATePIDcreate -> The CHECKSUM is: *checksum", *status);
@@ -1013,7 +1013,7 @@ EUDATePIDcreate(*path, *PID) {
 #
 EUDATePIDsearch(*field, *value, *PID) {
     msiWriteRodsLog("EUDATePIDsearch -> search the PID with *field equal to *value", *status);
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     *status0 = bool("true");
     msiExecCmd("epicclient.py","*credStoreType *credStorePath search *field \"*value\"", "null", "null", "null", *out);    
     msiGetStdoutInExecCmdOut(*out, *PID);
@@ -1056,7 +1056,7 @@ EUDATeCHECKSUMupdate(*PID) {
 # Added: Elena Erastova, RZG
 #
 EUDATeCHECKSUMupdate2(*PID,*path) {
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     msiWriteRodsLog("EUDATeCHECKSUMupdate -> modify checksum related to PID *PID", *status);
     msiDataObjChksum(*path, "null", *checksum);
     msiWriteRodsLog("EUDATeCHECKSUMupdate -> created checksum = *checksum", *status);
@@ -1078,7 +1078,7 @@ EUDATeCHECKSUMupdate2(*PID,*path) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATeURLupdate(*PID, *newURL) {
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     msiWriteRodsLog("EUDATeCHECKSUMupdate -> modify URL in PID *PID", *status);
     msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID URL \"*newURL\"", "null", "null", "null", *out);
     # WARNING: the following line clean all the 10320/LOC field instead of removing only the old entry... 
@@ -1206,10 +1206,10 @@ EUDATeiPIDeiChecksumMgmt2(*source, *pid) {
         # If *ePIDcheck look for ePID
         *pid = "empty";
         msiWriteRodsLog("EUDATeiPIDeiChecksumMgmt -> No PID registered in iCAT. Looking on the EPIC server.", *status);
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
         # Get ePID looking for one between: URL and CHECKSUM.
         #msiDataObjChksum(*source, "null", *checksum);
-        EUDATePIDsearch("URL", "*serverID"++"*source", *pid)
+        EUDATePIDsearch("URL", "*serverID"++"*source", *pid);
         # If ePID does not exist create both ePID and iPID
         if ( *pid == "empty" ) then
             {
