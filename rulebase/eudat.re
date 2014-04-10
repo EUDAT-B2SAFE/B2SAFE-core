@@ -410,12 +410,14 @@ readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
 #   *cmdPath    [IN]    the iRODS path to the pid command file
 #
 # Author: Willem Elbers, MPI-TLA
+# Edited: Elena Erastova, RZG
 #
 processPIDCommandFile(*cmdPath) {
-    logInfo("processPID(*cmdPath)");
-    readFile(*cmdPath, *out_STRING);
-    *list = split(*out_STRING, ";");
+        logInfo("processPID(*cmdPath)");
+        readFile(*cmdPath, *out_STRING);
+        *list = split(*out_STRING, ";");
 
+    # assign values from array to parameters
     *ror = "None";
     *parent = "None";
     *counter=0;
@@ -424,25 +426,20 @@ processPIDCommandFile(*cmdPath) {
         else if ( *counter == 1 ) { *parent      = *item_LIST ; }
         else if ( *counter == 2 ) { *destination = *item_LIST ; }
         else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-        *counter = *counter + 1;    
+        *counter = *counter + 1;
     }
     *list_size = *counter ;
 
     # process command/action
     if ((*list_size==4) || (*list_size==3)){
         if(*pidAction == "create") {
-            if(*ror=="None") {
-                *ror = *parent;
-                *parent = "None";
-                logInfo("ror = *ror, parent = *parent");
-            }
             #manage pid in this repository
-            createPID(*parent, *destination, *ror, *new_pid, "null");
+            createPID(*parent, *destination, *ror, *new_pid, bool("true"));
             getSharedCollection(*destination,*collectionPath);
             #create .pid.update file based on absolute file path
-            msiReplaceSlash(*destination,*filepathslash); 
+            msiReplaceSlash(*destination,*filepathslash);
             triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
-        } 
+        }
         else if(*pidAction=="update") {
             *status = 0;
             updatePIDWithNewChild(*parent, *destination);
@@ -508,7 +505,7 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 
 # List of the function:
 #
-# createPID(*parent_pid, *path, *ror, *newPID)
+# createPID(*parent_pid, *path, *ror, *newPID, *iCATCache)
 # addPIDWithChecksum(*path, *newPID)
 # searchPID(*path, *existing_pid)
 # searchPIDchecksum(*path, *existing_pid)
@@ -541,7 +538,8 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #   *iCATCache  [IN]    the boolean flag to enable creation of PID in the iCAT 
 #   *newPID     [OUT]   the pid generated for this replica 
 #
-# Author: Willem Elbers, MPI-TLA, edited by Elena Erastova, RZG
+# Author: Willem Elbers, MPI-TLA
+# Edited by Elena Erastova, RZG
 #
 createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
     logInfo("create pid for *path and save *ror as ror");
@@ -584,60 +582,51 @@ createPID(*parent_pid, *path, *ror, *newPID, *iCATCache) {
         *newPID = *existing_pid;
         logInfo("PID already exists (*newPID)");
     }
-
     # add RoR to PID record if there is one defined
-
-    if((*ror == "None") && (*parent_pid != "None")) {
-        *ror = *parent_pid;
-        *parent_pid = "None";
+    *myRor = *ror;
+    *myPpid = *parent_pid;
+    if(*myRor != "None") {
+        *listRor = split(*myRor, "/");
+        *firstRor = elem(*listRor,0);
+        if(*firstRor != "http:") {
+            *myRor = *epicApi*myRor;
+        }
     }
-
-    if(*ror != "None") {
+    if(*myPpid != "None") {
+        *listPpid = split(*myPpid, "/");
+        *firstPpid = elem(*listPpid,0);
+        if(*firstPpid != "http:") {
+            *myPpid = "*epicApi*myPpid";
+        }
+        if(*myRor == "None") {
+            *myRor = *myPpid;
+            *myPpid = "None";   
+        }
+        else if(*myRor == *myPpid) {
+            *myPpid = "None";
+        }
+    }
+    if(*myRor != "None") {
         # add RoR to PID record
         if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *ror");
+            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID ROR *myRor");
         }
-        
-        *list0 = split(*ror, "/");
-        *first = elem(*list0,0);
-        if(*first=="http:") {
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *ror", "null", "null", "null", *out4);
-            msiGetStdoutInExecCmdOut(*out4, *response4);
-	    if(*epicDebug > 1) {
-            	logDebug("modify handle response = *response4")
-	    }
-        }
-        else {
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *epicApi*ror", "null", "null", "null", *out2);
-            msiGetStdoutInExecCmdOut(*out2, *response2);
-	    if(*epicDebug > 1) {
-            	logDebug("modify handle response = *response2");
-	    }
-        }
-    }
-
-    if(*parent_pid != "None") {
-    # add PPID to PID record
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/ROR *myRor", "null", "null", "null", *out4);
+        msiGetStdoutInExecCmdOut(*out4, *response4);
         if(*epicDebug > 1) {
-            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID EUDAT/PPID *parent_pid");
+            logDebug("modify handle response = *response4")
+	}
+    }
+    if(*myPpid != "None") {
+        # add PPID to PID record
+        if(*epicDebug > 1) {
+            logDebug("epicclient.py *credStoreType *credStorePath modify *newPID EUDAT/PPID *myPpid");
         }
-
-        *list0 = split(*parent_pid, "/");
-        *first = elem(*list0,0);
-        if(*first=="http:") {
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *parent_pid", "null", "null", "null", *out44);
-            msiGetStdoutInExecCmdOut(*out44, *response44);
-	    if(*epicDebug > 1) {
-            	logDebug("modify handle response = *response44")
-	    }
-        }
-        else {
-            msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *epicApi*parent_pid", "null", "null", "null", *out22);
-            msiGetStdoutInExecCmdOut(*out22, *response22);
-	    if(*epicDebug > 1) {
-	        logDebug("modify handle response = *response22");
-	    }
-        }
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *newPID EUDAT/PPID *myPpid", "null", "null", "null", *out44);
+        msiGetStdoutInExecCmdOut(*out44, *response44);
+        if(*epicDebug > 1) {
+            logDebug("modify handle response = *response44")
+	}
     }
 }
 
