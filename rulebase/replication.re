@@ -169,7 +169,8 @@ transferUsingFailLog(*buffer_length) {
                 *counter = *counter + 1;
                 if (*counter == 2) {break;}
         }
-        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);                          # writeLine("serverLog","*path_of_transfer_file vs *target_of_transfer_file");
+        tranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);    
+        
     }
 	
 
