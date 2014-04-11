@@ -15,10 +15,10 @@
 # Author: Long Phan, Juelich
 #
 catchErrorChecksum(*source,*destination){
-	logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
+    logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
 
-	*b = bool("true");
- 	*checksum0 = "";
+    *b = bool("true");
+    *checksum0 = "";
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
     foreach ( *BS ) {
@@ -35,7 +35,7 @@ catchErrorChecksum(*source,*destination){
     }
 
     if(*checksum0 != *checksum1) {
-        searchPID(*source, *pid);
+        EUDATSearchPID(*source, *pid);
         logInfo("*checksum0 != *checksum1, existing_pid = *pid");
         logInfo("replication from *source to *destination");
         *b = bool("false"); 
@@ -48,15 +48,15 @@ catchErrorChecksum(*source,*destination){
 # Catch error Size of file
 #
 # Parameters:
-#	*source			[IN] path source of data object
+#	*source		[IN] path source of data object
 #	*destination	[IN] path destination of replicated data object
 #  
 # Author: Long Phan, Juelich
 #
 catchErrorSize(*source,*destination) {
-	logInfo("Check if 2 replicas have the same size. Source = *source, destination = *destination");
+    logInfo("Check if 2 replicas have the same size. Source = *source, destination = *destination");
 
-	*b = bool("true"); 	
+    *b = bool("true"); 	
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_SIZE WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
     foreach   ( *BS )    {
@@ -72,7 +72,7 @@ catchErrorSize(*source,*destination) {
     }
 
     if(*size0 != *size1) {
-        searchPID(*source, *pid);
+        EUDATSearchPID(*source, *pid);
         logInfo("*size0 != *size1, existing_pid = *pid");
         logInfo("replication from *source to *destination");
         *b = bool("false"); 
@@ -94,8 +94,6 @@ catchErrorSize(*source,*destination) {
 #
 processErrorUpdatePID(*updfile) {
 		
-    #setLogFiles(*logStatisticFilePath,*logFailedFilePath, *ReplFr, *ReplTo);
-    #logInfo("Error update PID at *path_of_transfered_file failed, logged in ICAT at *logFailedFilePath");
     *status_transfer_success = bool("false");
     
     # Compose a name of a .replicate.time.sucess file in the local zone
@@ -146,9 +144,10 @@ processErrorUpdatePID(*updfile) {
                 logInfo("processErrorUpdatePID: replication went wrong, no .replicate file exists");
             }
             else if(*num == "1") {
-            *cause = "replication went wrong but file *dataName exists";
-            readReplicationCommandFile(*coll++"/"++*dataName,*pid,*path_of_transfered_file,*target_transfered_file,*ror);
-            updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
+                *cause = "replication went wrong but file *dataName exists";
+                readReplicationCommandFile(*coll++"/"++*dataName, *pid,*path_of_transfered_file, 
+                                           *target_transfered_file, *ror);
+                updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
             }
         }
         else if(*num == "1") {
@@ -177,10 +176,10 @@ catchErrorDataOwner(*path,*status){
     # CAT_NO_ACCESS_PERMISSION	    
     msiCheckAccess(*path,"own",*Result);								    									    
     if (*Result == 0) {
-        writeLine("serverLog","++++++++++++++++++ WARNING: Error CAT_NO_ACCESS_PERMISSION ");
+        logInfo("++++++++++++++++++ WARNING: Error CAT_NO_ACCESS_PERMISSION ");
     	*status = bool("false");
     } else {
-    	writeLine("serverLog","Identity of user is confirmed! ");
+    	logInfo("Identity of user is confirmed! ");
     }    	
 }
 

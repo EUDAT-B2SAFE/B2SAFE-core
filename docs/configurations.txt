@@ -1,0 +1,55 @@
+Configurations
+
+[authz.map.json]
+
+- iRODS 3.3.x is required.
+
+- in case you are using the version 3.3.0 please apply the patch in "rsExecCmd.patch" placed the dir "patches".
+
+- in the rule file "eudat.re": there are two new rules called "getEUDATAuthZ" and "getAuthZParameters".
+  The "getEUDATAuthZ" calls an external python script placed in iRODS_home/server/bin/cmd and called "authZ.manager.py".
+  Which requires a configuration file placed in iRODS_home/modules/BE2SAFE/cmd and called "authz.map.json".
+  The script provides just a couple of methods: "test" and "check", which returns a boolean value of True if the authorization is granted,
+  False otherwise.
+  The authorization decision is based on the file "authz.map.json", which contains triplets (subject, action, target) called assertions.
+  So, for example, passing to the script in input a request like:
+    testuser#testzone, read, /iRODS_home/modules/BE2SAFE/cmd/credentials
+  It will be accepted if the json file contains:
+    "assertion 1":
+      { "subject":
+         [ "testuser#testzone" ],
+        "action":
+         [ "read" ],
+        "target":
+         [ " /iRODS_home/modules/BE2SAFE/cmd/credentials" ]
+      }
+  Or even:
+    "assertion 1":
+       { "subject": 
+          [ "*#testzone" ],
+         "action":
+          [ "read" ],
+         "target":
+          [ " /iRODS_home/modules/BE2SAFE/cmd/*" ]
+       }
+  Because it supports the wild characters in the same way a shell do. 
+
+- in the rulebase file "core.re" the hook shoul be configured using the patch "corere.patch" placed in the folder "patches" of the module.
+
+- The entry point for rules specific for certain external executables should be called inside the "getEUDATAuthZ" as fall back.
+
+
+[log.manager.conf]
+
+
+- just configure the logging level (INFO, DEBUG, ERROR) and the path to the logging directory:
+{
+"log_level": "DEBUG",
+"log_dir": "/<iRODS path>/modules/BE2SAFE/log",
+}
+
+
+
+
+
+
