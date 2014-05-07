@@ -89,7 +89,7 @@ tranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
     # ----------  Transfer Data using EUDAT-Module triggerReplication(...) ---------------
 		
     logInfo("query PID of DataObj *path_of_transfered_file");
-    EUDATSearchPID(*path_of_transfered_file, *pid)
+    EUDATSearchPID(*path_of_transfered_file, *pid);
 
     if (*pid == "empty") {
         logInfo("PID is empty, no replication will be executed");		
