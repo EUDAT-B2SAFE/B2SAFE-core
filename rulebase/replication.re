@@ -198,7 +198,7 @@ checkReplicas(*source, *destination) {
 # Collection replication management                                                #
 ####################################################################################
 
-#																							  # TODO: verify and consolidate the following functions
+# TODO: verify and consolidate the following functions
 # 	  
 #####################################################################################
 #
@@ -252,7 +252,7 @@ checkReplicas(*source, *destination) {
 #			if (*subcollname == *path_of_transfered_collection || *choplength == *lengthtemp) {
 #			
 #			# --------------------  Get SubCollection. -#-------------------	
-#          		*PATH = *Collection++"/"+*Name;	
+#          		*PATH = *Collection++"/"++*Name;	
 #	                msiSubstr(*PATH,str(int(*pathLength)+1),"null",*SubCollection);		
 #							
 #			# ---------------- Save *SubCollection into *list -------------
