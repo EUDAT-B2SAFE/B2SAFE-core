@@ -4,17 +4,13 @@
 #                                                                              #
 ################################################################################
 
-################################################################################
-#                                                                              #
-# Utility functions                                                            #
-#                                                                              #
-################################################################################
-
 # List of the functions:
 #
+#---- authorization ---
+# getEUDATAuthZ(*user, *action, *target, *response)
+#---- utility ---
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
-# getEUDATAuthZ(*user, *action, *target, *response)
 # getSharedCollection(*zonePath, *collectionPath)
 # writeFile(*file, *contents)
 # readFile(*file, *contents)
@@ -23,13 +19,69 @@
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
-# updateMonitor(*file)
 # EUDATiCHECKSUMretrieve(*path, *checksum)
 # EUDATiCHECKSUMget(*path, *checksum)
 # EUDATgetObjectTimeDiff(*filePath, *age)
 # EUDATfileInPath(*path,*subColl)
 # createAVU(*Key,*Value,*Path)
 # getCollectionName(*path_of_collection,*Collection_Name)
+#---- command file triggers ---
+# triggerReplication(*commandFile,*pid,*source,*destination)
+# triggerCreatePID(*commandFile,*pid,*destination,*ror)
+# triggerUpdateParentPID(*commandFile,*pid,*new_pid)
+#---- process command file ---
+# processReplicationCommandFile(*cmdPath)
+# readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror)
+# processPIDCommandFile(*cmdPath)
+# doReplication(*pid, *source, *destination, *ror, *status)
+# updateMonitor(*file)
+
+################################################################################
+#                                                                              #
+# Authorization functions                                                      #
+#                                                                              #
+################################################################################
+
+#
+# Return a boolean value:
+#   True, if the authorization request matches against, at least
+#   one assertion listed in the authz.map.json file
+#   False otherwise.
+#
+# Parameters:
+#   *user           [IN]    a username, related to the user who request a permission
+#   *action         [IN]    the action, which the user would like to perform
+#   *target         [IN]    the target of the action
+#   *response       [OUT]   True or False depending on authorization rights
+#
+# Author: Claudio Cacciari, Cineca
+#
+getEUDATAuthZ(*user, *action, *target, *response) {
+    getAuthZParameters(*authZMapPath);
+    logInfo("checking authorization for *user to perform: *action *target");
+    msiExecCmd("authZ.manager.py", "*authZMapPath check *user '*action' '*target'",
+               "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *response);
+    if (*response == "False") {
+        # here should be placed specific authorization rules 
+        # EUDATsetFilterACL(*action, *target, null, null, *status);
+        # if (*status == "false") {}
+        logInfo("authorization denied");
+        msiExit("-1", "user is not allowed to perform the requested action");
+    }
+    else {
+        # here should be placed specific authorization rules 
+        # EUDATsetFilterACL(*action, *target, null, null, *status);
+        # if (*status == "true") {}
+        logInfo("authorization granted");
+    }
+}
+
+################################################################################
+#                                                                              #
+# Utility functions                                                            #
+#                                                                              #
+################################################################################
 
 #
 #It manages the writing and reading of log messages to/from external log services.
@@ -84,41 +136,6 @@ EUDATQueue(*action, *message, *number) {
     if (*action == 'pop' && *number > 1) {
         *message = triml(*message, "[");
         *message = trimr(*message, "]");
-    }
-}
-
-#
-# Return a boolean value:
-#   True, if the authorization request matches against, at least
-#   one assertion listed in the authz.map.json file
-#   False otherwise.
-#
-# Parameters:
-#   *user           [IN]    a username, related to the user who request a permission
-#   *action         [IN]    the action, which the user would like to perform
-#   *target         [IN]    the target of the action
-#   *response       [OUT]   True or False depending on authorization rights
-#
-# Author: Claudio Cacciari, Cineca
-#
-getEUDATAuthZ(*user, *action, *target, *response) {
-    getAuthZParameters(*authZMapPath);
-    logInfo("checking authorization for *user to perform: *action *target");
-    msiExecCmd("authZ.manager.py", "*authZMapPath check *user '*action' '*target'",
-               "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *response);
-    if (*response == "False") {
-        # here should be placed specific authorization rules 
-        # EUDATsetFilterACL(*action, *target, null, null, *status);
-        # if (*status == "false") {}
-        logInfo("authorization denied");
-        msiExit("-1", "user is not allowed to perform the requested action");
-    }
-    else {
-        # here should be placed specific authorization rules 
-        # EUDATsetFilterACL(*action, *target, null, null, *status);
-        # if (*status == "true") {}
-        logInfo("authorization granted");
     }
 }
 
@@ -212,28 +229,6 @@ logWithLevel(*level, *msg) {
 }
 
 #
-# Monitor the specified pid command file
-#
-# Parameters:
-#   *file   [IN]    start a monitor on the specified iRODS file
-#
-# Author: Willem Elbers, MPI-TLA
-#
-updateMonitor(*file) {
-    logInfo("updateMonitor(*file)");
-    delay("<PLUSET>1m</PLUSET>") {
-        if(errorcode(msiObjStat(*file,*out)) >= 0) {
-            logInfo("*file exists");
-            processPIDCommandFile(*file);
-        } else {
-            logInfo("*file does not exist yet");
-            # save *source of failed_transfered data object into fail_log 
-            processErrorUpdatePID(*file);
-        }
-    }
-}
-
-#
 # The function retrieve iCHECKSUM for a given object.
 #
 # Environment variable used:
@@ -304,11 +299,11 @@ EUDATgetObjectTimeDiff(*filePath, *age) {
 }
 
 #
-# Rules to chech if a file is in a given path.
+# Rules to check if a file is in a given path.
 #
 # Arguments:
 #   *path               [IN]    The full iRODS path of the object
-#   *subColl            [IN]    The iRODS path of the collection we are looging in for the object
+#   *subColl            [IN]    The iRODS path of the collection we are looking in for the object
 #   *b                  [REI]   False if no value is found, trou elsewhere
 #
 # Author: Hao Xu, DICE; Giacomo Mariani, CINECA
@@ -582,5 +577,27 @@ doReplication(*pid, *source, *destination, *ror, *status) {
     }
     else {
         logInfo("No pid management");
+    }
+}
+
+#
+# Monitor the specified pid command file
+#
+# Parameters:
+#   *file   [IN]    start a monitor on the specified iRODS file
+#
+# Author: Willem Elbers, MPI-TLA
+#
+updateMonitor(*file) {
+    logInfo("updateMonitor(*file)");
+    delay("<PLUSET>1m</PLUSET>") {
+        if(errorcode(msiObjStat(*file,*out)) >= 0) {
+            logInfo("*file exists");
+            processPIDCommandFile(*file);
+        } else {
+            logInfo("*file does not exist yet");
+            # save *source of failed_transfered data object into fail_log 
+            processErrorUpdatePID(*file);
+        }
     }
 }

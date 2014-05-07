@@ -172,7 +172,7 @@ transferUsingFailLog(*buffer_length) {
 #    1. find the pid of the object and modify checksum in the pid or create a new pid
 #    2. create pid in the iCAT if it does not exist
 #    3. add/update ROR in iCAT
-#    4. tregger replication from source to destination
+#    4. trigger replication from source to destination
 #
 # Parameters:
 #   *source         [IN]     source of the file
