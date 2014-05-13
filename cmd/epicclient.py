@@ -674,7 +674,7 @@ class Credentials(object):
 ###############################################################################
 
 def replaceHash(args):
-    s = args.a
+    s = ' '.join(args.a)
     result = s.replace('#','*').replace('%','*').replace('&','*')
     sys.stdout.write(str(result))
 
@@ -685,7 +685,8 @@ def search(args):
     credentials.parse()
 
     ec = EpicClient(credentials)
-    result = ec.searchHandle(credentials.prefix, args.key, args.value)
+    value = ' '.join(args.value)
+    result = ec.searchHandle(credentials.prefix, args.key, value)
 
     sys.stdout.write(str(result))
 
@@ -937,9 +938,8 @@ if __name__ == "__main__":
                                                    'actions',
                                        help='additional help')
 
-    parser_replaceHash = subparsers.add_parser('replaceHash',
-											   help='')
-    parser_replaceHash.add_argument("a", help="")
+    parser_replaceHash = subparsers.add_parser('replaceHash', help='')
+    parser_replaceHash.add_argument("a",  nargs='+', help="")
     parser_replaceHash.set_defaults(func=replaceHash)
 
     parser_create = subparsers.add_parser('create',
@@ -977,7 +977,7 @@ if __name__ == "__main__":
                                           help='Search for handle records')
     parser_search.add_argument("key", choices=['URL','CHECKSUM'],
                                help="the key to search")
-    parser_search.add_argument("value", help="the value to search")
+    parser_search.add_argument("value", nargs='+', help="the value to search")
     parser_search.set_defaults(func=search)
 
     parser_relation = subparsers.add_parser('relation',
