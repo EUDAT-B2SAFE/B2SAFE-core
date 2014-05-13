@@ -269,7 +269,7 @@ EUDATiCHECKSUMretrieve(*path, *checksum) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATiCHECKSUMget(*path, *checksum) {
-    if (!EUDATiCHECKSUMretrieve(*objPath, *checksum)) {
+    if (!EUDATiCHECKSUMretrieve(*path, *checksum)) {
         msiDataObjChksum(*path, "null", *checksum);
     }
 }

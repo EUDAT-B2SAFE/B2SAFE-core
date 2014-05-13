@@ -138,6 +138,7 @@ The command files are written to the shared iRODS space and are used to control 
 *** Know bugs ***
 
 - the rule set string in the file <irods>/server/config/server.config has a limit of 64 characters.
-  Hence the errror message: 
+  Hence the error message: 
     ERROR: rstrcpy not enough space in dest, slen:65, maxLen:64
   means that the string has to be made shorter.
+- the character '&' is not managed by the function "EUDATSearchPID": the epic client invocation fails.

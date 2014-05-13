@@ -27,6 +27,10 @@
 # EUDATeCHECKSUMupdate(*PID)
 # EUDATeURLupdate(*PID, *newURL)
 # EUDATePIDremove(*path)
+# EUDATeiPIDeiChecksumMgmtColl(*sourceColl)
+# EUDATiRORupdate(*source, *pid)
+# EUDATeParentUpdate(*PID, *PFName, *PFValue)
+# 
 
 # Deprecated
 # addPIDWithChecksum(*path, *newPID)
@@ -59,9 +63,8 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 
         if (*iCATCache == bool("true")) {
             # Add PID into iCAT
-            logInfo("Begin to SAVE PID into field AVU -PID- of iCAT *path with PID = *newPID");
+            logInfo("Saving PID into field AVU -PID- of iCAT *path with PID = *newPID");
             EUDATiPIDcreate(*path, *newPID);
-            logInfo("---> PID's saved in iCAT with AVU PID");
         }
 
     }
@@ -246,7 +249,11 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         # If ePID does not exist create both ePID and iPID
         if ( *PID == "empty" ) { 
             logInfo("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet");
-            EUDATCreatePID("None", *path, "None", *iCATuse, *PID);
+            EUDATePIDcreate(*path, *newPID);
+            if (*iCATuse == bool("true")) {
+                # Add PID into iCAT
+                EUDATiPIDcreate(*path, *newPID);
+            }
         }
         else {
             logInfo("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *PID");  
