@@ -7,7 +7,7 @@
 # List of the functions:
 #
 #---- authorization ---
-# getEUDATAuthZ(*user, *action, *target, *response)
+# EUDATAuthZ(*user, *action, *target, *response)
 #---- utility ---
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
@@ -23,7 +23,7 @@
 # EUDATiCHECKSUMget(*path, *checksum)
 # EUDATgetObjectTimeDiff(*filePath, *age)
 # EUDATfileInPath(*path,*subColl)
-# createAVU(*Key,*Value,*Path)
+# EUDATCreateAVU(*Key,*Value,*Path)
 # getCollectionName(*path_of_collection,*Collection_Name)
 #---- command file triggers ---
 # triggerReplication(*commandFile,*pid,*source,*destination)
@@ -56,9 +56,9 @@
 #
 # Author: Claudio Cacciari, Cineca
 #
-getEUDATAuthZ(*user, *action, *target, *response) {
+EUDATAuthZ(*user, *action, *target, *response) {
     getAuthZParameters(*authZMapPath);
-    logInfo("checking authorization for *user to perform: *action *target");
+    logDebug("checking authorization for *user to perform: *action *target");
     msiExecCmd("authZ.manager.py", "*authZMapPath check *user '*action' '*target'",
                "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *response);
@@ -66,14 +66,14 @@ getEUDATAuthZ(*user, *action, *target, *response) {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
         # if (*status == "false") {}
-        logInfo("authorization denied");
+        logDebug("authorization denied");
         msiExit("-1", "user is not allowed to perform the requested action");
     }
     else {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
         # if (*status == "true") {}
-        logInfo("authorization granted");
+        logDebug("authorization granted");
     }
 }
 
@@ -333,12 +333,12 @@ EUDATfileInPath(*path,*subColl) {
 # 
 # Author: Long Phan, Juelich
 # 
-createAVU(*Key,*Value,*Path) {
+EUDATCreateAVU(*Key,*Value,*Path) {
+    logDebug("[EUDATCreateAVU] Adding AVU = *Key with *Value to metadata of *Path");
     msiAddKeyVal(*Keyval,*Key, *Value);
     writeKeyValPairs('serverLog', *Keyval, " is : ");
     msiGetObjType(*Path,*objType);
     msiAssociateKeyValuePairsToObj(*Keyval, *Path, *objType);
-    logInfo("EUDAT create -> Added AVU = *Key with *Value to metadata of *Path");
 }
 
 #
@@ -576,8 +576,9 @@ doReplication(*pid, *source, *destination, *ror, *status) {
         updateMonitor("*collectionPath*filepathslash.pid.update");
     }
     else {
-        logInfo("No pid management");
+        logDebug("No pid management");
     }
+
 }
 
 #
@@ -597,7 +598,7 @@ updateMonitor(*file) {
         } else {
             logInfo("*file does not exist yet");
             # save *source of failed_transfered data object into fail_log 
-            processErrorUpdatePID(*file);
+            EUDATProcessErrorUpdatePID(*file);
         }
     }
 }

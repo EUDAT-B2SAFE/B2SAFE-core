@@ -1,9 +1,9 @@
 ################################################################################
 #                                                                              #
 # Module Replication:                                                          #
-#        - enable transfer single file                                  #   
-#        - enable transfer collection                                   #
-#        - enable transfer all files which have been logged             #
+#        - enable transfer single file                                         #   
+#        - enable transfer collection                                          #
+#        - enable transfer all files which have been logged                    #
 #                 from the last transfers                                      #
 #                                                                              #
 ################################################################################
@@ -13,11 +13,12 @@
 # EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file, 
 #               *target_transfered_file, *cause)
 # EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file)
-# EUDATTranferSingleFile(*path_of_transfered_file,*target_of_transfered_file)
+# EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file)
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATCheckReplicas(*source, *destination)
 #---- collection management ---
-# EUDATTransferCollection(*path_of_transfered_collection,*target_of_transfered_collection)
+# EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,
+                          *incremental,*recursive)
 
 #
 # Update Logging Files
@@ -59,10 +60,14 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
     
     *status_transfer_success = bool("true");
     *cause = "";
-    if (catchErrorChecksum(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
+    msiIsData(*target_of_transfered_file, *result, *status);
+    if (int(*result) == 0) {
+        *cause = "missing replicated object";
+        *status_transfer_success = bool("false");
+    } else if (EUDATCatchErrorChecksum(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
         *cause = "different checksum";
         *status_transfer_success = bool("false");
-    } else if (catchErrorSize(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
+    } else if (EUDATCatchErrorSize(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
         *cause = "different size";
     *status_transfer_success = bool("false");
     } 
@@ -73,7 +78,7 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
     }
 
     EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
-                  *target_of_transfered_file, *cause);
+                       *target_of_transfered_file, *cause);
 }
 
 #
@@ -86,36 +91,43 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
 # Author: Long Phan, Juelich
 # Modified by Claudio Cacciari, Cineca
 #
-EUDATTranferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
+EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
     
-    # ----------  Transfer Data using EUDAT-Module triggerReplication(...) ---------------
+    logInfo("[EUDATTransferSingleFile] transfering *path_of_transfered_file to *target_of_transfered_file");    
         
-    logInfo("query PID of DataObj *path_of_transfered_file");
+    logDebug("query PID of DataObj *path_of_transfered_file");
     EUDATSearchPID(*path_of_transfered_file, *pid);
 
     if (*pid == "empty") {
-        logInfo("PID is empty, no replication will be executed");        
+        logDebug("PID is empty, no replication will be executed");        
         # Update Logging (Statistic File and Failed Files)
         *status_transfer_success = bool("false");
         EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
                       *target_of_transfered_file, "empty PID");                
     } else {
-        logInfo("PID exist, Replication's beginning ...... ");
+        logDebug("PID exist, Replication's beginning ...... ");
         getSharedCollection(*path_of_transfered_file,*sharedCollection);
         msiSplitPath(*path_of_transfered_file, *collection, *file);
         msiReplaceSlash(*target_of_transfered_file, *controlfilename);
-        logInfo("ReplicateFile: *sharedCollection*controlfilename");            
+        logDebug("ReplicateFile: *sharedCollection*controlfilename");            
             
         # Catch Error CAT_NO_ACCESS_PERMISSION before replication
-        catchErrorDataOwner(*path_of_transfered_file,*status_identity);
+        EUDATCatchErrorDataOwner(*path_of_transfered_file,*status_identity);
             
         if (*status_identity == bool("true")) {
-            triggerReplication("*sharedCollection*controlfilename.replicate",*pid,
-                                *path_of_transfered_file,*target_of_transfered_file);            
-            logInfo("Perform the last checksum and checksize of transfered data object");        
-            EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file);                      
+            *err = errorcode(triggerReplication("*sharedCollection*controlfilename.replicate",*pid,
+                                                 *path_of_transfered_file,*target_of_transfered_file));
+            if (*err < 0) {
+                logDebug("triggerReplication failed with error code *err");
+                *status_transfer_success = bool("false");
+                updateLogging(*status_transfer_success,*path_of_transfered_file,
+                              *target_of_transfered_file,"iRODS errorcode=*err");
+            } else {
+                logDebug("Perform the last checksum and checksize of transfered data object");        
+                EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file);
+            }
         } else {
-            logInfo("Action is canceled. Error is caught in function catchErrorDataOwner"); 
+            logDebug("Action is canceled. Error is caught in function EUDATCatchErrorDataOwner"); 
             # Update fail_log                
             *status_transfer_success = bool("false");
             EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_of_transfered_file,
@@ -154,7 +166,7 @@ EUDATTransferUsingFailLog(*buffer_length) {
             *counter = *counter + 1;
             if (*counter == 2) {break;}
         }
-        EUDATTranferSingleFile(*path_of_transfer_file, *target_of_transfer_file);
+        EUDATTransferSingleFile(*path_of_transfer_file, *target_of_transfer_file);
     }
 
     # get size of queue-log after transfer. 
@@ -183,8 +195,8 @@ EUDATTransferUsingFailLog(*buffer_length) {
 #
 EUDATCheckReplicas(*source, *destination) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
-    if (catchErrorChecksum(*source, *destination) == bool("false") || 
-        catchErrorSize(*source, *destination) == bool("false")) 
+    if (EUDATCatchErrorChecksum(*source, *destination) == bool("false") || 
+        EUDATCatchErrorSize(*source, *destination) == bool("false")) 
     {
         EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
         EUDATiRORupdate(*source, *pid);
@@ -205,125 +217,67 @@ EUDATCheckReplicas(*source, *destination) {
 #     *path_of_transfered_coll     [IN] absolute iRODS path of the collection to be transfered
 #     *target_of_transfered_coll   [IN] absolute iRODS path of the destination
 #     *incremental                 [IN] bool('true') to perform an incremental transfer.
+#     *recursive                   [IN] bool('true') to replicate the whole tree of subcollections.
 #
 # Author: Long Phan, Juelich
 #         Claudio Cacciari, Cineca
 #
-EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental) {
+#
+EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive) {
 
-    msiStrlen(*path_of_transfered_coll,*path_originallength);
-
-    # ----------------- Build Path for sourcePATH --------------
-    msiStrchop(*path_of_transfered_coll,*out);
-    msiStrlen(*out,*choplength);
-    *sourcePATH = "*out"; 
-    *SubCollection = "";
-
-    # ----------------- Build condition for iCAT --------------- 
-    *sPATH = "*sourcePATH" ++ "%";
-    *Condition = "COLL_NAME like '*sPATH'";
-    *ContInxOld = 1;
+    #Verify that input path is a collection
+    msiIsColl(*path_of_transfered_coll,*Result, *Status);
+    if(*Result == 0) {
+        logError("Input path *path_of_transfered_coll is not a collection");
+        fail;
+    }
+    msiIsColl(*target_of_transfered_coll, *Result, *Status);
+    if(*Result == 0) {
+        logError("Input path *target_of_transfered_coll is not a collection");
+        fail;
+    }
 
     msiSplitPath(*sourcePATH,*sourceParent,*sourceChild);
     msiStrlen(*sourceParent,*pathLength);
 
-    # ----------------------------------------------------------
-    msiMakeGenQuery("COLL_NAME,DATA_NAME",*Condition, *GenQInp);
-    msiExecGenQuery(*GenQInp, *GenQOut);
-    msiGetContInxFromGenQueryOut(*GenQOut,*ContInxNew);
-    while(*ContInxOld > 0) {
-        foreach(*GenQOut) {
-            msiGetValByKey(*GenQOut, "DATA_NAME", *Name);
-            msiGetValByKey(*GenQOut, "COLL_NAME", *Collection);
-            
-            # get length of *Collection
-            msiStrlen(*Collection,*lengthtemp);
-            # get SubCollection
-            msiSubstr(*Collection,"0","*path_originallength",*subcollname);
-            
-            # Compare to eliminate paths with similar Collection 
-            if (*subcollname == *path_of_transfered_coll || *choplength == *lengthtemp) {
-            
-                # --------------------  Get SubCollection. --------------------    
-                *PATH = *Collection++"/"++*Name;                    
-                msiSubstr(*PATH,str(int(*pathLength)+1),"null",*SubCollection);
-                   
-                # -------------------- Transfer Data Obj ----------------------
-                *Source = "*sourceParent" ++ "/" ++ "*SubCollection"; 
-                *Destination = "*target_of_transfered_coll"++"*SubCollection"
-
-                if (*incremental == bool("true") && 
-                    (catchErrorChecksum(*Source, *Destination) == bool("false") || 
-                     catchErrorSize(*Source, *Destination) == bool("false"))) {
-                    
-                    EUDATTranferSingleFile(*Source,*Destination);        
-                }
-                else if (*incremental == bool("false")) {
-                    EUDATTranferSingleFile(*Source,*Destination);
-                }
-            }              
+    *Work=``{
+        msiGetObjectPath(*File,*source,*status);
+        msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+        *depth_level = split(*subCollection, "/");
+        *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+        msiIsData(*destination, *result, *status);
+        # If the replication is not recursive
+        if (bool("``++"*recursive"++``") == bool("false") && size(*depth_level) == 2) {
+            # If the replication is not recursive, but it is incremental and 
+            # the object *destination is not valid or does not exist
+            if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
+                tranferSingleFile(*source,*destination);
+            }
+            # The replication is not recursive and it is not incremental
+            else if (bool("``++"*incremental"++``") == bool("false")) {
+                tranferSingleFile(*source,*destination);
+            }
         }
-        
-        *ContInxOld = *ContInxNew;
-        
-        # get more rows in case data > 256 rows.
-        if (*ContInxOld > 0) {msiGetMoreRows(*GenQInp,*GenQOut,*ContInxNew);}
-    }
+        # If the replication is recursive
+        else if (bool("``++"*recursive"++``") == bool("true")) {
+            # If the replication is recursive, it is incremental and 
+            # the object *destination is not valid or does not exist
+            if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
+                tranferSingleFile(*source,*destination);
+            }
+            # The replication is recursive and it is not incremental
+            else if (bool("``++"*incremental"++``") == bool("false")) {
+                *err = errorcode(tranferSingleFile(*source,*destination));
+                if (*err < 0) {
+                    *status_transfer_success = bool("false");
+                    updateLogging(*status_transfer_success,*source,*destination,"iRODS errorcode=*err");
+                }
+            }
+        }
+    }``;
+    msiCollectionSpider(*path_of_transfered_coll,*File,*Work,*Status);
             
 }
-
-
-#
-# Transfer all data objects at Parent_Collection without recursion on subCollection
-#
-# Parameters:
-#    *path_of_transfered_collection		[IN] path of transfered collection in iRODS (ex. /COMMUNITY/DATA/Dir9/)
-#	*target_of_transfered_collection	[IN] destination of replication in iRODS	(ex. /DATACENTER/DATA/)
-#
-# Author: Long Phan, Juelich
-#
-#transferCollectionWithoutRecursion(*path_of_transfered_collection,*target_of_transfered_collection) {
-#		
-#	# ----------------- Build Path for sourcePATH --------------
-#	# Query only works without '/'
-#	msiStrchop(*path_of_transfered_collection,*out);
-#	msiStrlen(*out,*choplength);	
-#	*sourcePATH = "*out"; 
-#	*SubCollection = "";
-#	
-#	
-#	# ----------------- Build condition for iCAT ---------------		
-#	*Condition = "COLL_NAME = '*out'";
-#	*ContInxOld = 1;	
-#	
-#	msiSplitPath(*sourcePATH,*sourceParent,*sourceChild);
-#	msiStrlen(*sourceParent,*pathLength);
-#	
-#	# ----------------- Query and transfer ---------------------				
-#	
-#	msiMakeGenQuery("DATA_NAME",*Condition, *GenQInp);
-#	msiExecGenQuery(*GenQInp, *GenQOut);
-#	msiGetContInxFromGenQueryOut(*GenQOut,*ContInxNew);
-#	while(*ContInxOld > 0) {
-#		foreach(*GenQOut) {
-#			msiGetValByKey(*GenQOut, "DATA_NAME", *Name);				
-#
-#			*PATH = "*path_of_transfered_collection"++"*Name";
-#			msiSubstr(*PATH,str(int(*pathLength)+1),"null",*SubCollection);
-#					
-#			# -------------------- Transfer Data Obj ----------------------
-#			*Source = "*sourceParent" ++ "/" ++ "*SubCollection"; 
-#			*Destination = "*target_of_transfered_collection"++"*SubCollection";			
-#								
-#			EUDATTranferSingleFile(*Source,*Destination);
-#		}
-#		
-#		*ContInxOld = *ContInxNew;		
-#		# get more rows in case data > 256 rows.
-#		if (*ContInxOld > 0) {msiGetMoreRows(*GenQInp,*GenQOut,*ContInxNew);}
-#	}
-#}
-
 
 #
 # Show status of Collection (Size, count of data objects, collection owner, location, date) and save it  
@@ -333,6 +287,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 # TODO additional feature: only data objects of User on Session ($userNameClient 
 #      and $rodsZoneClient) at *path_of_collection will be recorded in case collection 
 #      contains data of many people.
+# TODO check if it is possible to use msiGetCollectionSize.
 #
 # Parameter:
 # 	*path_of_collection		[IN]	Path of collection in iRODS (ex. /COMMUNITY/DATA)

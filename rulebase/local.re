@@ -11,7 +11,7 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    getEUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
+    EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
 }
 
 getAuthZParameters(*authZMapPath) {

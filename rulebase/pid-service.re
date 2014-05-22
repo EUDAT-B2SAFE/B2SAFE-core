@@ -273,7 +273,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATiPIDcreate(*path, *PID) {
-    createAVU("PID", *PID, *path);
+    EUDATCreateAVU("PID", *PID, *path);
 }
 
 #

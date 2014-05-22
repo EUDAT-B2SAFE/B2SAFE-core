@@ -9,13 +9,14 @@
 # Catch error with Checksum (edited from function checkReplicas in eudat.re)
 #
 # Parameters:
-#	*source			[IN] path source of data object
+#	*source         [IN] path source of data object
 #	*destination	[IN] path destination of replicated data object
 # 
 # Author: Long Phan, Juelich
 #
-catchErrorChecksum(*source,*destination){
-    logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
+EUDATCatchErrorChecksum(*source,*destination){
+    logInfo("[EUDATCatchErrorChecksum] Check if 2 replicas have the same checksum. " ++
+            "Source = *source, destination = *destination");
 
     *b = bool("true");
     *checksum0 = "";
@@ -23,7 +24,7 @@ catchErrorChecksum(*source,*destination){
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
     foreach ( *BS ) {
         msiGetValByKey(*BS,"DATA_CHECKSUM", *checksum0);
-        logInfo("checksum0 = *checksum0");
+        logDebug("checksum0 = *checksum0");
     }
 
     *checksum1 = "";
@@ -31,13 +32,12 @@ catchErrorChecksum(*source,*destination){
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
     foreach ( *BD ) {
         msiGetValByKey(*BD,"DATA_CHECKSUM", *checksum1);
-        logInfo("checksum1 = *checksum1");
+        logDebug("checksum1 = *checksum1");
     }
 
     if(*checksum0 != *checksum1) {
         EUDATSearchPID(*source, *pid);
-        logInfo("*checksum0 != *checksum1, existing_pid = *pid");
-        logInfo("replication from *source to *destination");
+        logDebug("*checksum0 != *checksum1, existing_pid = *pid");
         *b = bool("false"); 
     } 
     *b;
@@ -53,28 +53,28 @@ catchErrorChecksum(*source,*destination){
 #  
 # Author: Long Phan, Juelich
 #
-catchErrorSize(*source,*destination) {
-    logInfo("Check if 2 replicas have the same size. Source = *source, destination = *destination");
+EUDATCatchErrorSize(*source,*destination) {
+    logInfo("[EUDATCatchErrorSize] Check if 2 replicas have the same size." ++
+            "Source = *source, destination = *destination");
 
     *b = bool("true"); 	
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_SIZE WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
     foreach   ( *BS )    {
         msiGetValByKey(*BS,"DATA_SIZE", *size0);
-        logInfo("Size *source = *size0");
+        logDebug("Size *source = *size0");
     }
 
     msiSplitPath(*destination,*parentD,*childD);
     msiExecStrCondQuery("SELECT DATA_SIZE WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
     foreach   ( *BD )    {
         msiGetValByKey(*BD,"DATA_SIZE", *size1);
-        logInfo("Size *destination = *size1");
+        logDebug("Size *destination = *size1");
     }
 
     if(*size0 != *size1) {
         EUDATSearchPID(*source, *pid);
-        logInfo("*size0 != *size1, existing_pid = *pid");
-        logInfo("replication from *source to *destination");
+        logDebug("*size0 != *size1, existing_pid = *pid");
         *b = bool("false"); 
     } 
     *b;
@@ -92,7 +92,7 @@ catchErrorSize(*source,*destination) {
 #
 # Author: Long Phan, Juelich, Elena Erastova, RZG
 #
-processErrorUpdatePID(*updfile) {
+EUDATProcessErrorUpdatePID(*updfile) {
 		
     *status_transfer_success = bool("false");
     
@@ -121,7 +121,7 @@ processErrorUpdatePID(*updfile) {
 
     # Check if the remote zone is available
     if (errorcode(msiObjStat(*remoteZoneName,*out)) != 0) {
-            logInfo("processErrorUpdatePID: remote zone *remoteZoneName is not available");
+            logDebug("[EUDATProcessErrorUpdatePID] remote zone *remoteZoneName is not available");
     }
     else {
         # Look for a .replicate.time.sucess file in the local zone
@@ -141,7 +141,7 @@ processErrorUpdatePID(*updfile) {
                 msiGetValByKey(*c,"DATA_NAME",*num);
             }
             if(*num == "0") {
-                logInfo("processErrorUpdatePID: replication went wrong, no .replicate file exists");
+                logDebug("[EUDATProcessErrorUpdatePID] replication went wrong, no .replicate file exists");
             }
             else if(*num == "1") {
                 *cause = "replication went wrong but file *dataName exists";
@@ -170,7 +170,7 @@ processErrorUpdatePID(*updfile) {
 #
 # Author: Long Phan, Juelich
 #
-catchErrorDataOwner(*path,*status){
+EUDATCatchErrorDataOwner(*path,*status){
     *status = bool("true");
 		
     # CAT_NO_ACCESS_PERMISSION	    
@@ -189,6 +189,6 @@ catchErrorDataOwner(*path,*status){
 #
 # TODO: ...
 #
-catchErrorCollectionOwner(*path_of_transfered_collection) {
-
-}
+#catchErrorCollectionOwner(*path_of_transfered_collection) {
+#
+#}
