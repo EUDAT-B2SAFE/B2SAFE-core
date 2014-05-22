@@ -267,11 +267,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
             }
             # The replication is recursive and it is not incremental
             else if (bool("``++"*incremental"++``") == bool("false")) {
-                *err = errorcode(tranferSingleFile(*source,*destination));
-                if (*err < 0) {
-                    *status_transfer_success = bool("false");
-                    updateLogging(*status_transfer_success,*source,*destination,"iRODS errorcode=*err");
-                }
+                tranferSingleFile(*source,*destination));
             }
         }
     }``;
