@@ -236,7 +236,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
         fail;
     }
 
-    msiSplitPath(*sourcePATH,*sourceParent,*sourceChild);
+    msiSplitPath(*path_of_transfered_coll,*sourceParent,*sourceChild);
     msiStrlen(*sourceParent,*pathLength);
 
     *Work=``{
