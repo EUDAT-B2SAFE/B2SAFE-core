@@ -267,7 +267,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
             }
             # The replication is recursive and it is not incremental
             else if (bool("``++"*incremental"++``") == bool("false")) {
-                tranferSingleFile(*source,*destination));
+                tranferSingleFile(*source,*destination);
             }
         }
     }``;
