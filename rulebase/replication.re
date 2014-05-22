@@ -251,11 +251,11 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
             # If the replication is not recursive, but it is incremental and 
             # the object *destination is not valid or does not exist
             if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
-                tranferSingleFile(*source,*destination);
+                EUDATTransferSingleFile(*source,*destination);
             }
             # The replication is not recursive and it is not incremental
             else if (bool("``++"*incremental"++``") == bool("false")) {
-                tranferSingleFile(*source,*destination);
+                EUDATTransferSingleFile(*source,*destination);
             }
         }
         # If the replication is recursive
@@ -263,11 +263,11 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
             # If the replication is recursive, it is incremental and 
             # the object *destination is not valid or does not exist
             if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
-                tranferSingleFile(*source,*destination);
+                EUDATTransferSingleFile(*source,*destination);
             }
             # The replication is recursive and it is not incremental
             else if (bool("``++"*incremental"++``") == bool("false")) {
-                tranferSingleFile(*source,*destination);
+                EUDATTransferSingleFile(*source,*destination);
             }
         }
     }``;
