@@ -17,8 +17,7 @@
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATCheckReplicas(*source, *destination)
 #---- collection management ---
-# EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,
-                          *incremental,*recursive)
+# EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive)
 
 #
 # Update Logging Files
