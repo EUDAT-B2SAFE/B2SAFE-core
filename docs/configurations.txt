@@ -6,14 +6,14 @@ Configurations
 
 - in case you are using the version 3.3.0 please apply the patch in "rsExecCmd.patch" placed the dir "patches".
 
-- in the rule file "eudat.re": there are two new rules called "getEUDATAuthZ" and "getAuthZParameters".
+- in the rule file "eudat.re": there are two new rules called "EUDATAuthZ" and "getAuthZParameters".
   The "getEUDATAuthZ" calls an external python script placed in iRODS_home/server/bin/cmd and called "authZ.manager.py".
   Which requires a configuration file placed in iRODS_home/modules/BE2SAFE/cmd and called "authz.map.json".
   The script provides just a couple of methods: "test" and "check", which returns a boolean value of True if the authorization is granted,
   False otherwise.
   The authorization decision is based on the file "authz.map.json", which contains triplets (subject, action, target) called assertions.
   So, for example, passing to the script in input a request like:
-    testuser#testzone, read, /iRODS_home/modules/BE2SAFE/cmd/credentials
+    testuser#testzone, read, /iRODS_home/modules/B2SAFE/cmd/credentials
   It will be accepted if the json file contains:
     "assertion 1":
       { "subject":
@@ -21,7 +21,7 @@ Configurations
         "action":
          [ "read" ],
         "target":
-         [ " /iRODS_home/modules/BE2SAFE/cmd/credentials" ]
+         [ "/iRODS_home/modules/B2SAFE/cmd/credentials" ]
       }
   Or even:
     "assertion 1":
@@ -30,7 +30,7 @@ Configurations
          "action":
           [ "read" ],
          "target":
-          [ " /iRODS_home/modules/BE2SAFE/cmd/*" ]
+          [ "/iRODS_home/modules/B2SAFE/cmd/*" ]
        }
   Because it supports the wild characters in the same way a shell do. 
 
@@ -45,7 +45,7 @@ Configurations
 - just configure the logging level (INFO, DEBUG, ERROR) and the path to the logging directory:
 {
 "log_level": "DEBUG",
-"log_dir": "/<iRODS path>/modules/BE2SAFE/log",
+"log_dir": "/<iRODS path>/modules/B2SAFE/log",
 }
 
 

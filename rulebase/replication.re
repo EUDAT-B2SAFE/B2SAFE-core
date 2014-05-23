@@ -25,8 +25,8 @@
 # Parameters:
 #    *status_transfer_success    [IN] Status of transfered file (true or false)     
 #    *path_of_transfered_file    [IN] path of transfered file in iRODS
-#   *target_transfered_file     [IN] path of the destination file in iRODS
-#   *cause                      [IN] cause of the failed transfer
+#    *target_transfered_file     [IN] path of the destination file in iRODS
+#    *cause                      [IN] cause of the failed transfer
 #
 # Author: Long Phan, Juelich
 # Modified by Claudio Cacciari, Cineca
@@ -216,7 +216,7 @@ EUDATCheckReplicas(*source, *destination) {
 #     *path_of_transfered_coll     [IN] absolute iRODS path of the collection to be transfered
 #     *target_of_transfered_coll   [IN] absolute iRODS path of the destination
 #     *incremental                 [IN] bool('true') to perform an incremental transfer.
-#     *recursive                   [IN] bool('true') to replicate the whole tree of subcollections.
+#     *recurs:wive                   [IN] bool('true') to replicate the whole tree of subcollections.
 #
 # Author: Long Phan, Juelich
 #         Claudio Cacciari, Cineca
@@ -224,12 +224,14 @@ EUDATCheckReplicas(*source, *destination) {
 #
 EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive) {
 
-    #Verify that input path is a collection
+    logInfo("[EUDATTransferCollection] Transfering *path_of_transfered_coll to *target_of_transfered_coll");
+    #Verify that source input path is a collection
     msiIsColl(*path_of_transfered_coll,*Result, *Status);
     if(*Result == 0) {
         logError("Input path *path_of_transfered_coll is not a collection");
         fail;
     }
+    #Verify that destination input path is a collection
     msiIsColl(*target_of_transfered_coll, *Result, *Status);
     if(*Result == 0) {
         logError("Input path *target_of_transfered_coll is not a collection");
@@ -239,39 +241,60 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
     msiSplitPath(*path_of_transfered_coll,*sourceParent,*sourceChild);
     msiStrlen(*sourceParent,*pathLength);
 
-    *Work=``{
-        msiGetObjectPath(*File,*source,*status);
-        msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
-        *depth_level = split(*subCollection, "/");
-        *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
-        msiIsData(*destination, *result, *status);
-        # If the replication is not recursive
-        if (bool("``++"*recursive"++``") == bool("false") && size(*depth_level) == 2) {
-            # If the replication is not recursive, but it is incremental and 
-            # the object *destination is not valid or does not exist
-            if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
-                EUDATTransferSingleFile(*source,*destination);
-            }
-            # The replication is not recursive and it is not incremental
-            else if (bool("``++"*incremental"++``") == bool("false")) {
-                EUDATTransferSingleFile(*source,*destination);
-            }
+    # if incremental
+    if (*incremental == bool("true")) {
+        # if recursive
+        if (*recursive == bool("true")) {
+            *Work=``{
+                msiGetObjectPath(*File,*source,*status);
+                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+                msiIsData(*destination, *result, *status);
+                if (int(*result) == 0) {
+                    EUDATTransferSingleFile(*source,*destination);
+                }
+            }``;
         }
-        # If the replication is recursive
-        else if (bool("``++"*recursive"++``") == bool("true")) {
-            # If the replication is recursive, it is incremental and 
-            # the object *destination is not valid or does not exist
-            if (bool("``++"*incremental"++``") == bool("true") && int(*result) == 0) {
-                EUDATTransferSingleFile(*source,*destination);
-            }
-            # The replication is recursive and it is not incremental
-            else if (bool("``++"*incremental"++``") == bool("false")) {
-                EUDATTransferSingleFile(*source,*destination);
-            }
+        # if not recursive
+        else {
+            *Work=``{
+                msiGetObjectPath(*File,*source,*status);
+                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+                *depth_level = split(*subCollection, "/");
+                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+                msiIsData(*destination, *result, *status);
+                if (int(*result) == 0 && size(*depth_level) == 2) {
+                    EUDATTransferSingleFile(*source,*destination);
+                }
+            }``;
         }
-    }``;
-    msiCollectionSpider(*path_of_transfered_coll,*File,*Work,*Status);
-            
+    }
+    # if not incremental
+    else {
+        # if recursive
+        if (*recursive == bool("true")) {
+            *Work=``{
+                msiGetObjectPath(*File,*source,*status);
+                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+                EUDATTransferSingleFile(*source,*destination);
+            }``;
+        }
+        # if not recursive
+        else {
+	    *Work=``{
+                msiGetObjectPath(*File,*source,*status);
+                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+                *depth_level = split(*subCollection, "/");
+                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+                if (size(*depth_level) == 2) {
+                    EUDATTransferSingleFile(*source,*destination);
+                }
+            }``;
+        }
+    }
+
+    msiCollectionSpider(*path_of_transfered_coll,*File,*Work,*Status);         
 }
 
 #
