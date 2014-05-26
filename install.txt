@@ -121,7 +121,7 @@ The command files are written to the shared iRODS space and are used to control 
 
 3) *.pid.update
 
-    Contians a command to update a PID:
+    Contains a command to update a PID:
     
     "update;*pid;*new_pid"
         *pid            the handle of the source object (the parent)

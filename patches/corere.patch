@@ -10,7 +10,7 @@
 +#     if a parameter is not provided, then it is the empty string
 +acPreProcForExecCmd(*cmd, *args, *addr, *hint) {
 +	if (*cmd != "authZ.manager.py") {
-+               getEUDATAuthZ("$userNameClient#$rodsZoneClient", *cmd, *args, *response);
++           EUDATAuthZ("$userNameClient#$rodsZoneClient", *cmd, *args, *response);
 +       }
 +}
  # ----------------------------------------------------------------------------

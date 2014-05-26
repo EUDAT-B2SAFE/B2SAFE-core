@@ -140,7 +140,7 @@ EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
 # according to the format: cause::path_of_transfer_file::target_of_transfer_file.
 #
 # Parameters:
-#   *buffer_length    [IN] max number of failed transfer to process.
+#   *buffer_length    [IN] max number of failed transfers to process.
 #                          It has to be > 1.
 #
 # Author: Long Phan, Juelich
