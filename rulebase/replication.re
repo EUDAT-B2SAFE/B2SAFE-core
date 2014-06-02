@@ -216,7 +216,7 @@ EUDATCheckReplicas(*source, *destination) {
 #     *path_of_transfered_coll     [IN] absolute iRODS path of the collection to be transfered
 #     *target_of_transfered_coll   [IN] absolute iRODS path of the destination
 #     *incremental                 [IN] bool('true') to perform an incremental transfer.
-#     *recurs:wive                   [IN] bool('true') to replicate the whole tree of subcollections.
+#     *recursive                   [IN] bool('true') to replicate the whole tree of subcollections.
 #
 # Author: Long Phan, Juelich
 #         Claudio Cacciari, Cineca
