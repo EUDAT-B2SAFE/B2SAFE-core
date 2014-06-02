@@ -119,7 +119,7 @@ EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
             if (*err < 0) {
                 logDebug("triggerReplication failed with error code *err");
                 *status_transfer_success = bool("false");
-                updateLogging(*status_transfer_success,*path_of_transfered_file,
+                EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
                               *target_of_transfered_file,"iRODS errorcode=*err");
             } else {
                 logDebug("Perform the last checksum and checksize of transfered data object");        
