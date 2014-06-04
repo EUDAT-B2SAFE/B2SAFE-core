@@ -5,7 +5,9 @@
 # 	*srcColl	[IN]	Path of transfered Collection
 #	*destColl	[IN]	Path of replicated Collection
 #
-integrityCheck(*srcColl,*destColl) {
+# Author: Long Phan, Jülich
+#
+EUDATIntegrityCheck(*srcColl,*destColl) {
         # Verify that input path is a collection
         EUDATVerifyCollection(*srcColl);
         EUDATVerifyCollection(*destColl);
@@ -49,6 +51,8 @@ integrityCheck(*srcColl,*destColl) {
 # Parameter:
 # 	*srcColl	[IN]	Path of Collection
 #
+# Author: Long Phan, Jülich
+#
 EUDATVerifyCollection(*srcColl) {
     logInfo("Verify that source input path *srcColl is a collection")
     msiIsColl(*srcColl,*Result, *Status);
@@ -66,7 +70,9 @@ EUDATVerifyCollection(*srcColl) {
 #	*srcColl	[IN]	Path of transfered Collection
 #	*destColl	[IN]	Path of replicated Collection
 #
-transfer(*srcColl,*destColl,*targetResc) {
+# Author: Long Phan, Jülich
+#
+EUDATTransfer(*srcColl,*destColl,*targetResc) {
         EUDATVerifyCollection(*srcColl);
         EUDATVerifyCollection(*destColl);
 
@@ -85,13 +91,15 @@ transfer(*srcColl,*destColl,*targetResc) {
 # Step 1: applying msiCollRsync to transfer Collection
 # Step 2: create/ update PID 
 #
-transferCollection(*srcColl,*destColl,*transfer,*targetResc){
+# Author: Long Phan, Jülich
+#
+EUDATTransferColl(*srcColl,*destColl,*transfer,*targetResc){
 
         msiStrlen(*srcColl,*path_originallength);
 
         # ----------------- Apply transfer using msiCollRsync ------------    
         if (*transfer == bool("true")) {
-                transfer(*srcColl,*destColl,*targetResc);
+                EUDATTransfer(*srcColl,*destColl,*targetResc);
                 logInfo("Data Transfer completely. Done!");
         }
         logInfo("Begin to create CPID/ update PPID");
