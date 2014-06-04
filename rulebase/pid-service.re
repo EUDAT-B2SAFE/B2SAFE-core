@@ -78,7 +78,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
         *listRor = split(*ror, "/");
         *firstRor = elem(*listRor,0);
         if(*firstRor != "http:") {
-            *ror = *epicApi*ror;
+            *ror = "*epicApi*ror";
         }
     }
     if(*parent_pid != "None") {
