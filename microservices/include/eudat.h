@@ -20,12 +20,12 @@ msiWriteToLog(msParam_t *in_level, msParam_t *in_msg, ruleExecInfo_t *rei);
 int 
 msiGetZoneNameFromPath(msParam_t *inPath, msParam_t *outZoneName, ruleExecInfo_t *rei);
 
-#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
+//#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
 
-int
+/*int
 msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *rei);
-
-# endif /*((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3) */
+*/
+//# endif ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3)
 
 int
 msiReplaceSlash(msParam_t *inPath, msParam_t *outPath, ruleExecInfo_t *rei);

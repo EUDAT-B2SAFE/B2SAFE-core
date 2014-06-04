@@ -238,7 +238,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         *PID = "empty";
         if (*ePIDcheck) {
             logInfo("EUDATeiPIDeiChecksumMgmt -> No PID registered in iCAT. Looking on the EPIC server.");
-            EUDATgetObjectTimeDiff(*path, *liveTime);
+            EUDATgetObjectTimeDiff(*path, , "1", *liveTime);
             # If the file is older than "minTime" in seconds look for ePID
             if ( *liveTime >= *minTime ) {
                 # Get ePID looking for one between: URL and CHECKSUM.

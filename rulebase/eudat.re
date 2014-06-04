@@ -21,7 +21,8 @@
 # logWithLevel(*level, *msg)
 # EUDATiCHECKSUMretrieve(*path, *checksum)
 # EUDATiCHECKSUMget(*path, *checksum)
-# EUDATgetObjectTimeDiff(*filePath, *age)
+# EUDATgetObjectTimeDiff(*filePath, *mode, *age)
+# EUDATgetObjectAge(*filePath, *age) 
 # EUDATfileInPath(*path,*subColl)
 # EUDATCreateAVU(*Key,*Value,*Path)
 # getCollectionName(*path_of_collection,*Collection_Name)
@@ -35,6 +36,8 @@
 # processPIDCommandFile(*cmdPath)
 # doReplication(*pid, *source, *destination, *ror, *status)
 # updateMonitor(*file)
+#---- data staging ---
+# EUDATiDSSfileWrite(*DSSfile)
 
 ################################################################################
 #                                                                              #
@@ -279,23 +282,36 @@ EUDATiCHECKSUMget(*path, *checksum) {
 # In seconds.
 #
 # Arguments:
-#   *filePath           [IN]   The full iRODS path of the object
-#   *age                [OUT]  The age of the object in seconds
+#   *filePath      [IN]   The full iRODS path of the object
+#   *mode          [IN]   The way to calculate the time difference [1,2]
+#                         mode 1: modification time - creation time
+#                         mode 2: now - modification time
+#   *age           [OUT]  The age of the object in seconds
 #
 # Author: Giacomo Mariani, CINECA
 #
-EUDATgetObjectTimeDiff(*filePath, *age) {
+EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
     # Look when the file has been created in iRODS
     msiSplitPath(*filePath, *fileDir, *fileName);   
     *ec = SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir';
     foreach(*ec) {
         msiGetValByKey(*ec, "DATA_CREATE_TIME", *creationTime);
-        logInfo("EUDATgetObjectTimeDiff -> Created at  *creationTime");
+        logDebug("EUDATgetObjectTimeDiff -> Created at  *creationTime");
         msiGetValByKey(*ec, "DATA_MODIFY_TIME", *modifyTime);
-        logInfo("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
+        logDebug("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
     }
-    *age=int(*modifyTime)-int(*creationTime);
-    logInfo("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
+    if (*mode == "1") {
+        *age=int(*modifyTime)-int(*creationTime);
+    }
+    else if (*mode == "2") {
+        msiGetSystemTime(*Now,"unix");
+        *age=int(*Now)-int(*modifyTime);
+    }
+    logDebug("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
+}
+
+EUDATgetObjectAge(*filePath, *age) {
+    EUDATgetObjectTimeDiff(*filePath, "2", *age);
 }
 
 #
@@ -601,4 +617,57 @@ updateMonitor(*file) {
             EUDATProcessErrorUpdatePID(*file);
         }
     }
+}
+
+################################################################################
+#                                                                              #
+# Data Staging                                                                 #
+#                                                                              #
+################################################################################
+
+#
+# Rules to write the file used to store the list of PIDs and URLs
+#
+# Arguments:
+#   *path          [IN]    The path of the file to write in.
+#
+# Author: Giacomo Mariani, CINECA
+#
+EUDATiDSSfileWrite(*DSSfile) {
+    logDebug("Test PID -> acPostProcForCopy checks for *DSSfile");
+    msiSplitPath(*DSSfile, *coll, *name);
+    *b = bool("false");
+    *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME = '*name';
+    foreach(*c in *d) {
+        msiGetValByKey(*c,"DATA_NAME",*num);
+        if(*num == '1') {
+            *b = bool("true");
+        }  
+    }
+    if (!*b)
+    {
+        logDebug("Test PID -> acPostProcForCopy creates *DSSfile");
+        msiDataObjCreate(*DSSfile,*OFlagsB,*DSSf);
+        msiDataObjClose(*DSSf,*Status);
+    }
+    EUDATgetObjectAge(*DSSfile, *age);
+    *minTime = int("86400");        # In seconds
+    if ( *age >= *minTime ) then
+    {
+        logInfo("Test PID -> acPostProcForCopy *DSSfile is old. Removing it.");
+        msiDataObjUnlink(*DSSfile,*Status);
+        msiDataObjCreate(*DSSfile,*OFlagsB,*DSSf);
+        msiDataObjClose(*DSSf,*Status);
+    }
+    msiDataObjOpen(*DSSfile++"++++openFlags=O_RDWR",*DSSf);
+    logDebug("Test PID -> acPostProcForCopy Open OK.");
+    msiDataObjLseek(*DSSf,"null","SEEK_END",*Status);
+    logDebug("Test PID -> acPostProcForCopy Seek OK.");
+    EUDATiPIDretrieve($objPath, *PID)
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
+    *Buf="*serverID"++"$objPath,*PID\n";
+    msiDataObjWrite(*DSSf,*Buf,*Len);
+    logDebug("Test PID -> acPostProcForCopy Write OK.");
+    msiDataObjClose(*DSSf,*Status);
+    logDebug("Test PID -> acPostProcForCopy Close OK.");
 }

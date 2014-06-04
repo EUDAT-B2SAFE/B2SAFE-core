@@ -2,8 +2,10 @@ B2SAFE module 2.0 [2014/04/13]
 - added an integrity check mechanism: see <module_home>/docs/integrityCheck.pdf
 - improved the PID interlinking mechanism: see <module_home>/docs/PID_interlinking-1.pdf
 - defined a rule for the replication of a single object: see <module_home>/docs/transferSingleFile.jpg
+- added a new logging mechanism
+- added a new authorization mechanism
 
-B2SAFE module 2.1 [2014/05/31]
+B2SAFE module 2.1 [2014/06/04]
 - refined the integrity check mechanism
 - defined a rule for the replication of a collection of objects
 - added a script to deploy automatically the module

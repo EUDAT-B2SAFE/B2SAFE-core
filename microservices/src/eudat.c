@@ -70,41 +70,41 @@ msiGetZoneNameFromPath(msParam_t *inPath, msParam_t *outZoneName, ruleExecInfo_t
     return 0;
 }
 
-#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
+//#if ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
 
-int
-msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *rei) {
-    rsComm_t *rsComm;
-    bytesBuf_t *outBuf;
-
-    int myInt;
-    bytesBuf_t tmpBBuf, *myBBuf;
-
-    rsComm = rei->rsComm;
-
-    if (in_buf_msp != NULL) {
-        myInt = parseMspForPosInt(in_buf_msp);
-        if (myInt < 0) {
-            if (myInt != SYS_NULL_INPUT) {
-                rei->status = myInt;
-                rodsLogAndErrorMsg(LOG_ERROR, &rsComm->rError, rei->status,
-                        "msiDataObjWrite: parseMspForPosInt error for param2.");
-                return (rei->status);
-            }
-        }
-        myBBuf = in_buf_msp->inpOutBuf;
-    }
-
-    int len = myBBuf->len+1;
-    char inStr[len];
-    snprintf(inStr, len, "%s", myBBuf->buf);
-   
-    fillStrInMsParam(out_str_msp, inStr);
-
-    return 0;
-}
-
-#endif /* ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 ) */
+/*int
+*msiBytesBufToStr(msParam_t* in_buf_msp, msParam_t* out_str_msp, ruleExecInfo_t *rei) {
+*    rsComm_t *rsComm;
+*    bytesBuf_t *outBuf;
+*
+*    int myInt;
+*    bytesBuf_t tmpBBuf, *myBBuf;
+*
+*    rsComm = rei->rsComm;
+*
+*    if (in_buf_msp != NULL) {
+*        myInt = parseMspForPosInt(in_buf_msp);
+*        if (myInt < 0) {
+*            if (myInt != SYS_NULL_INPUT) {
+*                rei->status = myInt;
+*                rodsLogAndErrorMsg(LOG_ERROR, &rsComm->rError, rei->status,
+*                        "msiDataObjWrite: parseMspForPosInt error for param2.");
+*                return (rei->status);
+*            }
+*        }
+*        myBBuf = in_buf_msp->inpOutBuf;
+*    }
+*
+*    int len = myBBuf->len+1;
+*    char inStr[len];
+*    snprintf(inStr, len, "%s", myBBuf->buf);
+*   
+*    fillStrInMsParam(out_str_msp, inStr);
+*
+*    return 0;
+*}
+*/
+//#endif ((RODS_MAYOR_VERSION == 3 &&  RODS_MINOR_VERSION < 3) || RODS_MAYOR_VERSION < 3 )
 
 
 /*
