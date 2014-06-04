@@ -64,10 +64,10 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                 *action = elem(*subargs,2);
                 if (*action == "read" || *action == "search" || *action == "relation" || *action == "test") {
                     writeLine("serverLog","--- NOTICE action *action on PID");
-		    *status = "true";
+		   			*status = "true";
                 } else if (*action == "create") {
 
-# -------------------------------------- BEGIN TO FILTER ACTION CREATE ------------------------------------------
+				# -------------------------------------- BEGIN TO FILTER ACTION CREATE ------------------------------------------
 										
                     *param = elem(*subargs,3)
 
@@ -76,36 +76,36 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 
                     writeLine("serverLog","WARNING action CREATE PID with URL *param");
 
-		    # Filter logical address of data Object from *param
+				    # Filter logical address of data Object from *param
 
-		    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+		  			getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
                     *templength = strlen(*serverID);
                     *tempID = substr(*param,0,*templength);
                     writeLine("serverLog","Length of *serverID = *templength with substr from *param = *tempID");
-		    if (*tempID == *serverID) {
+				    if (*tempID == *serverID) {
                         msiSubstr(*param,"*templength","null",*stringout);
-			*pathDataObject = *stringout;
-			writeLine("serverLog","Path of Data Object = *pathDataObject");
-			
+						*pathDataObject = *stringout;
+						writeLine("serverLog","Path of Data Object = *pathDataObject");
+						
                         # figure out dataOwner of data Object and compare with user on session.
                         # If not dataOwner, fail 
                         
                         msiSplitPath(*pathDataObject,*collname,*dataname);
 			
                         # ------------- Check the existence of Data Object in iCAT, 
-			# ------------- if it exists in iCAT, continue check dataOwner. 
+						# ------------- if it exists in iCAT, continue check dataOwner. 
                         # If it's NOT exist in iCAT, continue deliver CREATE right. 
                         # ------------- Base on rule EUDATfileInPath of Giacomo -----------------
                         
                         *t = bool("false");	
-			writeLine("serverLog","BEGIN TO CHECK WHETHER DATA EXIST");
-                        *y = SELECT count(DATA_NAME) WHERE COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
-			foreach(*x in *y) {
-			    msiGetValByKey(*x,"DATA_NAME",*num);
-			    if(*num == '1') {				         	 				        *t = bool("true");
-                                writeLine("serverLog","Confirmed that DATA already existed under Coll_Name *collname with name *dataname");
-                            } 
-			}
+						writeLine("serverLog","BEGIN TO CHECK WHETHER DATA EXIST");
+			            *y = SELECT count(DATA_NAME) WHERE COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
+						foreach(*x in *y) {
+						    msiGetValByKey(*x,"DATA_NAME",*num);
+						    if(*num == '1') {				         	 				        *t = bool("true");
+			                                writeLine("serverLog","Confirmed that DATA already existed under Coll_Name *collname with name *dataname");
+			                            } 
+						}
 			
                         # -----------------------------------------------------------------------
 										    
@@ -123,10 +123,10 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
 
                             *y = SELECT DATA_OWNER_NAME, DATA_OWNER_ZONE WHERE COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
                             foreach (*x in *y) {
-				msiGetValByKey(*x,"DATA_OWNER_NAME",*owner);
-				msiGetValByKey(*x,"DATA_OWNER_ZONE",*zone);         
-			    }
-			    if ($userNameClient == *owner && $rodsZoneClient == *zone) {			
+								msiGetValByKey(*x,"DATA_OWNER_NAME",*owner);
+								msiGetValByKey(*x,"DATA_OWNER_ZONE",*zone);         
+							    }
+			  				if ($userNameClient == *owner && $rodsZoneClient == *zone) {			
                                 writeLine("serverLog","User $userNameClient from *zone is confirmed as DataOwner of DataObject, action creating PID keeps going");	
                                
                                 # Check whether this data Object already has one PID (in iCAT). If yes, fail. 
@@ -135,11 +135,11 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                                 *h = "META_DATA_ATTR_NAME = 'PID' AND COLL_NAME = '*collname' AND DATA_NAME = '*dataname'";
                                 msiMakeGenQuery("count(META_DATA_ATTR_VALUE)",*h,*GenQInp);
                                 msiExecGenQuery(*GenQInp, *GenQOut);
-				*b = bool("false");
+								*b = bool("false");
                                 foreach(*GenQOut) {
                                     msiGetValByKey(*GenQOut,"META_DATA_ATTR_VALUE",*meta);
                                     if (*meta == '1') {
-					#writeLine("serverLog","Name of file *dataname has AVU = *meta");
+										#writeLine("serverLog","Name of file *dataname has AVU = *meta");
                                         *b = bool("true");		
                                     }														
                                 }
@@ -172,7 +172,7 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                     writeLine("serverLog","--- Use PID *pid to search in iCAT to query dataOwner");
 
                     #*d = SELECT DATA_OWNER_NAME, DATA_OWNER_ZONE WHERE DATA_COMMENTS = '*pid';
-		    *d = SELECT DATA_OWNER_NAME, DATA_OWNER_ZONE, COLL_NAME, DATA_NAME WHERE META_DATA_ATTR_NAME = 'PID' AND META_DATA_ATTR_VALUE = '*pid';
+		  			*d = SELECT DATA_OWNER_NAME, DATA_OWNER_ZONE, COLL_NAME, DATA_NAME WHERE META_DATA_ATTR_NAME = 'PID' AND META_DATA_ATTR_VALUE = '*pid';
                     foreach (*c in *d) {
                         msiGetValByKey(*c,"DATA_OWNER_NAME",*owner);
                         msiGetValByKey(*c,"DATA_OWNER_ZONE",*zone);
@@ -182,14 +182,14 @@ EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
                     }
 										
                     if ($userNameClient == *owner && $rodsZoneClient == *zone) {
-		        *status = "true";
+				        *status = "true";
                         writeLine("serverLog","Identity of user $userNameClient from Zone $rodsZoneClient is confirmed as OWNER of DATA, script will be executed");
                     } else {
                         *user = "$userNameClient"++"#"++"$rodsZoneClient";
                         *e = SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = 'GROUP' AND COLL_NAME = '*collname' AND DATA_NAME = '*dataname';
                         foreach (*f in *e) {
-			    msiGetValByKey(*f,"META_DATA_ATTR_VALUE",*otherUser);
-			    if (*otherUser == *user) {
+					    msiGetValByKey(*f,"META_DATA_ATTR_VALUE",*otherUser);
+					    if (*otherUser == *user) {
                                 *status = "true";
                                 writeLine("serverLog","Access right of user $userNameClient from Zone $rodsZoneClient is confirmed in GROUP");
                                 break;
