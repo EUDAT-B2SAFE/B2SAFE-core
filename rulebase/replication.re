@@ -313,7 +313,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 #
 # Author: Long Phan, Juelich
 #
-#getStatCollection(*path_of_collection, *logStatisticFilePath) {
+#EUDATGetStatCollection(*path_of_collection, *logStatisticFilePath) {
 #
 #		# --- create optional content of logfile for collection ---
 #		*contents = "------------- Log Information of Collection *path_of_collection --------------- \n";
@@ -378,7 +378,10 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 #				
 #		*contents = *contents ++ "\nIn *logStatisticFilePath \n--Number of files: *count\n"++"-- Capacity: *sum \n";
 # #-----------------------------------------------------------------------------------------------											
-#		writeLine("stdout","*contents");
-#		writeFile(*logStatisticFilePath, *contents);
+#		if (*logStatisticFilePath == "") {
+#			writeLine("stdout","*contents");
+#		} else {
+#			writeFile(*logStatisticFilePath, *contents);
+#		}
 #								
 #}
