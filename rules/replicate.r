@@ -1,3 +1,6 @@
+# 
+# Test triggerReplication
+#
 replicate {
         msiWriteRodsLog("starting replication", *status);
         getSharedCollection(*source,*collectionPath);

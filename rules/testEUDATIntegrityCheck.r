@@ -3,7 +3,7 @@
 #
 
 test {
-	integrityCheck(*Path,*replicaPath);
+	EUDATIntegrityCheck(*Path,*replicaPath);
 	
 	}
 
