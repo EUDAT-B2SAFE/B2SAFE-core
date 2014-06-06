@@ -19,7 +19,7 @@
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
 # EUDATGetRorPid(*pid, *ror)
-# EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime)
+# EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
 # EUDATePIDcreate(*path, *PID)
@@ -442,7 +442,7 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
     *Work=``{
         msiGetObjectPath(*File,*source,*status);
         logInfo("EUDATeiPIDeiChecksumMgmtColl: File *source");
-        EUDATeiPIDeiChecksumMgmt(*source, *pid);
+	EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
         EUDATiRORupdate(*source, *pid);
         }``;
         msiCollectionSpider(*sourceColl,*File,*Work,*Status);
