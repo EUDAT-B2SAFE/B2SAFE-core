@@ -118,11 +118,11 @@ os.system("rm -f " + irods_dir + "/server/config/reConfigs/euloc.re")
 os.system("ln -s " + b2_mod_dir + "/rulebase/local.re " + \
 irods_dir + "/server/config/reConfigs/euloc.re")
 
-os.system("rm -f " + irods_dir + \
-"/server/config/reConfigs/integritycheck.re")
-os.system("rm -f " + irods_dir + "/server/config/reConfigs/euint.re")
-os.system("ln -s " + b2_mod_dir + "/rulebase/integritycheck.re " + \
-irods_dir + "/server/config/reConfigs/euint.re")
+#os.system("rm -f " + irods_dir + \
+#"/server/config/reConfigs/integritycheck.re")
+#os.system("rm -f " + irods_dir + "/server/config/reConfigs/euint.re")
+#os.system("ln -s " + b2_mod_dir + "/rulebase/integritycheck.re " + \
+#irods_dir + "/server/config/reConfigs/euint.re")
 
 
 print '3. edit <irods>/server/config/server.config and append '\
