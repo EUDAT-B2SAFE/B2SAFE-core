@@ -19,7 +19,7 @@
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
 # EUDATGetRorPid(*pid, *ror)
-# EUDATeiPIDeiChecksumMgmt(*ePIDcheck, *iCATuse, *minTime)
+# EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
 # EUDATePIDcreate(*path, *PID)
@@ -238,7 +238,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         *PID = "empty";
         if (*ePIDcheck) {
             logInfo("EUDATeiPIDeiChecksumMgmt -> No PID registered in iCAT. Looking on the EPIC server.");
-            EUDATgetObjectTimeDiff(*path, , "1", *liveTime);
+            EUDATgetObjectTimeDiff(*path, "1", *liveTime);
             # If the file is older than "minTime" in seconds look for ePID
             if ( *liveTime >= *minTime ) {
                 # Get ePID looking for one between: URL and CHECKSUM.
@@ -442,7 +442,7 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
     *Work=``{
         msiGetObjectPath(*File,*source,*status);
         logInfo("EUDATeiPIDeiChecksumMgmtColl: File *source");
-        EUDATeiPIDeiChecksumMgmt(*source, *pid);
+	EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
         EUDATiRORupdate(*source, *pid);
         }``;
         msiCollectionSpider(*sourceColl,*File,*Work,*Status);
