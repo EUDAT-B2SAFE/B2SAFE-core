@@ -107,8 +107,8 @@ os.system("ln -s " + b2_mod_dir + "/rulebase/catchError.re " + \
 irods_dir + "/server/config/reConfigs/eucerr.re")
 
 os.system("rm -f " + irods_dir + "/server/config/reConfigs/euaf.re")
-os.system("rm -f " + irods_dir + \
-"/server/config/reConfigs/eudat-authZ-filters.re")
+#os.system("rm -f " + irods_dir + \
+#"/server/config/reConfigs/eudat-authZ-filters.re")
 os.system("rm -f " + irods_dir + "/server/config/reConfigs/authZ.re")
 os.system("ln -s " + b2_mod_dir + "/rulebase/authZ.re " + \
 irods_dir + "/server/config/reConfigs/euaf.re")
@@ -126,7 +126,7 @@ irods_dir + "/server/config/reConfigs/euloc.re")
 
 
 print '3. edit <irods>/server/config/server.config and append '\
-',eudat,replication,pid-service,catchError,eudat-authZ-filters'\
+',eudat,replication,pid-service,catchError,authZ'\
 ',local to reRuleSet (make sure to include the comma and no spaces)'
 
 
@@ -139,21 +139,21 @@ for line in source:
         if (line.find('eudat') < 0) and \
 (line.find('replication') < 0):
             destination.write(line.strip("\n") + \
-",eudat,eurepl,eupids,eucerr,euaf,euloc,euint" + "\n")
+",eudat,eurepl,eupids,eucerr,euaf,euloc" + "\n")
         elif (line.find('eudat') > -1) and \
 (line.find('replication') < 0) and (line.find('eurepl') < 0):
             destination.write(line.strip("\n") + \
-",eurepl,eupids,eucerr,euaf,euloc,euint" + "\n")
+",eurepl,eupids,eucerr,euaf,euloc" + "\n")
         elif (line.find('eudat') > -1) and \
 (line.find('replication') > -1):
             line1 = line.replace("replication","eurepl")
             line1 = line1.replace("pid-service","eupids")
             line1 = line1.replace("catchError","eucerr")
-            line1 = line1.replace("eudat-authZ-filters","euaf")
+#            line1 = line1.replace("eudat-authZ-filters","euaf")
             line1 = line1.replace("authZ","euaf")
-            line1 = line1.replace("eudat-authZ-filters","euaf")
+#            line1 = line1.replace("eudat-authZ-filters","euaf")
             line1 = line1.replace("local","euloc")
-            line1 = line1.replace("integritycheck","euint")
+#            line1 = line1.replace("integritycheck","euint")
             destination.write(line1)
         else:
             destination.write(line)
