@@ -1,13 +1,13 @@
 #
 # Test Do Replication
 #
-# 1.Test: 
+# 1.Test:
+# (with msiCollCreate) 
 # Source: /DATACENTER2/DATA/xaaaaaaaadv, Destination: /DATACENTER2/DATA/Test/xaaaaaaaadv
-# (with msiCollCreate)
 # Result: DONE, OK.
 #
 # 2.Test:
-# without msiCollCreate
+# (without msiCollCreate)
 # Source: /DATACENTER2/DATA/xaaaaaaaadv, Destination: /DATACENTER2/DATA/Test2/xaaaaaaaadv
 # Result: DONE, OK.
 #
