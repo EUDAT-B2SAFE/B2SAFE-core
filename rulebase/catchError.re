@@ -58,6 +58,7 @@ EUDATCatchErrorSize(*source,*destination) {
             "Source = *source, destination = *destination");
 
     *b = bool("true"); 	
+    *size0 = "";
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_SIZE WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
     foreach   ( *BS )    {
@@ -65,6 +66,7 @@ EUDATCatchErrorSize(*source,*destination) {
         logDebug("Size *source = *size0");
     }
 
+    *size1 = "";
     msiSplitPath(*destination,*parentD,*childD);
     msiExecStrCondQuery("SELECT DATA_SIZE WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
     foreach   ( *BD )    {
