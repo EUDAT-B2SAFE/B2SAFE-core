@@ -1,0 +1,47 @@
+{
+  "EUHIT_Repo": {
+    "members": [
+      "user1", 
+      "user2", 
+      "user3", 
+      "user4"
+    ], 
+    "groups": {
+      "group1": [
+        "user7", 
+        "user4"
+      ], 
+      "group2": [
+        "user12"
+      ], 
+      "group3": [], 
+      "group4": [
+        "user9", 
+        "user10" 
+      ] 
+    }
+  }, 
+  "EUDAT_EPOS": {
+    "members": [
+      "user_epos"
+    ], 
+    "groups": {}
+  }, 
+  "HBP_prjtome": {
+    "members": [], 
+    "groups": {
+      "group18": [
+        "user1"
+      ], 
+      "group15": [
+        "user6", 
+        "user35", 
+        "user21", 
+        "user32", 
+      ], 
+      "group_one": [
+        "user_one"
+      ]
+    }
+  } 
+}
