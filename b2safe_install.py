@@ -143,12 +143,12 @@ os.system("cp -r " + TRUNK + "/* " + B2_MOD_DIR)
 
 os.system("mkdir " + B2_MOD_DIR + "/microservices/obj")
 
-filename =  B2_MOD_DIR + "Makefile"
+filename =  B2_MOD_DIR + "/Makefile"
 os.rename(filename, filename+"~")
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
-    if line.find('reRuleSet') > -1:
+    if line.find('/lat/irods') > -1:
         line1 = line.replace("/lat/irods", IRODS_DIR)
         destination.write(line1)
     else:
@@ -379,13 +379,13 @@ for line in source:
     elif line.find(\
 '"/srv/irods/current/modules/B2SAFE/cmd/authz.map.json"') > -1:
         line1 = line.replace("/srv/irods/current/modules/B2SAFE/"\
-"cmd/authz.map.json",B2_MOD_DIR+"/cmd/authz.map.json")
+"cmd/authz.map.json",B2_MOD_DIR+"/conf/authz.map.json")
         destination.write(line1)
     elif line.find(\
 '"/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf"') > -1:
         line1 = line.replace(\
 "/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf",\
-B2_MOD_DIR+"/cmd/log.manager.conf")
+B2_MOD_DIR+"/conf/log.manager.conf")
         destination.write(line1) 	
     else:
         destination.write(line)
