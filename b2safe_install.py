@@ -10,6 +10,7 @@ RED = '\033[91m'
 BLUE = '\033[94m'
 GREEN = '\033[92m'
 BACK = '\033[0m'
+BOLD = '\033[1m'
 
 # read and set config values
 
@@ -80,17 +81,17 @@ def inpt(inp1):
 
 # welcome msgs
 
-print GREEN + 'Welcome! \n This script will install EUDAT B2SAFE module ' \
+print GREEN + BOLD + 'Welcome! \n This script will install EUDAT B2SAFE module ' \
       'in the following directory: ' + B2_MOD_DIR + BACK
-print BLUE + 'CAUTION: ' \
+print BLUE + BOLD + 'CAUTION: ' \
       'If there is a previuos version of the B2SAFE module installed ' \
       'in this directory, it will be overwritten. \n' + BACK
 
-inp = raw_input(BLUE + 'Continue installation (y/n)? :' + BACK).lower()
+inp = raw_input(BLUE + BOLD + 'Continue installation (y/n)? :' + BACK).lower()
 
 chk = inpt(inp)
 
-print BLUE + 'CAUTION: ' \
+print BLUE + BOLD + 'CAUTION: ' \
             'If you were using a previuos version of the B2SAFE module, \n' \
             '1) your ' + IRODS_DIR + '/server/config/reConfigs/ ' \
             'may contain symbolic ' \
@@ -131,7 +132,7 @@ print BLUE + 'CAUTION: ' \
             'remove mentioned above symbolic links and start ' \
             'the installation again.' + BACK
 
-inp = raw_input(BLUE + 'Continue installation (y/n)? :' + BACK).lower()
+inp = raw_input(BLUE + BOLD + 'Continue installation (y/n)? :' + BACK).lower()
 
 chk = inpt(inp)
 
@@ -139,6 +140,22 @@ print 'copy trunk to modules dir in irods'
 
 os.system("mkdir " + B2_MOD_DIR)
 os.system("cp -r " + TRUNK + "/* " + B2_MOD_DIR)
+
+os.system("mkdir " + B2_MOD_DIR + "/microservices/obj")
+
+filename =  B2_MOD_DIR + "Makefile"
+os.rename(filename, filename+"~")
+destination = open(filename, "w")
+source = open(filename+"~", "r")
+for line in source:
+    if line.find('reRuleSet') > -1:
+        line1 = line.replace("/lat/irods", IRODS_DIR)
+        destination.write(line1)
+    else:
+        destination.write(line)
+source.close()
+destination.close()
+
 
 print '1.1. <irods>/scripts/configure --enable-B2SAFE \n'\
 'If a previous version of the module is present, \n'\
@@ -482,7 +499,27 @@ if status != 0:
 for i in range(1, len(us)):
     os.system("ichmod -r own " + us[i] + " " + SHARED_SPACE)
 
-print GREEN + 'B2SAFE module installation is finished' + BACK
+print GREEN + BOLD + 'B2SAFE module installation is' \
+            + RED + BOLD + ' ALMOST ' + GREEN + BOLD + 'finished!' + BACK
+print GREEN + BOLD + 'Please, complete the following steps ' \
+      'to be able to use the module: \n '\
+      '- change "#!/usr/bin/env python" in python scripts in ' \
+      'modules/B2SAFE/cmd/ to your python installation \n '\
+      '- install httplib2, simplejson and pylint: \n '\
+      '  httplib2: \n '\
+      '    download from http://code.google.com/p/httplib2 \n '\
+      '    python setup.py install \n '\
+      '  simplejson: \n '\
+      '    download from http://pypi.python.org/pypi/simplejson/ \n '\
+      '    python setup.py install \n '\
+      '  ubuntu: apt-get install python-httplib2 python-simplejson \n '\
+      '  ubuntu: apt-get install pylint \n '\
+      '- test the epic api interaction by running the '\
+      '"./cmd/epicclient.py test" script manually and with '\
+      '"iexecmd epicclient.py" \n '\
+      '- test the replication by changing and triggering "replicate.r" '\
+      'rule in <irods>/modules/B2SAFE/rules' + BACK
+
 
 exit()
 
