@@ -88,6 +88,7 @@ update_one_record()
   if (( $prev_time < $ver_time ))
   then
     imeta set -d $data_object $ATTR_NAME $ver_time
+    irule -F updatePidChecksum.r "*path='$data_object'"
   fi
   
   return 0
