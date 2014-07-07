@@ -16,6 +16,7 @@ import ConfigParser
 from utilities.drivers.hbpIncf import *
 from utilities.drivers.euhit import *
 from utilities.drivers.myproxy import *
+from utilities.drivers.eudatunity import *
 
 logging.basicConfig()
 
@@ -59,7 +60,6 @@ class SyncRemoteUsers:
         logfilepath = self._getConfOption('Common', 'logfile')
         loglevel = self._getConfOption('Common', 'loglevel')
         self.filepath = self._getConfOption('Common', 'usersfile')
-##        self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
         
         main_project = _args.group
         subproject = _args.subgroup
@@ -93,42 +93,19 @@ class SyncRemoteUsers:
             sys.exit(1)
 
         userparam = {k:v for k,v in self.config.items(main_project)}
-        if (main_project == 'HBP_prjtome' and subproject == 'HBP_INCF'):
-            self.logger.info('Syncronizing local json file with \'incf\' ' +
-                             'zone user DB...')
-            hbpRemoteSource = HBPRemoteSource(userparam, self.logger)
-            local_users_list = data[main_project]["groups"][subproject]
-            data = hbpRemoteSource.synchronize_user_db(local_users_list, \
-                                                       data, remove)
-
-        if (main_project == 'EUHIT_Repo'):
-            self.logger.info('Syncronizing local json file with euhit user DB...')
-            euhitRemoteSource = EuhitRemoteSource(userparam, self.logger)
+        if (main_project == 'EUDAT'):
+            self.logger.info('Syncronizing local json file with eudat user DB...')
+            eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
             local_users_by_org = data[main_project]["groups"]
-            data = euhitRemoteSource.synchronize_user_db(local_users_by_org, \
+            data = eudatRemoteSource.synchronize_user_db(local_users_by_org, \
                                                          data, remove)
+                                                        
         if data == None: sys.exit(1)
 
         with open(self.filepath, "w") as jsonFile:
             jsonFile.write(json.dumps(data,indent=2))
         self.logger.info('{0} correctly written!'.format(self.filepath))
         jsonFile.close()
-
-        # Get the json file containing the list of distinguished names and users
-##        with open(self.dnsfilepath, "r") as jsonFile:
-##            data = json.load(jsonFile)
-##
-##        if (main_project == 'MyProxy'):
-##            userparam = {k:v for k,v in self.config.items('MyProxy')}
-##            myproxyRemoteSource = MyProxyRemoteSource(userparam, self.logger)
-##            data = myproxyRemoteSource.synchronize_user_db(data)
-##
-##        if data == None: sys.exit(1)
-##
-##        with open(self.dnsfilepath, "w") as jsonFile:
-##            jsonFile.write(json.dumps(data,indent=2))
-##        self.logger.info('{0} correctly written!'.format(self.dnsfilepath))
-##        jsonFile.close()
 
         sys.exit(0)
     
