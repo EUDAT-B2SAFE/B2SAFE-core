@@ -130,7 +130,7 @@ print BLUE + BOLD + 'CAUTION: ' \
             'symbolic links in your irods directories, you can ' \
             'proceed with this installation. Otherwise, plese, quit it, ' \
             'remove mentioned above symbolic links and start ' \
-            'the installation again.' + BACK
+            'the installation again. \n' + BACK
 
 inp = raw_input(BLUE + BOLD + 'Continue installation (y/n)? :' + BACK).lower()
 
@@ -409,7 +409,7 @@ for line in source:
         line1 = line.replace("ZZZ", PREFIX)
         destination.write(line1)
     elif line.find('"password"') > -1:
-        print BLUE + "Please, enter your password for your prefix " \
+        print BLUE + BOLD + "Please, enter your password for your prefix " \
               + PREFIX + ":" + BACK
         password = getpass.getpass()
         line1 = line.replace("YYYYYYYY", password)
@@ -501,7 +501,7 @@ for i in range(1, len(us)):
 
 print GREEN + BOLD + 'B2SAFE module installation is' \
             + RED + BOLD + ' ALMOST ' + GREEN + BOLD + 'finished!' + BACK
-print GREEN + BOLD + 'Please, complete the following steps ' \
+print BLUE + BOLD + 'Please, complete the following steps ' \
       'to be able to use the module: \n '\
       '- change "#!/usr/bin/env python" in python scripts in ' \
       'modules/B2SAFE/cmd/ to your python installation \n '\
@@ -514,11 +514,12 @@ print GREEN + BOLD + 'Please, complete the following steps ' \
       '    python setup.py install \n '\
       '  ubuntu: apt-get install python-httplib2 python-simplejson \n '\
       '  ubuntu: apt-get install pylint \n '\
+      '- install queuelib library to run logging-mechanism \n '\
       '- test the epic api interaction by running the '\
-      '"./cmd/epicclient.py test" script manually and with '\
-      '"iexecmd epicclient.py" \n '\
-      '- test the replication by changing and triggering "replicate.r" '\
-      'rule in <irods>/modules/B2SAFE/rules' + BACK
+      '"' + IRODS_DIR + '/modules/B2SAFE/cmd/epicclient.py test"'\
+      ' script manually and with "iexecmd epicclient.py" \n '\
+      '- test replication by changing and triggering test rules '\
+      'in' + IRODS_DIR + '/modules/B2SAFE/rules' + BACK
 
 
 exit()
