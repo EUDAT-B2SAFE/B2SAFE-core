@@ -104,7 +104,6 @@ class EudatRemoteSource:
         """
 
         remote_users_list = self.getRemoteUsers()
-        print(pformat(remote_users_list))
         
         for org,members in remote_users_list['groups'].iteritems():
 
