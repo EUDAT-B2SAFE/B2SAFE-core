@@ -13,9 +13,6 @@ from pprint import pformat
 import os
 import ConfigParser
 
-from utilities.drivers.hbpIncf import *
-from utilities.drivers.euhit import *
-from utilities.drivers.myproxy import *
 from utilities.drivers.eudatunity import *
 
 logging.basicConfig()
