@@ -3,10 +3,10 @@ Brief:          EUDAT Microservices
 Description:    Micro services required by the EUDAT infrastructure to support
                 the safe replication and PID management services
 
-                See https://confluence.csc.fi/display/Eudat/iRODS+PID+Management
+                See https://github.com/EUDAT-B2SAFE/B2SAFE-core/blob/latest/docs/administrator.guide.pdf
                 for more details.
 
 Enabled:        yes 
 Creator:        Willem Elbers - Max Planck Institute for Psycholinguistics, contact willem.elbers@mpi.nl
 Created:        August 2012	
-License:        GPL 3.0
+License:        BSD

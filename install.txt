@@ -34,14 +34,11 @@ Manually:
 
 2. create a symbolic link to the eudat rulebase
   cd <irods>
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/eudat.re ./server/config/reConfigs/eudat.re
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/replication.re ./server/config/reConfigs/replication.re
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/pid-service.re ./server/config/reConfigs/pid-service.re
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/catchError.re ./server/config/reConfigs/catchError.re
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/eudat-authZ-filters.re ./server/config/reConfigs/eudat-authZ-filters.re
-  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/local.re ./server/config/reConfigs/local.re
+  ln -s <absolute-irods-path>/modules/B2SAFE/rulebase/*.re ./server/config/reConfigs/*.re
+  replacing the jolly character "*" with each file name available in the directory "rulebase".
 
-3. edit <irods>/server/config/server.config and append ",eudat,replication,pid-service,catchError,eudat-authZ-filters,local" to "reRuleSet" 
+3. edit <irods>/server/config/server.config and append to "reRuleSet" the list of ruleset file names written 
+   in a single line and without the suffix".re", in this way ",filename1,filename2,filename3 ..."  
 	(make sure to include the comma and no spaces)
 
 4. configure iRODS hooks.
@@ -133,13 +130,6 @@ The command files are written to the shared iRODS space and are used to control 
     "update;*pid;*new_pid"
         *pid            the handle of the source object (the parent)
         *new_pid        the (generated) handle of the destination object (the child)
-
-
-*** TODO ***
-
-- improve logic and data actual written/conveyed
-    --> merge pid.create and pid.update actions in a single command file
-- improve error handling
 
 
 *** Know bugs ***
