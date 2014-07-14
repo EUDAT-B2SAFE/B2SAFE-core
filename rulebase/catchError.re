@@ -12,7 +12,7 @@
 #	*source         [IN] path source of data object
 #	*destination	[IN] path destination of replicated data object
 # 
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #
 EUDATCatchErrorChecksum(*source,*destination){
     logInfo("[EUDATCatchErrorChecksum] Check if 2 replicas have the same checksum. " ++
@@ -51,7 +51,7 @@ EUDATCatchErrorChecksum(*source,*destination){
 #	*source		[IN] path source of data object
 #	*destination	[IN] path destination of replicated data object
 #  
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #
 EUDATCatchErrorSize(*source,*destination) {
     logInfo("[EUDATCatchErrorSize] Check if 2 replicas have the same size." ++
@@ -92,7 +92,7 @@ EUDATCatchErrorSize(*source,*destination) {
 # TODO: Need Test
 # TODO: to be updated with the new logging mechanism
 #
-# Author: Long Phan, Juelich, Elena Erastova, RZG
+# Author: Long Phan, JSC; Elena Erastova, RZG
 #
 EUDATProcessErrorUpdatePID(*updfile) {
 		
@@ -170,7 +170,7 @@ EUDATProcessErrorUpdatePID(*updfile) {
 #	*path			[IN] path source of data object
 #	*status			[OUT] status of data object ('true' = DATA OWNER or false = NO ACCESS PERMISSION)
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #
 EUDATCatchErrorDataOwner(*path,*status){
     *status = bool("true");

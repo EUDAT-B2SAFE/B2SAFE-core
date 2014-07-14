@@ -4,7 +4,7 @@
 #   *path	[IN] the full iRODS path of the object
 #   *otherUser	[IN] name of user who will be appended into GROUP
 #   *otherZone  [IN] name of zone of *otherUser
-# Author: Long Phan, Juelich	
+# Author: Long Phan, JSC
 #
 EUDATsetAccessZone(*path,*otherUser,*otherZone) {
 		
@@ -40,7 +40,7 @@ EUDATsetAccessZone(*path,*otherUser,*otherZone) {
 # 	*args			[IN]	argument of *cmd
 #	*addr, *hint	[IN]	( see iexecmd -h)  
 # 	*status			[OUT]	status of variable to decide whether script will be executed (true = yes, false = no)
-# Author: Long Phan, Juelich 
+# Author: Long Phan, JSC
 #
 EUDATsetFilterACL (*cmd, *args, *addr, *hint, *status) {
     *status = "false";

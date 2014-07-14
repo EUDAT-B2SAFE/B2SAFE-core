@@ -347,7 +347,7 @@ EUDATfileInPath(*path,*subColl) {
 #	*Value	[IN]	Value in AVU
 #	*Path	[IN]	Path of log_file
 # 
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 # 
 EUDATCreateAVU(*Key,*Value,*Path) {
     logDebug("[EUDATCreateAVU] Adding AVU = *Key with *Value to metadata of *Path");
@@ -364,7 +364,7 @@ EUDATCreateAVU(*Key,*Value,*Path) {
 #	*path_of_collection		[IN] 	path of collection in iRODS
 #	*Collection_Name 		[OUT]	return Name of Collection 
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #
 getCollectionName(*path_of_collection,*Collection_Name){
     *list = split("*path_of_collection","/");

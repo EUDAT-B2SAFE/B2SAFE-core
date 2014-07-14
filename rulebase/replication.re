@@ -28,7 +28,7 @@
 #    *target_transfered_file     [IN] path of the destination file in iRODS
 #    *cause                      [IN] cause of the failed transfer
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
 EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file, 
@@ -52,7 +52,7 @@ EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file,
 #    *path_of_transfered_file    [IN] path of transfered file in iRODS
 #    *target_of_transfered_file    [IN] destination of replication in iRODS
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
 EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
@@ -87,7 +87,7 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
 #    *path_of_transfered_file    [IN] path of transfered file in iRODS
 #    *target_of_transfered_file  [IN] destination of replication in iRODS
 # 
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
 EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
@@ -143,7 +143,7 @@ EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
 #   *buffer_length    [IN] max number of failed transfers to process.
 #                          It has to be > 1.
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca;
 #
 EUDATTransferUsingFailLog(*buffer_length) {
@@ -218,7 +218,7 @@ EUDATCheckReplicas(*source, *destination) {
 #     *incremental                 [IN] bool('true') to perform an incremental transfer.
 #     *recursive                   [IN] bool('true') to replicate the whole tree of subcollections.
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #         Claudio Cacciari, Cineca
 #
 #
@@ -311,7 +311,7 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 # 	*path_of_collection		[IN]	Path of collection in iRODS (ex. /COMMUNITY/DATA)
 #	*logStatisticFilePath	[IN]	Path of statistic file in iRODS
 #
-# Author: Long Phan, Juelich
+# Author: Long Phan, JSC
 #
 #EUDATGetStatCollection(*path_of_collection, *logStatisticFilePath) {
 #
