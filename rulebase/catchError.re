@@ -149,7 +149,7 @@ EUDATProcessErrorUpdatePID(*updfile) {
                 *cause = "replication went wrong but file *dataName exists";
                 readReplicationCommandFile(*coll++"/"++*dataName, *pid,*path_of_transfered_file, 
                                            *target_transfered_file, *ror);
-                updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
+                EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
             }
         }
         else if(*num == "1") {
@@ -157,7 +157,7 @@ EUDATProcessErrorUpdatePID(*updfile) {
             *openFile = *coll++"/"++*dataName;
             readReplicationCommandFile(*openFile,*pid,*path_of_transfered_file,*target_transfered_file,*ror);
             *status_transfer_success = bool("true");
-            updateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
+            EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
         }
     }
 }
