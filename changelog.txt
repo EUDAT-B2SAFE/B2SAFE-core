@@ -1,3 +1,5 @@
+B2SAFE module 2.2.1
+
 B2SAFE module 2.2 [2014/07/09]
 - defined a set of properties to publish the basic local B2SAFE configuration
 - on demand checksum generation and verification tools based on replica location paths
