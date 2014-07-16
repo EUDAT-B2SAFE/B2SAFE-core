@@ -34,7 +34,16 @@ class EudatRemoteSource:
         else: missingp.append(key)
         if len(missingp) > 0:
             self.logger.error('missing parameters: ' + pformat(missingp))
-            
+
+    def createNewJson(self, filepath, subgroup):
+        data = {}
+        data[subgroup] = {"groups":{}}
+
+        with open(filepath, "w") as jsonFile:
+            jsonFile.write(json.dumps(data,indent=2))
+        self.logger.info('{0} correctly written!'.format(filepath))
+
+        jsonFile.close()
 
     def queryUnity(self, sublink):
         """

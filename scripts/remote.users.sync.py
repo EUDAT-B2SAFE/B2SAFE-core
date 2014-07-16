@@ -77,21 +77,33 @@ class SyncRemoteUsers:
         
         # Get the json file containing the list of projects, sub-groups and 
         # related members
-        with open(self.filepath, "r") as jsonFile:
-            data = json.load(jsonFile)
-            
+
+        userparam = {k:v for k,v in self.config.items(main_project)}
+        try:
+            with open(self.filepath, "r") as jsonFile:
+                data = json.load(jsonFile)
+        except IOError:
+            print "I/O error. JSON-File does not exist - creating it under %s %s..."%(self.filepath,main_project)
+            eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
+            eudatRemoteSource.createNewJson(self.filepath,main_project)
+            print "JSON-File is already created under %s. Please run script again to sync data from %s"%(self.filepath,main_project)
+            sys.exit(1)
+        except:
+            print "Unknown error", sys.exc_info()[0]
+            sys.exit(1)
+
+
         if main_project in data:
             if subproject:
                 if subproject not in data[main_project]["groups"]:
                     self.logger.error('\'' + subproject + '\' group not found.')
                     sys.exit(1)
         else:
-            self.logger.error('\'' + main_project + '\' group not found.')
+            self.logger.error('\'' + main_project + '\' main_project group not found.')
             sys.exit(1)
 
-        userparam = {k:v for k,v in self.config.items(main_project)}
         if (main_project == 'EUDAT'):
-            self.logger.info('Syncronizing local json file with eudat user DB...')
+            self.logger.info('Synchronizing local json file with eudat user DB...')
             eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
             local_users_by_org = data[main_project]["groups"]
             data = eudatRemoteSource.synchronize_user_db(local_users_by_org, \
