@@ -376,8 +376,8 @@ class EpicClient(object):
         #if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
 
-        uri = self._getURI(prefix,key,value,suffix)
-        self._debugMsg('modifyHandle',"URI " + uri)
+        uri = self._getURI(prefix, '', '', suffix)
+        self._debugMsg('modifyHandle', "URI " + uri)
         # hdrs = None
         # auth = base64.encodestring(self.cred.username + ':' + self.cred.password)
         # if self.cred.accept_format:
