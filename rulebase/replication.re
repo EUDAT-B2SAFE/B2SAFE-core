@@ -320,15 +320,16 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 #		msiGetCollectionACL(*path_of_collection,"",*Buf);		
 #		*contents = *contents ++ "Collection Owner: \n*Buf \n";
 #	
-#	# ------ This code-part only works partially, not in all case of collection's path ----------
-#	# ------ it's similar like iquest "SELECT RESC_LOC, RESC_NAME WHERE COLL_NAME = '*path'" but it does not work when iCAT does not save information about Input-Path
+#	# ------ This code-part only works partially, not in all case of collection's path 	 ----------
+#	# ------ it's similar like iquest "SELECT RESC_LOC, RESC_NAME WHERE COLL_NAME = '*path'" ----------
+#	# ------ but it does not work when iCAT does not save information about Input-Path 	 ----------
 #	#	msiExecStrCondQuery("SELECT RESC_LOC, RESC_NAME WHERE COLL_NAME = '*path_of_collection'" ,*BS);
 #	#	foreach   ( *BS )    {
-#	#        msiGetValByKey(*BS,"RESC_LOC", *resc_loc);
-#	#        msiGetValByKey(*BS,"RESC_NAME", *resc_name);
-#	#    }
+#	#        	msiGetValByKey(*BS,"RESC_LOC", *resc_loc);
+#	#        	msiGetValByKey(*BS,"RESC_NAME", *resc_name);
+#	#    	}
 #	#	*contents = *contents ++ "Resource Name: *resc_name\nResource Location: *resc_loc \n";
-#	# --------------------------------------------------------------------------------------------
+#	# -------------------------------------------------------------------------------------------------
 #		
 #		msiGetSystemTime(*time,"human");		
 #		*contents = *contents ++ "Date.Time: *time \n\n";
