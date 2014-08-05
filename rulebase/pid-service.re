@@ -48,7 +48,9 @@
 #   *newPID     [OUT]   the pid generated for this replica 
 #
 # Author: Willem Elbers, MPI-TLA
-# Edited by Elena Erastova, RZG
+# Edited by Elena Erastova, RZG; Long Phan, JSC
+#
+# TODO: NEED TESTING
 #
 EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
     logInfo("create pid for *path and save *ror as ror");
@@ -74,36 +76,59 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
     }
 
     # add RoR to PID record if there is one defined
-    if(*ror != "None") {
-        *listRor = split(*ror, "/");
-        *firstRor = elem(*listRor,0);
-        if(*firstRor != "http:") {
-            *ror = "*epicApi*ror";
-        }
-    }
-    if(*parent_pid != "None") {
-        *listPpid = split(*parent_pid, "/");
-        *firstPpid = elem(*listPpid,0);
-        if(*firstPpid != "http:") {
-            *parent_pid = "*epicApi*parent_pid";
-        }
-        if(*ror == "None") {
-            *ror = *parent_pid;
-            *parent_pid = "None";   
-        }
-        else if(*ror == *parent_pid) {
-            *parent_pid = "None";
-        }
-    }
+#    if(*ror != "None") {
+#        *listRor = split(*ror, "/");
+#        *firstRor = elem(*listRor,0);
+#       if(*firstRor != "http:") {
+#            *ror = "*epicApi*ror";
+#        }
+#    }
+#    if(*parent_pid != "None") {
+#        *listPpid = split(*parent_pid, "/");
+#        *firstPpid = elem(*listPpid,0);
+#        if(*firstPpid != "http:") {
+#            *parent_pid = "*epicApi*parent_pid";
+#        }
+#        if(*ror == "None") {
+#            *ror = *parent_pid;
+#            *parent_pid = "None";   
+#        }
+#        else if(*ror == *parent_pid) {
+#            *parent_pid = "None";
+#        }
+#    }
 
-    if(*ror != "None") {
-        # add ROR to PID record
-        EUDATeParentUpdate(*newPID, "ROR", *ror);
-    }
-    if(*parent_pid != "None") {
-        # add PPID to PID record
-        EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
-    }
+#    if(*ror != "None") {
+#        # add ROR to PID record
+#        EUDATeParentUpdate(*newPID, "ROR", *ror);
+#    }
+#    if(*parent_pid != "None") {
+#        # add PPID to PID record
+#        EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
+#    }
+     
+     if (*ror != "None" && *ror != "" && *parent_pid != "None" && *parent_pid != "") {
+                logInfo("Update Parent PID with fields ROR and PPID");
+
+                EUDATeParentUpdate(*newPID, "ROR", *ror);
+                EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
+
+     } else if ((*ror != "None" && *ror != "" && *parent_pid == "None") ||
+                (*ror != "None" && *ror != "" && *parent_pid == "")) {
+
+                logInfo("Update ParentPID with field ROR");
+                EUDATeParentUpdate(*newPID, "ROR", *ror);
+
+     } else if ((*parent_pid != "None" && *parent_pid != "" && *ror == "None") ||
+                (*parent_pid != "None" && *parent_pid != "" && *ror == "")) {
+
+                logInfo("Update ParentPID = *parent_pid with field PPID");
+                EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
+
+     } else {
+                logInfo("field ROR and PPID are empty or invalid, No ParentUpdate");
+     }
+
 }
 
 #
