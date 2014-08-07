@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from testB2SafeCmd.testEpicClient import EpicClientTestCase
+from testB2SafeCmd.testLogManager import LogManagerTestCase
 import argparse
 import unittest
 
@@ -18,15 +19,22 @@ if __name__ == '__main__':
 
     if param.script == "epic":
         # Test cases for B2Safe-Epicclient#
-        epic_suite = unittest.TestSuite()
         print "Test Epicclient Script"
+        epic_suite = unittest.TestSuite()
         epic_suite.addTest(EpicClientTestCase("test_case"))
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(epic_suite)
+
     elif param.script == "log":
         print "Test Logging Script"
+        log_suite = unittest.TestSuite()
+        log_suite.addTest(LogManagerTestCase("test_case"))
+        unittest.TextTestRunner(descriptions=2, verbosity=2).run(log_suite)
+
     elif param.script == "auth":
         print "Test Authorization Script"
+
     elif param.script == "all":
         print "Test all scripts"
+
     else:
         print "Invalid Input; Valid example ./testB2SafeCmd -test epic"
