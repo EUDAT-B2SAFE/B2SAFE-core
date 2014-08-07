@@ -27,6 +27,7 @@ from queuelib import FifoDiskQueue
 # Log Manager Client Class #
 ###############################################################################
 
+
 class LogManager(object):
     """Class implementing a log manager."""
 
@@ -58,7 +59,7 @@ class LogManager(object):
             tmp = eval(filehandle.read())
             filehandle.close()
         except (OSError, IOError) as e:
-            print "problem while reading configuration file %s" % (self.file)
+            print "problem while reading configuration file %s" % self.file
             print "Error:", e
 
         self.log_level_value = self.log_level[tmp['log_level']]
@@ -85,7 +86,7 @@ class LogManager(object):
         
     def getLogger(self):
         """get the logger instance."""
-        
+
         return self.logger
 
     def getLogFile(self):
@@ -123,7 +124,8 @@ def log(args):
         logger.critical(msg)
     else:
         sys.stdout.write('no log level defined')
-        
+
+
 def push(args):
     '''perform push action'''
     
@@ -132,7 +134,8 @@ def push(args):
     queue = logManager.getQueue()
     queue.push(' '.join(args.message))
     queue.close()
-    
+
+
 def pop(args):
     '''perform pop action'''
     
@@ -143,7 +146,7 @@ def pop(args):
     if args.number:
         i = 0
         messages = []
-        while (i < int(args.number)):
+        while i < int(args.number):
             message = queue.pop()
             if message is not None:
                 messages.append(message)
@@ -156,7 +159,8 @@ def pop(args):
         print message
         
     queue.close()
-    
+
+
 def queuesize(args):
     '''get the current size of the queue'''
     
@@ -166,7 +170,8 @@ def queuesize(args):
     length = str(len(queue))
     print length
     queue.close()
-    
+
+
 def test(args):
     '''do a series of tests'''
     
@@ -177,21 +182,24 @@ def test(args):
         
         try:
             filehandle = open(logfile, "r")
-            line = filehandle.readline()
+            # read last line in file
+            linelist = filehandle.readlines()
             filehandle.close()
-        except (OSError, IOError) as e:
-            print "problem while reading file %s" % (file)
-            print "Error:", e
+        except (OSError, IOError) as er:
+            print "problem while reading file %s" % logfile
+            print "Error:", er
             return False
-        
-        if 'test log message' in line:
+        #print linelist
+        lastline = linelist[len(linelist)-1]
+        #print "Info in last line is ", linelist[len(linelist)-1]
+        if 'test log message' in lastline:
             return True
         
         return False
 
     def test_result(result, testval):
-        '''local helper func: print OK/FAIL for test result
-        Returns 0 on OK, 1 on failure'''
+        """local helper func: print OK/FAIL for test result
+        Returns 0 on OK, 1 on failure"""
         
         if type(result) != type(testval):
             print "FAIL (wrong type; test is bad)"
@@ -203,26 +211,49 @@ def test(args):
         else:
             print "FAIL"
             return 1
-            
-    logManager = LogManager(args.conffilepath, args.debug)
-    logManager.initializeLogger()
-    logger = logManager.getLogger()
-    logfile = logManager.getLogFile()
+
+    try:
+        logManager = LogManager(args.conffilepath, args.debug)
+        logManager.initializeLogger()
+        logger = logManager.getLogger()
+        logfile = logManager.getLogFile()
+    except IOError as er:
+        print "IOError, directory 'log' might not exist"
+        print "Error: ", er
+        return False
+
     logManager.initializeQueue()
     queue = logManager.getQueue()
     
     fail = 0
     
     print
-    print "logging info to the file " + file
+    print "logging info to the file " + logfile
+    print "Test: log message"
     fail += test_result(read_log_last_line(logger, logfile), True)
+
+    oldsize = len(queue)
     print
-    print "pushing info to the queue"
+    print "Test: size Queue before push", oldsize
+
+    print
+    print "Test: push info to the queue"
     queue.push('test message')
+    oldsize += 1
+
+    print
+    print "Test: size Queue after push ", oldsize
+    if len(queue) == oldsize:
+        print "OK"
+    else:
+        fail += 1
+        print "size of queue", len(queue)
+
+    print
+    print "Test: pop info from queue"
     fail += test_result('test message', queue.pop())
     queue.close()
-    
-    print
+
     if fail == 0:
         print "All tests passed OK"
     else:
@@ -256,8 +287,8 @@ if __name__ == "__main__":
     parser_pop.add_argument("-n", "--number", help="pop a number of elements")
     parser_pop.set_defaults(func=pop)
 
-    parser_queue = subparsers.add_parser('queuesize', help='get the lenght '
-                                                          'of the queue')
+    parser_queue = subparsers.add_parser('queuesize', help='get the length '
+                                                           'of the queue')
     parser_queue.set_defaults(func=queuesize)
 
     parser_test = subparsers.add_parser('test', help='Run test suite')
