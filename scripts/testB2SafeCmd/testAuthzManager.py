@@ -27,7 +27,19 @@ class AuthzManagerTestCase(unittest.TestCase):
         authzclient.parse()
 
         print
-        print "Test Case:"
-        self.assertTrue(authzclient.checkauth('testuser#testzone',
+        print "Test Case 1 (should be True):"
+        self.assertTrue(authzclient.checkauth('rods#DATACENTER2',
                         'epicclient2beta.py', '* delete *',
                         'path/to/creds'))
+
+        print
+        print "Test Case 2 (should be True):"
+        self.assertTrue(authzclient.checkauth('testuser#testzone',
+                                              'logmanager.py', '* push *',
+                                              '/home/irods/iRODS/modules/'
+                                              'B2SAFE/cmd/credentials'))
+
+        print
+        print "Test Case 3 (should be False):"
+        self.assertFalse(authzclient.checkauth('testuser#testzone',
+                         'epicclient2beta.py', '* delete *', 'path/to/creds'))

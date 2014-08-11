@@ -9,7 +9,7 @@
 	},
 "assertion 2":
         { "subject":
-                [ "rods#DATACENTER2", "testuser#testzone" ],
+                [ "rods#DATACENTER2" ],
           "action":
                 [ "epicclient2beta.py"],
           "target":
