@@ -198,12 +198,12 @@ configure_irods_hooks() {
 
 acPostProcForPut {
     ON(\$objPath like "\*.replicate") {
-        processReplicationCommandFile();
+        processReplicationCommandFile(\$objPath);
     }
 }
 acPostProcForPut {
     ON(\$objPath like "\*.pid.create") {
-        processPIDCommandFile();
+        processPIDCommandFile(\$objPath);
     }
 }
 
