@@ -238,7 +238,7 @@ update_irods_core_resource() {
     cat $IRODS_COREFILE | \
         awk -v DEFAULT_RESOURCE=$DEFAULT_RESOURCE '{
             if ( $1 ~ /acSetRescSchemeForCreate|acSetRescSchemeForRepl/ ) {
-                $2="{msiSetDefaultResc(\""DEFAULT_RESOURCE"\",\"null\");}"
+                $2="{msiSetDefaultResc(\""DEFAULT_RESOURCE"\",\"null\"); }"
                 $0=$1" "$2
             } print $0
         }' >  $IRODS_COREFILE.new
