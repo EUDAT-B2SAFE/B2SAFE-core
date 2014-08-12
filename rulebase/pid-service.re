@@ -24,7 +24,7 @@
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
 # EUDATePIDcreate(*path, *PID)
 # EUDATePIDsearch(*field, *value, *PID)
-# EUDATeCHECKSUMupdate(*PID)
+# EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
 # EUDATePIDremove(*path)
 # EUDATeiPIDeiChecksumMgmtColl(*sourceColl)
@@ -255,7 +255,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
     if (EUDATiFieldVALUEretrieve(*path, "PID", *PID)) {
         logInfo("EUDATeiPIDeiChecksumMgmt -> Update PID with CHECKSUM for: 
                  *PID, $userNameClient, *path");
-        EUDATeCHECKSUMupdate(*PID);                 
+        EUDATeCHECKSUMupdate(*PID, *path);                 
     }
     # iPID does not exist
     else {
@@ -282,7 +282,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         }
         else {
             logInfo("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *PID");  
-            EUDATeCHECKSUMupdate(*PID);
+            EUDATeCHECKSUMupdate(*PID, *path);
             if (*iCATuse) {EUDATiPIDcreate(*path, *PID)};
         }
     }
