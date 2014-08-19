@@ -232,6 +232,41 @@ logWithLevel(*level, *msg) {
 }
 
 #
+# The function checks if date of the last computation of iCHECKSUM was set and set the date if not.
+# The date is stored as metadata attribute of name 'eudat_dpm_checksum_date:<name of resc>'
+#
+# Environment variable used:
+#
+# Arguments:
+#   *coll               [IN]    the collection of the data object
+#   *name               [IN]    the name of the data object
+#   *resc               [IN]    the resource on which the object is located
+#   *modTime            [IN]    time of thee last modification of the object -will be assumed as time of the first computation of the iCHECKSUM
+#
+# Author: Michal Jankowski, PSNC
+#
+EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
+
+    *metaName = 'eudat_dpm_checksum_date:*resc';
+    
+    msiMakeGenQuery("count(META_DATA_ATTR_VALUE)", "COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName'", *GenQIn);
+    msiExecGenQuery(*GenQIn, *GenQOut);
+    
+    foreach(*row in *GenQOut) {
+       *count = *row.META_DATA_ATTR_VALUE
+        #*count = 0 means the attr was not set
+        if (*count=="0"){
+            logInfo("EUDATiCHECKSUMdate -> Setting *metaName for *coll/*name.");
+            msiString2KeyValPair("*metaName=*modTime",*kvpaircs);
+            msiSetKeyValuePairsToObj(*kvpaircs, "*coll/*name", "-d")
+        }else{
+            logDebug("EUDATiCHECKSUMdate -> *metaName already set for *coll/*name.");
+        }   
+    }   
+}   
+ 
+
+#
 # The function retrieve iCHECKSUM for a given object.
 #
 # Environment variable used:
@@ -241,23 +276,33 @@ logWithLevel(*level, *msg) {
 #   *checksum           [OUT]   iCHECKSUM
 #   *status             [REI]   false if no value is found, trou elsewhere
 #
-# Author: Giacomo Mariani, CINECA
+# Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #
 EUDATiCHECKSUMretrieve(*path, *checksum) {
     *status = bool("false");
+    *checksum = "";
     logInfo("EUDATiCHECKSUMretrieve -> Looking at *path");
     msiSplitPath(*path, *coll, *name);
-    *d = SELECT DATA_CHECKSUM WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll'; 
+    *d = SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll';
+    #Loop over all resources, possibly the checksum was not computed forr all of them
     foreach(*c in *d) {
-        msiGetValByKey(*c, "DATA_CHECKSUM", *checksum);
-        if (*checksum==""){
-            logInfo("EUDATiCHECKSUMretrieve -> The iCHECKSUM is empty");
+        msiGetValByKey(*c, "DATA_CHECKSUM", *checksumTmp);
+        msiGetValByKey(*c, "DATA_RESC_NAME", *resc);      
+        msiGetValByKey(*c, "DATA_MODIFY_TIME", *modtime);
+
+        if (*checksumTmp==""){
+            logInfo("EUDATiCHECKSUMretrieve -> The iCHECKSUM on resource *resc is empty.");
         }else{
-            logInfo("EUDATiCHECKSUMretrieve -> Found iCHECKSUM = *checksum");
+            *checksum=*checksumTmp;
+            logInfo("EUDATiCHECKSUMretrieve -> Found iCHECKSUM = *checksum on resource *resc.");
+            #EUDATiCHECKSUMdate is called here instead just after msiDataObjChksum in EUDATiCHECKSUMget
+            #because it is not the only possible point the checksum may be computed
+            #other ones are "ichksum", "iput -k", "irepl" (on checksumed source) called by the user.
+            EUDATiCHECKSUMdate(*coll, *name, *resc, *modtime);
             *status = bool("true");
         }
     }
-    *status;
+    *status;#
 }
 
 #
@@ -269,11 +314,15 @@ EUDATiCHECKSUMretrieve(*path, *checksum) {
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
 #
-# Author: Giacomo Mariani, CINECA
+# Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #
 EUDATiCHECKSUMget(*path, *checksum) {
     if (!EUDATiCHECKSUMretrieve(*path, *checksum)) {
+        #NOTE: the 2. arg of msiDataObjChksum: "null" means only the default resc will be checksumed.
+        #Consider "ChksumAll="
         msiDataObjChksum(*path, "null", *checksum);
+        #call again EUDATiCHECKSUMretrieve in order to set checksum date
+        EUDATiCHECKSUMretrieve(*path, *checksum);
     }
 }
 
