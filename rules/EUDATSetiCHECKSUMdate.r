@@ -21,18 +21,30 @@ EUDATSetiCHECKSUMdate {
     else {
         *fullCond = "DATA_CHECKSUM <> '' AND *cond";
     }
-    msiMakeGenQuery("COLL_NAME, DATA_NAME, DATA_RESC_NAME, DATA_MODIFY_TIME", *fullCond, *GenQIn);
-    msiExecGenQuery(*GenQIn, *GenQOut);
 
-    foreach(*row in *GenQOut) {
+    msiMakeGenQuery("COLL_NAME, DATA_NAME, DATA_RESC_NAME, DATA_MODIFY_TIME", *fullCond, *genQIn);
+    msiExecGenQuery(*genQIn, *genQOut);
 
-        msiGetValByKey(*row, "COLL_NAME", *coll);
-        msiGetValByKey(*row, "DATA_NAME", *name);
-        msiGetValByKey(*row, "DATA_RESC_NAME", *resc);
-        msiGetValByKey(*row, "DATA_MODIFY_TIME", *modtime);
-        writeLine("stdout", "*resc: *coll/*name ");
-        EUDATiCHECKSUMdate(*coll, *name, *resc, *modtime);
+    *contOld=1;
+    msiGetContInxFromGenQueryOut(*genQOut,*contNew);
+    while (*contOld > 0) {
+        foreach(*genQOut){
+
+            msiGetValByKey(*genQOut, "COLL_NAME", *coll);
+            msiGetValByKey(*genQOut, "DATA_NAME", *name);
+            msiGetValByKey(*genQOut, "DATA_RESC_NAME", *resc);
+            msiGetValByKey(*genQOut, "DATA_MODIFY_TIME", *modtime);
+            writeLine("stdout", "*resc: *coll/*name ");
+            EUDATiCHECKSUMdate(*coll, *name, *resc, *modtime);
+
+        }
+        *contOld=*contNew+0;
+        if(*contOld > 0) {
+          msiGetMoreRows(*genQIn,*genQOut,*contNew);
+        }
     }
+
+
 }
 INPUT *cond=""
 OUTPUT ruleExecOut
