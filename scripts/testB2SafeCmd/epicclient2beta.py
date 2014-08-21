@@ -66,7 +66,7 @@ class EpicClient(object):
         else:
             uri = self.cred.baseuri + '/' + prefix
         if suffix != '':
-            #uri += "/" + suffix.partition("/")[2]
+            # uri += "/" + suffix.partition("/")[2]
             uri += "/" + suffix
         if key != '' and value != '':
             uri += '/?' + key + '=' + value
@@ -101,73 +101,118 @@ class EpicClient(object):
         return hdrs
 
     def _checkresponsecode(self, method, statuscode):
-        """
-        Process the returned HTTP status-code from HTTP.request
-        (http://code.tutsplus.com/tutorials
-            /a-beginners-guide-to-http-and-rest--net-16340
-        https://developer.yahoo.com/social/rest_api_guide
-            /http-response-codes.html)
-        http://tools.ietf.org/html/rfc2616
-        """
-        output = True
-        # HTTP-request GET, PUT, DELETE
-        if statuscode == 200:
-            self._debugmsg(str(method),
-                           "Request completed. No error, operation successful "
-                           + str(statuscode))
-        # HTTP-request POST
-        elif statuscode == 201:
-            self._debugmsg(str(method), "Successful creation of a resource "
-                           + str(statuscode))
-        # HTTP-request POST, PUT, DELETE
-        elif statuscode == 202:
-            self._debugmsg(str(method), "The request was received "
-                           + str(statuscode))
-        # HTTP-request POST, PUT, DELETE
-        elif statuscode == 204:
-            self._debugmsg(str(method),
-                           "The request was processed successfully, " +
-                           "but no response body is needed " + str(statuscode))
-        elif statuscode == 304:
-            self._debugmsg(str(method), "Resource has not been modified "
-                           + str(statuscode))
-            output = False
-        # HTTP-request GET, PUT, DELETE
-        elif statuscode == 400:
-            self._debugmsg(str(method), "Bad Request " + str(statuscode))
-            output = False
-        # HTTP-request GET, PUT, DELETE
-        elif statuscode == 401:
-            self._debugmsg(str(method), "Action requires user authentication "
-                           + str(statuscode))
-            output = False
-        elif statuscode == 404:
-            self._debugmsg(str(method), "Resource not found " + str(statuscode))
-            output = False
-        # HTTP-request GET, PUT, DELETE
-        elif statuscode == 405:
-            self._debugmsg(str(method), "Method Not Allowed " + str(statuscode))
-            output = False
-        # HTTP-request PUT, DELETE
-        elif statuscode == 409:
-            self._debugmsg(str(method), "Conflict " + str(statuscode))
-            output = False
-        elif statuscode == 500:
-            self._debugmsg(str(method), "Internal Server Error "
-                           + str(statuscode))
-            output = None
-        elif statuscode == 501:
-            self._debugmsg(str(method), "Requested HTTP operation not "
-                                        "supported " + str(statuscode))
-            output = None
-        elif statuscode == 503:
-            self._debugmsg(str(method), "Service Unavailable " + str(
-                statuscode))
-        else:
-            self._debugmsg(str(method), "Processing fails " + str(statuscode))
-            output = None
+        """ using dict-style """
+        codelist = [{"statuscode": "200", "info": "Request completed. No error,\
+                     operation successful", "output": "True"},
+                    {"statuscode": "201", "info": "Successful creation of a \
+                     resource", "output": "True"},
+                    {"statuscode": "202", "info": "The request was received",
+                     "output": "True"},
+                    {"statuscode": "204", "info": "The request was processed \
+                     successfully, but no response body is needed", "output":
+                     "True"},
+                    {"statuscode": "304", "info": "Resource has not been \
+                     modified", "output": "False"},
+                    {"statuscode": "400", "info": "Bad Request", "output":
+                     "False"},
+                    {"statuscode": "401", "info": "Action requires user \
+                     authentication", "output": "False"},
+                    {"statuscode": "404", "info": "Resource not found",
+                     "output": "False"},
+                    {"statuscode": "405", "info": "Method Not Allowed",
+                     "output": " False"},
+                    {"statuscode": "409", "info": "Conflict",
+                     "output": "False"},
+                    {"statuscode": "500", "info": "Internal Server Error",
+                     "output": "None"},
+                    {"statuscode": "501", "info": "Requested HTTP operation \
+                     not supported", "output": "None"},
+                    {"statuscode": "503", "info": "Service Unavailable",
+                     "output": "None"}]
+        for item in codelist:
+            if item["statuscode"] == str(statuscode):
+                print "-------------------------"
+                # print item["info"]
+                # print item["output"]
+                self._debugmsg(str(method), item["info"]+" "+str(statuscode))
+                output = item["output"]
+                if output is "None":
+                    return None
+                elif output is "False":
+                    return False
+                else:
+                    return True
+        print "Processing fails with statuscode = " + str(statuscode)
+        return None
 
-        return output
+#    def _checkresponsecode2(self, method, statuscode):
+#        """
+#        Process the returned HTTP status-code from HTTP.request
+#        (http://code.tutsplus.com/tutorials
+#            /a-beginners-guide-to-http-and-rest--net-16340
+#        https://developer.yahoo.com/social/rest_api_guide
+#            /http-response-codes.html)
+#        http://tools.ietf.org/html/rfc2616
+#        """
+#        output = True
+#        # HTTP-request GET, PUT, DELETE
+#        if statuscode == 200:
+#            self._debugmsg(str(method),
+#                           "Request completed. No error, operation successful "
+#                           + str(statuscode))
+#        # HTTP-request POST
+#        elif statuscode == 201:
+#            self._debugmsg(str(method), "Successful creation of a resource "
+#                           + str(statuscode))
+#        # HTTP-request POST, PUT, DELETE
+#        elif statuscode == 202:
+#            self._debugmsg(str(method), "The request was received "
+#                           + str(statuscode))
+#        # HTTP-request POST, PUT, DELETE
+#        elif statuscode == 204:
+#            self._debugmsg(str(method),
+#                           "The request was processed successfully, " +
+#                           "but no response body is needed " + str(statuscode))
+#        elif statuscode == 304:
+#            self._debugmsg(str(method), "Resource has not been modified "
+#                           + str(statuscode))
+#            output = False
+#        # HTTP-request GET, PUT, DELETE
+#        elif statuscode == 400:
+#            self._debugmsg(str(method), "Bad Request " + str(statuscode))
+#            output = False
+#        # HTTP-request GET, PUT, DELETE
+#        elif statuscode == 401:
+#            self._debugmsg(str(method), "Action requires user authentication "
+#                           + str(statuscode))
+#            output = False
+#        elif statuscode == 404:
+#           self._debugmsg(str(method), "Resource not found " + str(statuscode))
+#            output = False
+#        # HTTP-request GET, PUT, DELETE
+#        elif statuscode == 405:
+#           self._debugmsg(str(method), "Method Not Allowed " + str(statuscode))
+#            output = False
+#        # HTTP-request PUT, DELETE
+#        elif statuscode == 409:
+#            self._debugmsg(str(method), "Conflict " + str(statuscode))
+#            output = False
+#        elif statuscode == 500:
+#            self._debugmsg(str(method), "Internal Server Error "
+#                           + str(statuscode))
+#            output = None
+#        elif statuscode == 501:
+#            self._debugmsg(str(method), "Requested HTTP operation not "
+#                                        "supported " + str(statuscode))
+#            output = None
+#        elif statuscode == 503:
+#            self._debugmsg(str(method), "Service Unavailable " + str(
+#                statuscode))
+#        else:
+#            self._debugmsg(str(method), "Processing fails " + str(statuscode))
+#            output = None
+#
+#        return output
 
     # *************************** Public Methods *****************************
 
@@ -183,9 +228,9 @@ class EpicClient(object):
 
         """
 
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix + '/?' + key + '=' + value
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix + '/?' + key + '=' + value
 
         uri = self._geturi(prefix, key, value, '')
@@ -235,14 +280,14 @@ class EpicClient(object):
 
         """
 
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix
 
         uri = self._geturi(prefix, '', '', suffix)
 
-        #if suffix != '':
+        # if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
 
         self._debugmsg('retrieveHandle', "URI " + uri)
@@ -306,36 +351,44 @@ class EpicClient(object):
         """
         print "PREFIX = ", prefix
         print "SUFFIX = ", suffix
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix
 
-        #if suffix != '':
+        # if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
 
-        #auth = base64.encodestring(self.cred.username + ':'
+        # auth = base64.encodestring(self.cred.username + ':'
         #       + self.cred.password)
-        #hdrs = {'If-None-Match': '*', 'Content-Type': 'application/json',
+        # hdrs = {'If-None-Match': '*', 'Content-Type': 'application/json',
         #        'Authorization': 'Basic ' + auth }
 
         uri = self._geturi(prefix, '', '', suffix)
         self._debugmsg('createHandleWithLocation', "URI " + uri)
         hdrs = self._getheader("CREATE")
 
+        loc10320 = ('<locations><location id="0" href="' + str(location) +
+                    '" /></locations>')
         if checksum:
             new_handle_json = simplejson.dumps([{'type': 'URL',
                                                  'parsed_data': location},
+                                                {'type': '10320/LOC',
+                                                 'parsed_data': loc10320},
                                                 {'type': 'CHECKSUM',
                                                  'parsed_data': checksum}])
         else:
             new_handle_json = simplejson.dumps([{'type': 'URL',
-                                                 'parsed_data': location}])
+                                                 'parsed_data': location},
+                                                {'type': '10320/LOC',
+                                                 'parsed_data': loc10320},
+                                                {'type': 'CHECKSUM',
+                                                 'parsed_data': 'None'}])
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
-        #response code 201 for POST
-        #response, _ = self.http.request(uri, method='POST', headers=hdrs,
+        # response code 201 for POST
+        # response, _ = self.http.request(uri, method='POST', headers=hdrs,
         #               body=new_handle_json)
         #        if response.status == 201:
         #            self._debugmsg('createHandleWithLocation',
@@ -366,7 +419,7 @@ class EpicClient(object):
                 self._debugmsg('final hdl', hdl)
 
         # update location. Use the previous created handle location
-        self.updateHandleWithLocation(hdl, location)
+        # self.updateHandleWithLocation(hdl, location)
 
         return hdl
 
@@ -382,15 +435,15 @@ class EpicClient(object):
 
         """
 
-        #if prefix.startswith(self.cred.baseuri):
+        # if prefix.startswith(self.cred.baseuri):
         #    prefix = prefix[len(self.cred.baseuri):]
 
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix
 
-        #if suffix != '':
+        # if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
 
         uri = self._geturi(prefix, key, value, suffix)
@@ -416,8 +469,8 @@ class EpicClient(object):
                     del item['data']
                     del item['parsed_data']
                     # set value of field = NONE
-                    #handle[len(handle):] = ['NONE']
-                    #handle.remove(item)
+                    # handle[len(handle):] = ['NONE']
+                    # handle.remove(item)
                     break
         else:
             for item in handle:
@@ -429,14 +482,14 @@ class EpicClient(object):
 #                        self._debugmsg('modifyHandle', "Value is the same, "
 #                                                       "update timestamp")
 #                        # Reset/ Update new timestamp
-#                        #item['timestamp'] = 'UPDATE NEW TIME STAMP'
+#                        # item['timestamp'] = 'UPDATE NEW TIME STAMP'
 #                        item['parsed_data'] == 'None'
 #                        del item['data']
 #                        handle_json = simplejson.dumps(handle)
 #                        response, _ = self.http.request(uri, method='PUT',
 #                                                headers=hdrs, body=handle_json)
 #                        item['parsed_data'] = value
-#                        #if item['parsed_data'] == 'None':
+#                        # if item['parsed_data'] == 'None':
 #                        #    item['parsed_data'] = value
 #                        break
 #                    else
@@ -447,8 +500,8 @@ class EpicClient(object):
             if keyfound is False:
                 self._debugmsg('modifyHandle', "Value of keyfound is false, "
                                "create new key")
-                #THIS Following if-block is unused, comparing to line 424
-                #if value is "" or None or '':
+                # THIS Following if-block is unused, comparing to line 424
+                # if value is "" or None or '':
                 #    self._debugmsg('modifyHandle', "No value for Key " + key +
                 #                    "Create new Key without Value is not
                 # desire"
@@ -460,7 +513,7 @@ class EpicClient(object):
                 self._debugmsg('modifyHandle',
                                "Key " + key + " created. Generating new hash")
                 handleitem = {'type': key, 'parsed_data': value}
-                #handle.append(handleitem)
+                # handle.append(handleitem)
                 handle[len(handle):] = [handleitem]
 
         handle_json = simplejson.dumps(handle)
@@ -518,10 +571,10 @@ class EpicClient(object):
                     self._debugmsg('deleteHandle', "Found key " + key +
                                    " value=" + str(item['parsed_data']))
                     self._debugmsg('deleteHandle', "Remove Key's Field")
-                    #handle.remove(item)
-                    #print "Element = ", item
-                    #i = handle.index(item)
-                    #print "Index = ", i
+                    # handle.remove(item)
+                    # print "Element = ", item
+                    # i = handle.index(item)
+                    # print "Index = ", i
                     del handle[handle.index(item)]
                     break
 
@@ -536,7 +589,7 @@ class EpicClient(object):
                 response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                                 body=handle_json)
 
-        #output = True
+        # output = True
         output = self._checkresponsecode("deleteHandle", response.status)
         print "OUTPUT = ", output
         if (output is None) or (output is False):
@@ -555,11 +608,11 @@ class EpicClient(object):
 
         """
 
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix
-        #if suffix != '':
+        # if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
         uri = self._geturi(prefix, '', value, suffix)
 
@@ -615,12 +668,12 @@ class EpicClient(object):
 
         """
 
-        #if self.cred.baseuri.endswith('/'):
+        # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
-        #else:
+        # else:
         #    uri = self.cred.baseuri + '/' + prefix
 
-        #if suffix != '':
+        # if suffix != '':
         #    uri += "/" + suffix.partition("/")[2]
 
         uri = self._geturi(prefix, '', '', suffix)
@@ -829,10 +882,10 @@ class Credentials(object):
                 sys.exit(-1)
 
         elif self.store == "irods":
-            #self._debugmsg("irods", "Function getting credential store in iRODS
-            #is in testing ...")
+            # self._debugmsg("irods","Function getting credential store in iRODS
+            # is in testing ...")
             print "Function getting credential store in iRODS is in testing ..."
-            # FIXME: is there better way to exit ?.	
+            # FIXME: is there better way to exit ?.
             sys.exit(-1)
 
         # Deprecated Code:
@@ -914,7 +967,7 @@ def create(args):
     credentials.parse()
 
     uid = uuid.uuid1()
-    #pid = credentials.prefix + "/" + str(uid)
+    # pid = credentials.prefix + "/" + str(uid)
     suffix = str(uid)
 
     client = EpicClient(credentials)
@@ -1055,8 +1108,8 @@ def test(args):
            "846/157c344a-0179-11e2-9511-00215ec779a9")
     print "(should be True)"
     fail += test_result(client.updateHandleWithLocation(credentials.prefix,
-                        "846/157c344a-0179-11e2-9511-00215ec779a9", "TEST_CR1")
-                        , True)
+                        "846/157c344a-0179-11e2-9511-00215ec779a9", "TEST_CR1"),
+                        True)
 
     print
     print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"
@@ -1089,24 +1142,24 @@ def test(args):
            "846/157c344a-0179-11e2-9511-00215ec779a8")
     print "(should be False)"
     fail += test_result(client.updateHandleWithLocation(credentials.prefix,
-                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1")
-                        , False)
+                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1"),
+                        False)
 
     print
     print ("Removing 10320/loc type location "
            "846/157c344a-0179-11e2-9511-00215ec779a8")
     print "(should be True)"
     fail += test_result(client.removeLocationFromHandle(credentials.prefix,
-                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1")
-                        , True)
+                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1"),
+                        True)
 
     print
     print ("Removing 10320/loc type location "
            "846/157c344a-0179-11e2-9511-00215ec779a8")
     print "(should be False)"
     fail += test_result(client.removeLocationFromHandle(credentials.prefix,
-                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1")
-                        , False)
+                        "846/157c344a-0179-11e2-9511-00215ec779a8", "TEST_CR1"),
+                        False)
 
     print
     print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"
@@ -1114,20 +1167,20 @@ def test(args):
 
     print
     print "Deleting " + credentials.prefix + "/TEST_CR1 (should be True)"
-    fail += test_result(client.deleteHandle(credentials.prefix, "", "TEST_CR1")
-                        , True)
+    fail += test_result(client.deleteHandle(credentials.prefix, "", "TEST_CR1"),
+                        True)
 
     print
     print "Deleting (again) " + credentials.prefix + "/TEST_CR1 " \
                                                      "(should be False)"
-    fail += test_result(client.deleteHandle(credentials.prefix, "", "TEST_CR1")
-                        , False)
+    fail += test_result(client.deleteHandle(credentials.prefix, "", "TEST_CR1"),
+                        False)
 
     print
     print ("Retrieving handle info from non existing " + credentials.prefix +
            "/TEST_CR1 (should be None)")
-    fail += test_result(client.retrieveHandle(credentials.prefix, "TEST_CR1")
-                        , None)
+    fail += test_result(client.retrieveHandle(credentials.prefix, "TEST_CR1"),
+                        None)
 
     print
     if fail == 0:
@@ -1146,7 +1199,7 @@ if __name__ == "__main__":
                              "(os=filespace, irods=iRODS storage)")
     parser.add_argument("credpath", default="NULL",
                         help="path to the credentials")
-    #parser.add_argument("-d", "--debug", help="Show debug output")
+    # parser.add_argument("-d", "--debug", help="Show debug output")
 
     subparsers = parser.add_subparsers(title='Actions',
                                        description='Handle record management'
@@ -1208,7 +1261,8 @@ if __name__ == "__main__":
     parser_relation.add_argument("cpid", help="child handle value")
     parser_relation.set_defaults(func=relation)
 
-    parser_test = subparsers.add_parser('testB2SafeCmd', help='Run testB2SafeCmd suite')
+    parser_test = subparsers.add_parser('testB2SafeCmd',
+                                        help='Run testB2SafeCmd suite')
     parser_test.set_defaults(func=test)
 
     _args = parser.parse_args()
