@@ -131,7 +131,7 @@ class EpicClient(object):
                      "output": "None"}]
         for item in codelist:
             if item["statuscode"] == str(statuscode):
-                print "-------------------------"
+                # print "-------------------------"
                 # print item["info"]
                 # print item["output"]
                 self._debugmsg(str(method), item["info"]+" "+str(statuscode))
@@ -349,8 +349,6 @@ class EpicClient(object):
         Returns the URI of the new handle, None if an error occurred.
 
         """
-        print "PREFIX = ", prefix
-        print "SUFFIX = ", suffix
         # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
         # else:
@@ -447,7 +445,7 @@ class EpicClient(object):
         #    uri += "/" + suffix.partition("/")[2]
 
         uri = self._geturi(prefix, key, value, suffix)
-        print "URI = ", uri
+        # print "URI = ", uri
         self._debugmsg('modifyHandle', "URI " + uri)
 
         hdrs = self._getheader("UPDATE")
@@ -591,7 +589,7 @@ class EpicClient(object):
 
         # output = True
         output = self._checkresponsecode("deleteHandle", response.status)
-        print "OUTPUT = ", output
+        # print "OUTPUT = ", output
         if (output is None) or (output is False):
             return False
         else:
@@ -989,8 +987,8 @@ def modify(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-    print "PREFIX = ", prefix
-    print "SUFFIX = ", suffix
+#    print "PREFIX = ", prefix
+#    print "SUFFIX = ", suffix
     result = client.modifyHandle(prefix, args.key, args.value, suffix)
 
     sys.stdout.write(str(result))
@@ -1005,8 +1003,8 @@ def delete(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-    print "PREFIX = ", prefix
-    print "SUFFIX = ", suffix
+#    print "PREFIX = ", prefix
+#    print "SUFFIX = ", suffix
     result = client.deleteHandle(prefix, args.key, suffix)
 
     sys.stdout.write(str(result))
