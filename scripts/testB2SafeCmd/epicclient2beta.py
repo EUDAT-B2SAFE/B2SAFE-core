@@ -131,7 +131,7 @@ class EpicClient(object):
                      "output": "None"}]
         for item in codelist:
             if item["statuscode"] == str(statuscode):
-                # print "-------------------------"
+                print "-------------------------"
                 # print item["info"]
                 # print item["output"]
                 self._debugmsg(str(method), item["info"]+" "+str(statuscode))
@@ -338,7 +338,8 @@ class EpicClient(object):
                        " not found")
         return None
 
-    def createHandle(self, prefix, location, checksum=None, suffix=''):
+    def createHandle(self, prefix, location, checksum=None, extratype=None,
+                     suffix=''):
         """Create a new handle for a file.
 
         Parameters:
@@ -349,6 +350,8 @@ class EpicClient(object):
         Returns the URI of the new handle, None if an error occurred.
 
         """
+        # print "PREFIX = ", prefix
+        # print "SUFFIX = ", suffix
         # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
         # else:
@@ -368,13 +371,47 @@ class EpicClient(object):
 
         loc10320 = ('<locations><location id="0" href="' + str(location) +
                     '" /></locations>')
-        if checksum:
+        # print extratype[0].split(':')[0]
+        # print extratype[1].split(':')[0]
+        # print len(extratype)
+        if ((extratype is not None) and (len(extratype) is 2) and
+            ("EUDAT/ROR" in extratype[0].split(':')[0]) and
+                ("EUDAT/PPID" in extratype[1].split(':')[0])):
+                eudat_ror = extratype[0].split(':')[1]
+                eudat_ppid = extratype[1].split(':')[1]
+        else:
+            self._debugmsg('createHandle', "Error createHandle with ExtraType")
+            extratype = None
+
+        if checksum and extratype:
+            new_handle_json = simplejson.dumps([{'type': 'URL',
+                                                 'parsed_data': location},
+                                                {'type': '10320/LOC',
+                                                 'parsed_data': loc10320},
+                                                {'type': 'CHECKSUM',
+                                                 'parsed_data': checksum},
+                                                {'type': 'EUDAT/ROR',
+                                                 'parsed_data': eudat_ror},
+                                                {'type': 'EUDAT/PPID',
+                                                 'parsed_data': eudat_ppid}])
+        elif checksum:
             new_handle_json = simplejson.dumps([{'type': 'URL',
                                                  'parsed_data': location},
                                                 {'type': '10320/LOC',
                                                  'parsed_data': loc10320},
                                                 {'type': 'CHECKSUM',
                                                  'parsed_data': checksum}])
+        elif extratype:
+            new_handle_json = simplejson.dumps([{'type': 'URL',
+                                                 'parsed_data': location},
+                                                {'type': '10320/LOC',
+                                                 'parsed_data': loc10320},
+                                                {'type': 'CHECKSUM',
+                                                 'parsed_data': 'None'},
+                                                {'type': 'EUDAT/ROR',
+                                                 'parsed_data': eudat_ror},
+                                                {'type': 'EUDAT/PPID',
+                                                 'parsed_data': eudat_ppid}])
         else:
             new_handle_json = simplejson.dumps([{'type': 'URL',
                                                  'parsed_data': location},
@@ -445,7 +482,7 @@ class EpicClient(object):
         #    uri += "/" + suffix.partition("/")[2]
 
         uri = self._geturi(prefix, key, value, suffix)
-        # print "URI = ", uri
+        print "URI = ", uri
         self._debugmsg('modifyHandle', "URI " + uri)
 
         hdrs = self._getheader("UPDATE")
@@ -589,7 +626,7 @@ class EpicClient(object):
 
         # output = True
         output = self._checkresponsecode("deleteHandle", response.status)
-        # print "OUTPUT = ", output
+        print "OUTPUT = ", output
         if (output is None) or (output is False):
             return False
         else:
@@ -969,14 +1006,36 @@ def create(args):
     suffix = str(uid)
 
     client = EpicClient(credentials)
+    extype = None
+    if args.extratype is not None:
+        extype = args.extratype.split(',')
+    # print extype
     result = client.createHandle(credentials.prefix, args.location,
-                                 args.checksum, suffix)
+                                 args.checksum, extype, suffix)
 
     if result is None:
         sys.stdout.write("error")
     else:
         sys.stdout.write(result)
 
+
+# def createext(args):
+#    """perform create action with extension"""
+#    credentials = Credentials(args.credstore, args.credpath)
+#    credentials.parse()
+#
+#    uid = uuid.uuid1()
+#    # pid = credentials.prefix + "/" + str(uid)
+#    suffix = str(uid)
+#
+#    client = EpicClient(credentials)
+#    result = client.createHandleExt(credentials.prefix, args.location,
+#                                 args.checksum, args.extratype, suffix)
+#
+#    if result is None:
+#        sys.stdout.write("error")
+#    else:
+#        sys.stdout.write(result)
 
 def modify(args):
     """perform modify action"""
@@ -987,8 +1046,8 @@ def modify(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-#    print "PREFIX = ", prefix
-#    print "SUFFIX = ", suffix
+    # print "PREFIX = ", prefix
+    # print "SUFFIX = ", suffix
     result = client.modifyHandle(prefix, args.key, args.value, suffix)
 
     sys.stdout.write(str(result))
@@ -1003,8 +1062,8 @@ def delete(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-#    print "PREFIX = ", prefix
-#    print "SUFFIX = ", suffix
+    # print "PREFIX = ", prefix
+    # print "SUFFIX = ", suffix
     result = client.deleteHandle(prefix, args.key, suffix)
 
     sys.stdout.write(str(result))
@@ -1214,6 +1273,9 @@ if __name__ == "__main__":
                                                 "the new handle record")
     parser_create.add_argument("--checksum", help="checksum to store in "
                                                   "the new handle record")
+    parser_create.add_argument("--extratype", help="Extension create fields \
+                               EUDAT/ROR and EUDAT/PPID \
+                               in format: \"EUDAT/ROR:xyz,EUDAT/PPID:xyz\"")
     parser_create.set_defaults(func=create)
 
     parser_modify = subparsers.add_parser('modify',

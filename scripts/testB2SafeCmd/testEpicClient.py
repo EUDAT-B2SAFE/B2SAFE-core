@@ -41,7 +41,7 @@ class EpicClientTestCase(unittest.TestCase):
         """
         :return:
         """
-        #credentials = self._getcredinstance()
+        # credentials = self._getcredinstance()
         credentials = self.cred
         client = EpicClient(credentials)
 
@@ -57,7 +57,8 @@ class EpicClientTestCase(unittest.TestCase):
         print ("Creating handle " + credentials.prefix +
                "/TEST_CR1 (should be prefix + '/TEST_CR1')")
         self.assertEqual(client.createHandle(credentials.prefix,
-                         "http://www.testB2SafeCmd.com/1", None, "TEST_CR1"),
+                                             "http://www.testB2SafeCmd.com/1",
+                                             None, None, "TEST_CR1"),
                          credentials.prefix + "/TEST_CR1")
 
         # Test retrieve Handle
@@ -72,7 +73,7 @@ class EpicClientTestCase(unittest.TestCase):
                          "http://www.testB2SafeCmd.com/1"),
                          credentials.prefix+"/TEST_CR1")
 
-        #Test modify Handle
+        # Test modify Handle
         print
         print ("Modifying handle info from " + credentials.prefix +
                "/TEST_CR1 (should be True)")
