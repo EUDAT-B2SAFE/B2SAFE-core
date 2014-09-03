@@ -58,7 +58,7 @@ class EpicClientTestCase(unittest.TestCase):
                "/TEST_CR1 (should be prefix + '/TEST_CR1')")
         self.assertEqual(client.createHandle(credentials.prefix,
                                              "http://www.testB2SafeCmd.com/1",
-                                             None, None, "TEST_CR1"),
+                                             None, None, None, "TEST_CR1"),
                          credentials.prefix + "/TEST_CR1")
 
         # Test retrieve Handle

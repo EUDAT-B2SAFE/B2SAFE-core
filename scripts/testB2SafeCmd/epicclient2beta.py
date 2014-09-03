@@ -27,11 +27,14 @@ import httplib2
 import simplejson
 # FIXME xml.dom.minidom is not secure against maliciously crafted XML
 from xml.dom import minidom
-
+from lxml import etree
+from lxml.etree import tostring
+# from lxml.builder import E
 import base64
 import uuid
 import argparse
 import sys
+
 
 # ##############################################################################
 # Epic Client Class #
@@ -131,9 +134,7 @@ class EpicClient(object):
                      "output": "None"}]
         for item in codelist:
             if item["statuscode"] == str(statuscode):
-                print "-------------------------"
-                # print item["info"]
-                # print item["output"]
+                self._debugmsg("checkresponsecode", ".....")
                 self._debugmsg(str(method), item["info"]+" "+str(statuscode))
                 output = item["output"]
                 if output is "None":
@@ -339,7 +340,7 @@ class EpicClient(object):
         return None
 
     def createHandle(self, prefix, location, checksum=None, extratype=None,
-                     suffix=''):
+                     l10320=None, suffix=''):
         """Create a new handle for a file.
 
         Parameters:
@@ -350,8 +351,8 @@ class EpicClient(object):
         Returns the URI of the new handle, None if an error occurred.
 
         """
-        # print "PREFIX = ", prefix
-        # print "SUFFIX = ", suffix
+        self._debugmsg('createHandle', "PREFIX = " + prefix)
+        self._debugmsg('createHandle', "SUFFIX = " + suffix)
         # if self.cred.baseuri.endswith('/'):
         #    uri = self.cred.baseuri + prefix
         # else:
@@ -369,8 +370,21 @@ class EpicClient(object):
         self._debugmsg('createHandleWithLocation', "URI " + uri)
         hdrs = self._getheader("CREATE")
 
-        loc10320 = ('<locations><location id="0" href="' + str(location) +
-                    '" /></locations>')
+        idn = 0
+        root = etree.Element('locations')
+
+        if l10320 is None:
+            # loc10320 = ('<locations><location id="0" href="' + str(location) +
+            #            '" /></locations>')
+            self._debugmsg('createHandle', "loc10320 = None")
+            etree.SubElement(root, 'location', id=str(idn), href=str(location))
+        else:
+            etree.SubElement(root, 'location', id=str(idn), href=str(location))
+            for item in l10320:
+                idn += 1
+                etree.SubElement(root, 'location', id=str(idn), href=str(item))
+
+        loc10320 = tostring(root)
         # print extratype[0].split(':')[0]
         # print extratype[1].split(':')[0]
         # print len(extratype)
@@ -380,7 +394,7 @@ class EpicClient(object):
                 eudat_ror = extratype[0].split(':')[1]
                 eudat_ppid = extratype[1].split(':')[1]
         else:
-            self._debugmsg('createHandle', "Error createHandle with ExtraType")
+            self._debugmsg('createHandle', "ExtraType = None")
             extratype = None
 
         if checksum and extratype:
@@ -482,7 +496,7 @@ class EpicClient(object):
         #    uri += "/" + suffix.partition("/")[2]
 
         uri = self._geturi(prefix, key, value, suffix)
-        print "URI = ", uri
+        # print "URI = ", uri
         self._debugmsg('modifyHandle', "URI " + uri)
 
         hdrs = self._getheader("UPDATE")
@@ -626,7 +640,7 @@ class EpicClient(object):
 
         # output = True
         output = self._checkresponsecode("deleteHandle", response.status)
-        print "OUTPUT = ", output
+        self._debugmsg('deleteHandle', "OUTPUT = " + str(output))
         if (output is None) or (output is False):
             return False
         else:
@@ -1010,32 +1024,18 @@ def create(args):
     if args.extratype is not None:
         extype = args.extratype.split(',')
     # print extype
+    if args.loc10320 is not None:
+        l10320 = args.loc10320.split(';')
+    else:
+        l10320 = None
     result = client.createHandle(credentials.prefix, args.location,
-                                 args.checksum, extype, suffix)
+                                 args.checksum, extype, l10320, suffix)
 
     if result is None:
         sys.stdout.write("error")
     else:
         sys.stdout.write(result)
 
-
-# def createext(args):
-#    """perform create action with extension"""
-#    credentials = Credentials(args.credstore, args.credpath)
-#    credentials.parse()
-#
-#    uid = uuid.uuid1()
-#    # pid = credentials.prefix + "/" + str(uid)
-#    suffix = str(uid)
-#
-#    client = EpicClient(credentials)
-#    result = client.createHandleExt(credentials.prefix, args.location,
-#                                 args.checksum, args.extratype, suffix)
-#
-#    if result is None:
-#        sys.stdout.write("error")
-#    else:
-#        sys.stdout.write(result)
 
 def modify(args):
     """perform modify action"""
@@ -1115,7 +1115,8 @@ def test(args):
     print ("Creating handle " + credentials.prefix +
            "/TEST_CR1 (should be prefix + '/TEST_CR1')")
     fail += test_result(client.createHandle(credentials.prefix,
-                        "http://www.testB2SafeCmd.com/1", None, "TEST_CR1"),
+                                            "http://www.testB2SafeCmd.com/1",
+                                            None, None, None, "TEST_CR1"),
                         credentials.prefix + "/TEST_CR1")
 
     print
@@ -1276,6 +1277,8 @@ if __name__ == "__main__":
     parser_create.add_argument("--extratype", help="Extension create fields \
                                EUDAT/ROR and EUDAT/PPID \
                                in format: \"EUDAT/ROR:xyz,EUDAT/PPID:xyz\"")
+    parser_create.add_argument("--loc10320", help="Extension field 10320/LOC \
+                               in format: \"location1;location2;location3\"")
     parser_create.set_defaults(func=create)
 
     parser_modify = subparsers.add_parser('modify',
