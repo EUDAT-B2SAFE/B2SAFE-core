@@ -29,7 +29,6 @@ import simplejson
 from xml.dom import minidom
 from lxml import etree
 from lxml.etree import tostring
-# from lxml.builder import E
 import base64
 import uuid
 import argparse
@@ -385,14 +384,14 @@ class EpicClient(object):
                 etree.SubElement(root, 'location', id=str(idn), href=str(item))
 
         loc10320 = tostring(root)
-        # print extratype[0].split(':')[0]
-        # print extratype[1].split(':')[0]
+        # print extratype[0].split(';')[0]
+        # print extratype[1].split(';')[0]
         # print len(extratype)
         if ((extratype is not None) and (len(extratype) is 2) and
-            ("EUDAT/ROR" in extratype[0].split(':')[0]) and
-                ("EUDAT/PPID" in extratype[1].split(':')[0])):
-                eudat_ror = extratype[0].split(':')[1]
-                eudat_ppid = extratype[1].split(':')[1]
+            ("EUDAT/ROR" in extratype[0].split(';')[0]) and
+                ("EUDAT/PPID" in extratype[1].split(';')[0])):
+                eudat_ror = extratype[0].split('=')[1]
+                eudat_ppid = extratype[1].split('=')[1]
         else:
             self._debugmsg('createHandle', "ExtraType = None")
             extratype = None
@@ -1022,7 +1021,7 @@ def create(args):
     client = EpicClient(credentials)
     extype = None
     if args.extratype is not None:
-        extype = args.extratype.split(',')
+        extype = args.extratype.split(';')
     # print extype
     if args.loc10320 is not None:
         l10320 = args.loc10320.split(';')
@@ -1276,7 +1275,7 @@ if __name__ == "__main__":
                                                   "the new handle record")
     parser_create.add_argument("--extratype", help="Extension create fields \
                                EUDAT/ROR and EUDAT/PPID \
-                               in format: \"EUDAT/ROR:xyz,EUDAT/PPID:xyz\"")
+                               in format: \"EUDAT/ROR=xyz;EUDAT/PPID=abc\"")
     parser_create.add_argument("--loc10320", help="Extension field 10320/LOC \
                                in format: \"location1;location2;location3\"")
     parser_create.set_defaults(func=create)
