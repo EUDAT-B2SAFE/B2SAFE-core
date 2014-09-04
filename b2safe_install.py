@@ -20,7 +20,7 @@ lines = fr.readlines()
 for line in lines:
     if line.find('IRODS_DIR') > -1:
         ird = line.split()
-    if line.find('TRUNK') > -1:
+    if line.find('SOURCE_DIR') > -1:
         tr = line.split()
     if line.find('B2SAFE_MODULE_DIR:') > -1:
         bmd = line.split()
@@ -49,7 +49,7 @@ for line in lines:
 fr.close()    
 
 IRODS_DIR = ird[1]
-TRUNK = tr[1]
+SOURCE_DIR = tr[1]
 B2_MOD_DIR = bmd[1]
 DEFAULT_RESOURCE = dr[1]
 CRED_STORE_TYPE = cst[1]
@@ -136,10 +136,10 @@ inp = raw_input(BLUE + BOLD + 'Continue installation (y/n)? :' + BACK).lower()
 
 chk = inpt(inp)
 
-print 'copy trunk to modules dir in irods'
+print 'copy source_dir to modules dir in irods'
 
 os.system("mkdir " + B2_MOD_DIR)
-os.system("cp -r " + TRUNK + "/* " + B2_MOD_DIR)
+os.system("cp -r " + SOURCE_DIR + "/* " + B2_MOD_DIR)
 
 os.system("mkdir " + B2_MOD_DIR + "/microservices/obj")
 
@@ -224,8 +224,8 @@ IRODS_DIR + "/server/config/reConfigs/euint.re")
 
 
 print '3. edit <irods>/server/config/server.config and append '\
-',eudat,replication,pid-service,catchError,eudat-authZ-filters'\
-',local to reRuleSet (make sure to include the comma and no spaces)'
+',eudat,eurepl,eupids,eucerr,euaf,euloc,euint'\
+',to reRuleSet (make sure to include the comma and no spaces)'
 
 
 filename = IRODS_DIR + "/server/config/server.config"
@@ -351,14 +351,14 @@ os.system("ln -s " + B2_MOD_DIR + "/cmd/* " + IRODS_DIR + "/server/bin/cmd/")
 os.system("ln -s " + B2_MOD_DIR + "/conf/* " + IRODS_DIR + "/server/bin/cmd/")
 
 print "6.2 update the 'getEpicApiParameters' rule in "\
-"'./server/config/reConfigs/local.re' \n     "\
+"'./server/config/reConfigs/euloc.re' \n     "\
 "- Configure the credential storage type: 'os': "\
 "stored on the local filesystem or 'irods': stored on de irods namespace. "\
 "\n     - Set the path to the credentials file \n"\
 "     - set the correct serverID to include the fully qualified hostname. "\
 "For instance: 'irods://node.domain.com:1247' \n     "\
 "- Set the proper values in the credentials file "\
-"(see ./cmd/credentials_example for an example) "
+"(see ./conf/credentials_example for an example) "
 
 filename = B2_MOD_DIR + "/rulebase/local.re"
 os.rename(filename, filename+"~")
@@ -393,7 +393,7 @@ source.close()
 destination.close()
 
 print "- Set the proper values in the credentials "\
-"file (see ./cmd/credentials_example for an example)"
+"file (see ./conf/credentials_example for an example)"
 
 filename = B2_MOD_DIR + "/conf/credentials_example"
 destination = open(B2_MOD_DIR+"/conf/credentials","w")
@@ -420,8 +420,8 @@ source.close()
 destination.close()
 
 print '6.3 update the "getAuthZParameters" rule in '\
-'"./server/config/reConfigs/local.re" \n - '\
-'Set the proper values in modules/B2SAFE/cmd/authz.map.json'
+'"./server/config/reConfigs/euloc.re" \n - '\
+'Set the proper values in modules/B2SAFE/conf/authz.map.json'
 
 filename = B2_MOD_DIR + "/conf/authz.map.json"
 os.rename(filename, filename+"~")
@@ -448,8 +448,8 @@ source.close()
 destination.close()
 
 print '6.4 update the "getLogParameters" rule in '\
-'"./server/config/reConfigs/local.re" \n '\
-'- Set the proper values in modules/B2SAFE/cmd/log.manager.conf'
+'"./server/config/reConfigs/euloc.re" \n '\
+'- Set the proper values in modules/B2SAFE/conf/log.manager.conf'
 
 filename = B2_MOD_DIR + "/conf/log.manager.conf"
 
