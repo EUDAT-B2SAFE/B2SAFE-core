@@ -387,11 +387,15 @@ class EpicClient(object):
         # print extratype[0].split(';')[0]
         # print extratype[1].split(';')[0]
         # print len(extratype)
+        # print extratype[0]
+        # print extratype[1]
         if ((extratype is not None) and (len(extratype) is 2) and
-            ("EUDAT/ROR" in extratype[0].split(';')[0]) and
-                ("EUDAT/PPID" in extratype[1].split(';')[0])):
+            ("EUDAT/ROR" in extratype[0]) and
+                ("EUDAT/PPID" in extratype[1])):
                 eudat_ror = extratype[0].split('=')[1]
                 eudat_ppid = extratype[1].split('=')[1]
+                # print eudat_ror
+                # print eudat_ppid
         else:
             self._debugmsg('createHandle', "ExtraType = None")
             extratype = None
