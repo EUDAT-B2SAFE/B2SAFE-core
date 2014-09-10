@@ -1,5 +1,5 @@
 {
-  "EUHIT_Repo": {
+  "Big_Repo": {
     "members": [
       "user1", 
       "user2", 
@@ -27,7 +27,7 @@
     ], 
     "groups": {}
   }, 
-  "HBP_prjtome": {
+  "Experimental_prj": {
     "members": [], 
     "groups": {
       "group18": [
