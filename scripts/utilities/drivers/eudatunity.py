@@ -6,6 +6,7 @@ import urllib2
 import base64
 from pprint import pformat
 
+
 class EudatRemoteSource:
     def _debugMsg(self, method, msg):
         """Internal: Print a debug message if debug is enabled.
@@ -16,25 +17,41 @@ class EudatRemoteSource:
 
     def __init__(self, conf, parent_logger=None):
         """initialize the object"""
-        
-        if (parent_logger): self.logger = parent_logger
-        else: self.logger = logging.getLogger('eudat')
+
+        if parent_logger:
+            self.logger = parent_logger
+        else:
+            self.logger = logging.getLogger('eudat')
 
         self.main_project = 'EUDAT'
 
-        missingp = []    
+        missingp = []
         key = 'host'
-        if key in conf: self.host = conf[key]
-        else: missingp.append(key)
+        if key in conf:
+            self.host = conf[key]
+        else:
+            missingp.append(key)
         key = 'username'
-        if key in conf: self.username = conf[key]
-        else: missingp.append(key)
+        if key in conf:
+            self.username = conf[key]
+        else:
+            missingp.append(key)
         key = 'password'
-        if key in conf: self.password = conf[key]
-        else: missingp.append(key)
+        if key in conf:
+            self.password = conf[key]
+        else:
+            missingp.append(key)
         if len(missingp) > 0:
             self.logger.error('missing parameters: ' + pformat(missingp))
-            
+
+    def createNewJson(self, filepath, subgroup):
+        data = {subgroup: {"groups": {}}}
+
+        with open(filepath, "w") as jsonFile:
+            jsonFile.write(json.dumps(data, indent=2))
+        self.logger.info('{0} correctly written!'.format(filepath))
+
+        jsonFile.close()
 
     def queryUnity(self, sublink):
         """
@@ -45,10 +62,10 @@ class EudatRemoteSource:
         header = "Basic %s" % auth
         url = self.host + sublink
         request = urllib2.Request(url)
-        request.add_header("Authorization",header)
+        request.add_header("Authorization", header)
         try:
             response = urllib2.urlopen(request)
-        except IOError, e:
+        except IOError:
             print "Wrong username or password"
             sys.exit(1)
 
@@ -57,8 +74,7 @@ class EudatRemoteSource:
         response_dict = json.loads(json_data)
 
         return response_dict
-    
-    
+
     def getRemoteUsers(self):
         """
         Get the remote users' list
@@ -77,7 +93,7 @@ class EudatRemoteSource:
                 if identity['typeId'] == "userName":
                     list_member.append(identity['value'])
                     users_map[member_id] = identity['value']
-## TODO: if typeId = "persistent" get value and combine 
+## TODO: if typeId = "persistent" get value and combine
 ##       with eudat CA root issuer DN to build dynamically the user DN
 
         # Append list_member to final_list
@@ -94,23 +110,21 @@ class EudatRemoteSource:
 
         # Append list_group to final_list
         final_list['groups'] = list_group
-        
-        return final_list
 
+        return final_list
 
     def synchronize_user_db(self, local_users_list, data, remove=False):
         """
         Synchronize the remote users' list with a local json file (user db)
         """
-
         remote_users_list = self.getRemoteUsers()
-        
-        for org,members in remote_users_list['groups'].iteritems():
+
+        for org, members in remote_users_list['groups'].iteritems():
 
             #if subgroup org doesn't exist, create it
             org = 'eudat_' + org
-            if (org not in data[self.main_project]["groups"]):
-                self.logger.info('Creating sub-group \''+ org + '\'')
+            if org not in data[self.main_project]["groups"]:
+                self.logger.info('Creating sub-group \'' + org + '\'')
                 data[self.main_project]["groups"][org] = []
 
             # add new members
@@ -119,17 +133,17 @@ class EudatRemoteSource:
                 member = 'eudat_' + member
                 if member not in data[self.main_project]["groups"][org]:
                     data[self.main_project]["groups"][org].append(member)
-                    self.logger.debug('\tadded user %s' % (member,))
+                    self.logger.debug('\t added user %s' % (member,))
 
         # remove users that don't exist in remote groups
         if remove:
-            for org,members in local_users_list.iteritems():
-                self.logger.info('Removing users that have been removed from ' + org + '...') 
+            for org, members in local_users_list.iteritems():
+                self.logger.info('Removing users that have been removed from ' + org + '...')
                 for member in members:
                     remote_org = org[6:]
                     remote_member = member[6:]
                     if remote_member not in remote_users_list[remote_org]:
                         data[self.main_project]["groups"][org].remove(member)
-                        self.logger.debug('\tremoved user %s' % (member,))
+                        self.logger.debug('\t removed user %s' % (member,))
 
         return data
