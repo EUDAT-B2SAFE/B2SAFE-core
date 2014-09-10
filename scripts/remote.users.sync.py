@@ -57,11 +57,11 @@ class SyncRemoteUsers:
         logfilepath = self._getConfOption('Common', 'logfile')
         loglevel = self._getConfOption('Common', 'loglevel')
         self.filepath = self._getConfOption('Common', 'usersfile')
-        
+
         main_project = _args.group
         subproject = _args.subgroup
         remove = _args.remove
-        
+
         ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
         self.logger.setLevel(ll[loglevel])
@@ -79,7 +79,7 @@ class SyncRemoteUsers:
         # related members
         with open(self.filepath, "r") as jsonFile:
             data = json.load(jsonFile)
-            
+
         if main_project in data:
             if subproject:
                 if subproject not in data[main_project]["groups"]:
@@ -96,7 +96,7 @@ class SyncRemoteUsers:
             local_users_by_org = data[main_project]["groups"]
             data = eudatRemoteSource.synchronize_user_db(local_users_by_org, \
                                                          data, remove)
-                                                        
+
         if data == None: sys.exit(1)
 
         with open(self.filepath, "w") as jsonFile:
@@ -105,8 +105,8 @@ class SyncRemoteUsers:
         jsonFile.close()
 
         sys.exit(0)
-    
-    
+
+
     def _getConfOption(self, section, option):
         """
         get the options from the configuration file

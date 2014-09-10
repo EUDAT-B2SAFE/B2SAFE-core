@@ -1,5 +1,5 @@
 {
-  "EUHIT_Repo": {
+  "Big_Repo": {
     "members": [
       "user1", 
       "user2", 
@@ -20,14 +20,26 @@
         "user10" 
       ] 
     }
-  }, 
+  },
+  "Little_Repo": {
+    "members": [
+      "user2", 
+      "user4"
+    ], 
+    "groups": {
+      "group2": [
+        "user12"
+      ], 
+      "group3": []
+    }
+  },
   "EUDAT": {
     "members": [
       "user_epos"
     ], 
     "groups": {}
   }, 
-  "HBP_prjtome": {
+  "TADUE_prj": {
     "members": [], 
     "groups": {
       "group18": [
@@ -43,5 +55,5 @@
         "user_one"
       ]
     }
-  } 
+  }
 }
