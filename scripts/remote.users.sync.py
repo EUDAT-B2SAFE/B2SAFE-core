@@ -53,6 +53,7 @@ class SyncRemoteUsers:
 
         _args = parser.parse_args()
 
+	self.config = ConfigParser.RawConfigParser()
         self.config.readfp(open(_args.conf))
         logfilepath = self._getConfOption('Common', 'logfile')
         loglevel = self._getConfOption('Common', 'loglevel')
