@@ -16,14 +16,15 @@ import ConfigParser
 from utilities.drivers.eudatunity import *
 
 logging.basicConfig()
+logger = logging.getLogger('remote.users.sync')
 
 
 class SyncRemoteUsers:
+
     def __init__(self):
         """initialize the object"""
 
-        self.config = ConfigParser.RawConfigParser()
-        self.logger = logging.getLogger('remote.users.sync')
+        self.logger = logger
 
     def main(self):
         """
@@ -55,13 +56,14 @@ class SyncRemoteUsers:
         self.config.readfp(open(_args.conf))
         logfilepath = self._getConfOption('Common', 'logfile')
         loglevel = self._getConfOption('Common', 'loglevel')
-        filepath = self._getConfOption('Common', 'usersfile')
-
+        self.filepath = self._getConfOption('Common', 'usersfile')
+        self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
+        
         main_project = _args.group
         subproject = _args.subgroup
         remove = _args.remove
-
-        ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG,
+        
+        ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
         self.logger.setLevel(ll[loglevel])
         if _args.debug:
@@ -73,49 +75,64 @@ class SyncRemoteUsers:
         formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
         rfh.setFormatter(formatter)
         self.logger.addHandler(rfh)
-
+        
+        userparam = {k:v for k,v in self.config.items(main_project)}
+        data = None
         # Get the json file containing the list of projects, sub-groups and 
         # related members
-
-        userparam = {k: v for k, v in self.config.items(main_project)}
         try:
-            with open(filepath, "r") as jsonFile:
-                data = json.load(jsonFile)
-        except IOError:
-            print "I/O error. JSON-File does not exist - creating it under %s %s..." % (filepath, main_project)
-            eudat = EudatRemoteSource(userparam, self.logger)
-            eudat.createNewJson(filepath, main_project)
-            print "JSON-File is already created under %s. Please run script again to sync data from %s" % (
-                filepath, main_project)
-            sys.exit(1)
-        #except:
-        #    print "Unknown error", sys.exc_info()[0]
-        #    sys.exit(1)
-
-        if main_project in data:
-            if subproject:
-                if subproject not in data[main_project]["groups"]:
-                    self.logger.error('\'' + subproject + '\' group not found.')
+            with open(self.filepath, "r") as jsonFile:
+                try:
+                    data = json.load(jsonFile)
+                    if not main_project in data: 
+                        if 'type' not in userparam or userparam['type'] != 'attributes':
+                            data[main_project] = {"groups": {}, "members": []}
+                except (ValueError) as ve:
+                    self.logger.error('the file ' + self.filepath + ' is not a valid json.')
                     sys.exit(1)
+        except (IOError, OSError) as e:
+            with open(self.filepath, "w+") as jsonFile:
+                if 'type' not in userparam or userparam['type'] != 'attributes':
+                    data = {main_project: {"groups": {}, "members": []}}
+                    jsonFile.write(json.dumps(data,indent=2))
+        if subproject and not subproject in data[main_project]['groups']:
+            data[main_project]['groups'][subproject] = []
+
+        userdata = None
+        # Get the json file containing the list of distinguished names and users
+        try:
+            with open(self.dnsfilepath, "r") as jsonFile:
+                userdata = json.load(jsonFile)
+        except (IOError, OSError) as e:
+            with open(self.dnsfilepath, "w+") as jsonFile:
+                userdata = {}
+                jsonFile.write(json.dumps(userdata,indent=2))
+
+        if (main_project == 'EUDAT'):
+            self.logger.info('Syncronizing local json file with eudat user DB...')
+            eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
+            data = eudatRemoteSource.synchronize_user_db(data)
+            userdata = eudatRemoteSource.synchronize_user_attributes(userdata)
         else:
-            self.logger.error('\'' + main_project + '\' main_project group not found.')
-            sys.exit(1)
+            self.logger.info('Nothing to sync') 
+            sys.exit(0)
+        
+        if data: 
+            with open(self.filepath, "w") as jsonFile:
+                jsonFile.write(json.dumps(data,indent=2))
+            self.logger.info('{0} correctly written!'.format(self.filepath))
+        else:
+            self.logger.info('No data to write to {0}'.format(self.filepath))
 
-        if main_project == 'EUDAT':
-            self.logger.info('Synchronizing local json file with eudat user DB...')
-            eudat = EudatRemoteSource(userparam, self.logger)
-            local_users_by_org = data[main_project]["groups"]
-            data = eudat.synchronize_user_db(local_users_by_org, data, remove)
-
-        if data is None:
-            sys.exit(1)
-
-        with open(filepath, "w") as jsonFile:
-            jsonFile.write(json.dumps(data, indent=2))
-        self.logger.info('{0} correctly written!'.format(filepath))
-        jsonFile.close()
+        if userdata: 
+            with open(self.dnsfilepath, "w") as jsonFile:
+                jsonFile.write(json.dumps(userdata,indent=2))
+            self.logger.info('{0} correctly written!'.format(self.dnsfilepath))
+        else:
+            self.logger.info('No data to write to {0}'.format(self.dnsfilepath))
 
         sys.exit(0)
+    
 
     def _getConfOption(self, section, option):
         """
