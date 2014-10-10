@@ -170,7 +170,7 @@ class IRODSUtils():
             self.logger.error('Error running %s, rc = %d' % (' '.join(command),
                                                              rc))
             self.logger.error("output: %s", output[1])
-            if output[0] is not None and len(output[0].strip() > 0):
+            if output[0] is not None and len(output[0].strip()) > 0:
                 self.logger.error("error message: %s", output[0])
             return (rc, None)
         

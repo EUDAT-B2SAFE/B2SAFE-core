@@ -6,7 +6,6 @@ import urllib2
 import base64
 from pprint import pformat
 
-
 class EudatRemoteSource:
 
     def _debugMsg(self, method, msg):
@@ -18,11 +17,9 @@ class EudatRemoteSource:
 
     def __init__(self, conf, parent_logger=None):
         """initialize the object"""
-
-        if parent_logger:
-            self.logger = parent_logger
-        else:
-            self.logger = logging.getLogger('eudat')
+        
+        if (parent_logger): self.logger = parent_logger
+        else: self.logger = logging.getLogger('eudat')
 
         self.main_project = 'EUDAT'
 
@@ -36,7 +33,7 @@ class EudatRemoteSource:
 
         self.remote_users_list = self.getRemoteUsers()
 #        print(pformat(remote_users_list))
-
+            
 
     def queryUnity(self, sublink):
         """
@@ -47,10 +44,10 @@ class EudatRemoteSource:
         header = "Basic %s" % auth
         url = self.conf['host'] + sublink
         request = urllib2.Request(url)
-        request.add_header("Authorization", header)
+        request.add_header("Authorization",header)
         try:
             response = urllib2.urlopen(request)
-        except IOError:
+        except IOError, e:
             print "Wrong username or password"
             sys.exit(1)
 
@@ -59,7 +56,8 @@ class EudatRemoteSource:
         response_dict = json.loads(json_data)
 
         return response_dict
-
+    
+    
     def getRemoteUsers(self):
         """
         Get the remote users' list
@@ -101,8 +99,9 @@ class EudatRemoteSource:
             list_group[group_name[1:]] = user_list
 
         final_list['groups'] = list_group
-
+        
         return final_list
+
 
     def synchronize_user_db(self, data):
         """
