@@ -292,7 +292,7 @@ class SynchronizationTask():
                         quota_limit = self.irodsu.listIrodsUserQuota(user)
                         # quota from userDB is set in GB, while iRODS uses bytes
                         quota = quota_limit + self.toBytes(
-                                int(self.project[self.conf.quota_attribute] 
+                                int(project[self.conf.quota_attribute] 
                                    ), self.conf.quota_unity)
                         self.irodsu.setIrodsUserQuota(user,str(quota))
                         self.logger.debug("defined quota limit to %s GB for the user %s",
