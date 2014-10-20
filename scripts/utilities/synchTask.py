@@ -487,7 +487,7 @@ class SynchronizationTask():
                             if (self.conf.gridftp_active 
                                 and dn != self.conf.gridftp_server_dn):
                                 with open(self.conf.gridmapfile, 'a+') as mapf:
-                                    mapf.write(dn + " " + user + "\n")
+                                    mapf.write('"' + dn + '"' + " " + user + "\n")
                                     self.logger.info("the dn %s associated to the"
                                               + " user %s has been added to "
                                               + "the gridmapfile %s", dn, user, 
