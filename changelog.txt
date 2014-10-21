@@ -1,4 +1,16 @@
-B2SAFE module 2.2.1
+B2SAFE module 2.2.1 [2014/08/22]
+This is mainly a bug fix release with minor updates related to deployment, 
+test and integrity check scripts. 
+Unless you need to apply the patches mentioned in the documentation, there
+is no need to recompile the module.
+- fixed URI retrieval in the epic client function modifyHandle
+- fixed the PPID update in function EUDATCreatePID
+- updated docs/integrityCheck.pdf and docs/administrator.guide.pdf.
+- fixed a function name mismatch related to the rule EUDATUpdateLogging in catchError.re
+- added a test module for all scripts in cmd
+- update fix regarding to function EUDATeCHECKSUMupdate
+- update of the shell based install script
+- added script for verification of checksums on TSM
 
 B2SAFE module 2.2 [2014/07/09]
 - defined a set of properties to publish the basic local B2SAFE configuration

@@ -4,10 +4,16 @@
 
 This setup describes the procedure to enable the B2SAFE module for iRODS 3.3.x
 
-There is an automatic way to deploy the module based on the script:
+There are two automatic ways to deploy the module.
+One is based on the python script:
 <irods>/modules/B2SAFE/b2safe_install.py
-And on the configuration file:
+And on its configuration file:
 <irods>/modules/B2SAFE/b2safe.conf
+The other is besed on the shell script:
+<irods>/modules/B2SAFE/install.sh
+And on its configuration file:
+<irods>/modules/B2SAFE/install.conf
+
 
 And a manual way, reported in the following paragraphs.
 

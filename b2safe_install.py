@@ -3,6 +3,8 @@
 import os
 import getpass
 import commands
+import subprocess
+import glob
 
 # colors for terminal output
 
@@ -15,12 +17,19 @@ BOLD = '\033[1m'
 # read and set config values
 
 filename = "./b2safe.config"
-fr = open(filename,'r')
+try:
+    fr = open(filename,'r')
+except IOError:
+    print RED + BOLD + 'Error: cannot open file' + filename + '\n' \
+          'Please, check if the source download was '\
+          'complete and start over again.' + BACK
+    exit()
+
 lines = fr.readlines()
 for line in lines:
     if line.find('IRODS_DIR') > -1:
         ird = line.split()
-    if line.find('TRUNK') > -1:
+    if line.find('SOURCE_DIR') > -1:
         tr = line.split()
     if line.find('B2SAFE_MODULE_DIR:') > -1:
         bmd = line.split()
@@ -49,7 +58,7 @@ for line in lines:
 fr.close()    
 
 IRODS_DIR = ird[1]
-TRUNK = tr[1]
+SOURCE_DIR = tr[1]
 B2_MOD_DIR = bmd[1]
 DEFAULT_RESOURCE = dr[1]
 CRED_STORE_TYPE = cst[1]
@@ -62,27 +71,68 @@ LOG_LEVEL = ll[1]
 LOG_DIR = ld[1]
 SHARED_SPACE = hs[1]
 
-# y/n exit
-
 def inpt(inp1):
     """ y/n exit """
     for j in range(3):
         if inp1 == 'y':
             break
         if inp1 == 'n':
+            print BLUE + BOLD + 'Exiting.. Installation was not complete. ' \
+                  + BACK
             exit()
         else:
             inp1 = raw_input(RED + 'Please, respond in (y/n) :' + BACK).lower()
     if inp1 == 'y':
         return True
     else:
+        print RED + BOLD + 'Exiting.. Installation was not complete. ' + BACK
         exit()
+    return False
+
+def symlink(orign, link, oldlink1, oldlink2):
+    """ create symbolic links """
+    subprocess.call(["rm", "-f", oldlink1])
+    subprocess.call(["rm", "-f", oldlink2])
+    try:
+        subprocess.check_call(["stat", orign])
+    except subprocess.CalledProcessError:
+        print RED + BOLD + 'Error: file ' + orign \
+        + ' does not exist. \nPlease, check if the source download was ' \
+        'complete and start over again.' + BACK
+        exit()
+    else:
+        try:
+            subprocess.check_call(["ln", "-s", orign, link])
+        except subprocess.CalledProcessError:
+            print RED + BOLD + 'Error: failed to create symbolic link:\n' + \
+              link + '\nPlease, check command line output and start over '\
+              'again.' + BACK
+            exit()
+
+def stat(obj):
+    """ stat object """
+    try:
+        subprocess.check_call(["stat", obj])
+    except subprocess.CalledProcessError:
+        print RED + BOLD + 'Error: file/directory ' + obj + \
+              ' does not exist.\nPlease, check:\n' \
+              '1) if the source download was complete;\n' \
+              '2) if the path in the b2safe.config is correct;\n' \
+              '3) your iRODS installation and start over again.' + BACK
+        exit()
+
+def check(strr, fname):
+    """ check if string is in file """
+    datafile = file(fname) 
+    for lin in datafile:
+        if strr in lin: 
+            return True
     return False
 
 # welcome msgs
 
-print GREEN + BOLD + 'Welcome! \n This script will install EUDAT B2SAFE module ' \
-      'in the following directory: ' + B2_MOD_DIR + BACK
+print GREEN + BOLD + 'Welcome! \n This script will install EUDAT B2SAFE ' \
+      'module in the following directory: ' + B2_MOD_DIR + BACK
 print BLUE + BOLD + 'CAUTION: ' \
       'If there is a previuos version of the B2SAFE module installed ' \
       'in this directory, it will be overwritten. \n' + BACK
@@ -136,15 +186,64 @@ inp = raw_input(BLUE + BOLD + 'Continue installation (y/n)? :' + BACK).lower()
 
 chk = inpt(inp)
 
-print 'copy trunk to modules dir in irods'
+print 'copy source_dir to modules dir in irods'
 
-os.system("mkdir " + B2_MOD_DIR)
-os.system("cp -r " + TRUNK + "/* " + B2_MOD_DIR)
+try:
+    subprocess.check_call(["stat", B2_MOD_DIR])
+except subprocess.CalledProcessError:
+    print BLUE + BOLD + 'Creating directory ' + B2_MOD_DIR + '..' + BACK
+    try:
+        subprocess.check_call(["mkdir", B2_MOD_DIR])
+    except subprocess.CalledProcessError:
+        print RED + BOLD + 'Error: directory ' + B2_MOD_DIR + ' cannot be ' \
+          'created. \nPlease, check the path in the b2safe.config ' \
+          '(B2SAFE_MODULE_DIR) \nand access permissions and start over again.' \
+          + BACK
+        exit()
+    else:
+        subprocess.call(["mkdir", B2_MOD_DIR])
+else:
+    print RED + BOLD + 'Directory ' + B2_MOD_DIR + ' exists. \n' + BACK
+    inp = raw_input(RED + BOLD + 'Should it be overwritten (y/n)? :' \
+          + BACK).lower()
+    chk = inpt(inp)
 
-os.system("mkdir " + B2_MOD_DIR + "/microservices/obj")
+stat(SOURCE_DIR)
+
+try:
+    subprocess.call(["cp", "-r"] + glob.glob(os.path.join(SOURCE_DIR, '*')) \
+                    + [B2_MOD_DIR])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: cannot copy ' + SOURCE_DIR + ' to ' \
+          + B2_MOD_DIR + '\nPlease, check access permissions and start over' \
+          ' again.' + BACK
+    exit()
+
+try:
+    subprocess.check_call(["stat", B2_MOD_DIR + "/microservices/obj"])
+except subprocess.CalledProcessError:
+    try:
+        subprocess.check_call(["mkdir", B2_MOD_DIR + "/microservices/obj"])
+    except subprocess.CalledProcessError:
+        print RED + BOLD + 'Error: directory ' + B2_MOD_DIR + \
+              '/microservices/obj' + ' cannot be created. \n' \
+              'Please, check the path in the b2safe.config ' \
+              '(B2SAFE_MODULE_DIR) \nand access permissions and start ' \
+              'over again.' + BACK
+        exit()
+    else:
+        subprocess.call(["mkdir", B2_MOD_DIR + "/microservices/obj"])
 
 filename =  B2_MOD_DIR + "/Makefile"
-os.rename(filename, filename+"~")
+
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+    'Please, check if the source download was complete and start over ' \
+    'again.' + BACK
+    exit()
+
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
@@ -156,80 +255,105 @@ for line in source:
 source.close()
 destination.close()
 
-
 print '1.1. <irods>/scripts/configure --enable-B2SAFE \n'\
 'If a previous version of the module is present, \n'\
 'disable it before to install the new one \n'\
 '(if the directory name is the same, change it): \n'\
 '<irods>/scripts/configure --disable-OLD_MODULE --enable-B2SAFE'
 
-os.chdir(IRODS_DIR)
-os.system(IRODS_DIR + "/scripts/configure --enable-B2SAFE")
+try:
+    os.chdir(IRODS_DIR)
+except OSError:
+    print RED + BOLD + 'Error: directory ' + IRODS_DIR + 'does not exist.\n' \
+              'Please, check the path in the b2safe.config (IRODS_DIR) \n' \
+              'and access permissions and start over again.' + BACK
+    exit()
+
+stat(IRODS_DIR + "/scripts/configure")
+
+try:
+    subprocess.call([IRODS_DIR + "/scripts/configure", "--enable-B2SAFE"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: Cannot execute ' + IRODS_DIR + \
+          '/scripts/configure. \nPlease, check your access permissions and ' \
+          'start over again.' + BACK
+    exit()
 
 print '1.2. make clean'
-os.chdir(IRODS_DIR)
-os.system("make clean")
+
+try:
+    subprocess.check_call(["make", "clean"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: Cannot execute make.\nPlease, check your ' \
+          'iRODS Makefile and start over again.' + BACK
+    exit()
 
 print '1.3. make'
-os.system("make")
+
+try:
+    subprocess.check_call(["make"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: iRODS compilation was not successful.\n' \
+          'Please, check your command line output and start over again' + BACK
+    exit()
 
 print '1.4 <irods>/irodsctl restart'
 
-os.system(IRODS_DIR + "/irodsctl restart")
+try:
+    subprocess.check_call([IRODS_DIR + "/irodsctl", "restart"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: iRODS compilation was not successful.\n' \
+          'Please, check your command line output and start over again' + BACK
+    exit()
 
-print '2. create symbolic links'\
-' to the eudat rulebase'
+print '2. create symbolic links to the eudat rulebase'
 
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/eudat.re")
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/eudat-v1.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/eudat.re " + IRODS_DIR + \
-"/server/config/reConfigs/eudat.re")
+symlink(B2_MOD_DIR + "/rulebase/eudat.re", \
+        IRODS_DIR + "/server/config/reConfigs/eudat.re", \
+        IRODS_DIR + "/server/config/reConfigs/eudat.re", \
+        IRODS_DIR + "/server/config/reConfigs/eudat-v1.re")
 
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/replication.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/eurepl.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/replication.re " + \
-IRODS_DIR + "/server/config/reConfigs/eurepl.re")
+symlink(B2_MOD_DIR + "/rulebase/replication.re", \
+        IRODS_DIR + "/server/config/reConfigs/eurepl.re", \
+        IRODS_DIR + "/server/config/reConfigs/replication.re", \
+        IRODS_DIR + "/server/config/reConfigs/eurepl.re")
 
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/pid-service.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/eupids.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/pid-service.re " + \
-IRODS_DIR + "/server/config/reConfigs/eupids.re")
+symlink(B2_MOD_DIR + "/rulebase/pid-service.re", \
+        IRODS_DIR + "/server/config/reConfigs/eupids.re", \
+        IRODS_DIR + "/server/config/reConfigs/pid-service.ree", \
+        IRODS_DIR + "/server/config/reConfigs/eupids.re")
 
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/catchError.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/eucerr.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/catchError.re " + \
-IRODS_DIR + "/server/config/reConfigs/eucerr.re")
+symlink(B2_MOD_DIR + "/rulebase/catchError.re", \
+        IRODS_DIR + "/server/config/reConfigs/eucerr.re", \
+        IRODS_DIR + "/server/config/reConfigs/catchError.re", \
+        IRODS_DIR + "/server/config/reConfigs/eucerr.re")
 
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/euaf.re")
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/eudat-authZ-filters.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/authZ.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/authZ.re " + \
-IRODS_DIR + "/server/config/reConfigs/euaf.re")
+symlink(B2_MOD_DIR + "/rulebase/authZ.re", \
+        IRODS_DIR + "/server/config/reConfigs/euaf.re", \
+        IRODS_DIR + "/server/config/reConfigs/euaf.re", \
+        IRODS_DIR + "/server/config/reConfigs/eudat-authZ-filters.re")
 
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/local.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/euloc.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/local.re " + \
-IRODS_DIR + "/server/config/reConfigs/euloc.re")
+symlink(B2_MOD_DIR + "/rulebase/local.re", \
+        IRODS_DIR + "/server/config/reConfigs/euloc.re", \
+        IRODS_DIR + "/server/config/reConfigs/local.re", \
+        IRODS_DIR + "/server/config/reConfigs/euloc.re")
 
-os.system("rm -f " + IRODS_DIR + \
-"/server/config/reConfigs/integritycheck.re")
-os.system("rm -f " + IRODS_DIR + "/server/config/reConfigs/euint.re")
-os.system("ln -s " + B2_MOD_DIR + "/rulebase/integritycheck.re " + \
-IRODS_DIR + "/server/config/reConfigs/euint.re")
-
+symlink(B2_MOD_DIR + "/rulebase/integritycheck.re", \
+        IRODS_DIR + "/server/config/reConfigs/euint.re", \
+        IRODS_DIR + "/server/config/reConfigs/integritycheck.re", \
+        IRODS_DIR + "/server/config/reConfigs/euint.re")
 
 print '3. edit <irods>/server/config/server.config and append '\
-',eudat,replication,pid-service,catchError,eudat-authZ-filters'\
-',local to reRuleSet (make sure to include the comma and no spaces)'
-
+',eudat,eurepl,eupids,eucerr,euaf,euloc,euint'\
+',to reRuleSet (make sure to include the comma and no spaces)'
 
 filename = IRODS_DIR + "/server/config/server.config"
-os.rename(filename, filename+"~")
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+    'Please, check your iRODS installation and start over again.' + BACK
+    exit()
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
@@ -270,18 +394,16 @@ print "4. configure iRODS hooks. \n"\
 "ON($objPath like '\*.pid.create') { \n"\
 "            processPIDCommandFile($objPath);}} "
 
-def check(strr, fname):
-    """ check if string is in file """
-    datafile = file(fname) 
-    for lin in datafile:
-        if strr in lin: 
-            return True
-    return False
-
 filename = IRODS_DIR + "/server/config/reConfigs/core.re"
+stat(filename)
 if not check("\*.pid.create", filename):
-    print filename
-    os.rename(filename, filename+"~")
+    try:
+        os.rename(filename, filename+"~")
+    except OSError:
+        print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+              'Please, check your iRODS installation and start over again.' \
+              + BACK
+        exit()
     destination = open(filename, "w")
     source = open(filename+"~", "r")
     for line in source:
@@ -308,7 +430,13 @@ print '5. properly configure the default resource in '\
 if not check('acSetRescSchemeForCreate {msiSetDefaultResc("'\
  + DEFAULT_RESOURCE + '","null"); }',filename) \
 and DEFAULT_RESOURCE != 'demoResc':
-    os.rename(filename, filename+"~")
+    try:
+        os.rename(filename, filename+"~")
+    except OSError:
+        print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+              'Please, check your iRODS installation and start over again.' \
+              + BACK
+        exit()
     destination = open(filename, "w")
     source = open(filename+"~", "r")
     for line in source:
@@ -333,35 +461,61 @@ print '6.1 install python scripts \n     cd <irods> \n     '\
 'and make sure they are executable by the irods user \n'\
 '         e.g.chmod u+x cmd/* \n'
 
-os.system("chmod u+x " + B2_MOD_DIR + "/cmd/*")
+stat(B2_MOD_DIR + "/cmd")
 
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/authZ.manager.py")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/authz.map.json")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/authz.map.json~")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/credentials_example")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/credentials")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/epicclient.py")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/epicclient21.py")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/log.manager.conf")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/log.manager.conf~")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/log.manager.py")
-os.system("rm -f " + IRODS_DIR + "/server/bin/cmd/statpid.py")
+subprocess.call(["chmod", "u+x"] + \
+                 glob.glob(os.path.join(B2_MOD_DIR, 'cmd', '*')))
 
-os.system("ln -s " + B2_MOD_DIR + "/cmd/* " + IRODS_DIR + "/server/bin/cmd/")
-os.system("ln -s " + B2_MOD_DIR + "/conf/* " + IRODS_DIR + "/server/bin/cmd/")
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/authZ.manager.py"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/authz.map.json"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/authz.map.json~"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/credentials_example"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/credentials"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/epicclient.py"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/epicclient21.py"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/log.manager.conf"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/log.manager.conf~"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/log.manager.py"])
+subprocess.call(["rm", "-f", IRODS_DIR + "/server/bin/cmd/statpid.py"])
+
+try:
+    subprocess.check_call(["ln", "-s"] + \
+    glob.glob(os.path.join(B2_MOD_DIR, 'cmd', '*')) + \
+    [IRODS_DIR + "/server/bin/cmd/"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: failed to create symbolic link:\n' + \
+          IRODS_DIR + '/server/bin/cmd/*\nPlease, check command line output' \
+          'and start over again.' + BACK
+    exit()
+
+try:
+    subprocess.check_call(["ln", "-s"] + \
+    glob.glob(os.path.join(B2_MOD_DIR, 'conf', '*')) + \
+    [IRODS_DIR + "/server/bin/cmd/"])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Error: failed to create symbolic link:\n' + \
+          IRODS_DIR + '/server/bin/cmd/*\nPlease, check command line output' \
+          'and start over again.' + BACK
+    exit()
 
 print "6.2 update the 'getEpicApiParameters' rule in "\
-"'./server/config/reConfigs/local.re' \n     "\
+"'./server/config/reConfigs/euloc.re' \n     "\
 "- Configure the credential storage type: 'os': "\
 "stored on the local filesystem or 'irods': stored on de irods namespace. "\
 "\n     - Set the path to the credentials file \n"\
 "     - set the correct serverID to include the fully qualified hostname. "\
 "For instance: 'irods://node.domain.com:1247' \n     "\
 "- Set the proper values in the credentials file "\
-"(see ./cmd/credentials_example for an example) "
+"(see ./conf/credentials_example for an example) "
 
 filename = B2_MOD_DIR + "/rulebase/local.re"
-os.rename(filename, filename+"~")
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+          'Please, check your iRODS installation and start over again.' \
+          + BACK
+    exit()
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
@@ -393,9 +547,10 @@ source.close()
 destination.close()
 
 print "- Set the proper values in the credentials "\
-"file (see ./cmd/credentials_example for an example)"
+"file (see ./conf/credentials_example for an example)"
 
 filename = B2_MOD_DIR + "/conf/credentials_example"
+stat(filename)
 destination = open(B2_MOD_DIR+"/conf/credentials","w")
 source = open(filename, "r")
 for line in source:
@@ -420,11 +575,17 @@ source.close()
 destination.close()
 
 print '6.3 update the "getAuthZParameters" rule in '\
-'"./server/config/reConfigs/local.re" \n - '\
-'Set the proper values in modules/B2SAFE/cmd/authz.map.json'
+'"./server/config/reConfigs/euloc.re" \n - '\
+'Set the proper values in modules/B2SAFE/conf/authz.map.json'
 
 filename = B2_MOD_DIR + "/conf/authz.map.json"
-os.rename(filename, filename+"~")
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+          'Please, check your iRODS installation and start over again.' \
+          + BACK
+    exit()
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
@@ -448,12 +609,17 @@ source.close()
 destination.close()
 
 print '6.4 update the "getLogParameters" rule in '\
-'"./server/config/reConfigs/local.re" \n '\
-'- Set the proper values in modules/B2SAFE/cmd/log.manager.conf'
+'"./server/config/reConfigs/euloc.re" \n '\
+'- Set the proper values in modules/B2SAFE/conf/log.manager.conf'
 
 filename = B2_MOD_DIR + "/conf/log.manager.conf"
-
-os.rename(filename, filename+"~")
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+          'Please, check your iRODS installation and start over again.' \
+          + BACK
+    exit()
 destination = open(filename, "w")
 source = open(filename+"~", "r")
 for line in source:
@@ -520,7 +686,6 @@ print BLUE + BOLD + 'Please, complete the following steps ' \
       ' script manually and with "iexecmd epicclient.py" \n '\
       '- test replication by changing and triggering test rules '\
       'in' + IRODS_DIR + '/modules/B2SAFE/rules' + BACK
-
 
 exit()
 

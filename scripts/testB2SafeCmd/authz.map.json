@@ -1,0 +1,26 @@
+{
+"assertion 1":
+	{ "subject":
+                [ "rods#DATACENTER2", "testuser#testzone" ],
+	  "action":
+                [ "read" ],
+	  "target":
+                [ "/home/irods/iRODS/modules/B2SAFE/cmd/credentials", "path/to/creds" ]
+	},
+"assertion 2":
+        { "subject":
+                [ "rods#DATACENTER2" ],
+          "action":
+                [ "epicclient2beta.py"],
+          "target":
+                ["* create *","* delete *","* search *","* modify *", "* read *", "* replaceHash *", "* relation *"]
+        },
+"assertion 3":
+        { "subject":
+                [ "rods#DATACENTER2", "testuser#testzone" ],
+          "action":
+                [ "logmanager.py", "test.action.script" ],
+          "target":
+                ["* push *","* pop *","* queuesize *","* log *","* test-action *"]
+        }
+}

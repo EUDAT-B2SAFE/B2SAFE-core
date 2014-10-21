@@ -7,6 +7,9 @@
 #
 #set -x
 #
+#
+#
+# set default parameters for installation
 INSTALL_CONFIG=./install.conf
 STATUS=0
 EUDAT_RULEFILES=''
@@ -24,7 +27,7 @@ DEFAULT_RESOURCE=eudat
 #
 # credentials type and location
 CRED_STORE_TYPE=os
-CRED_FILE_PATH=$B2SAFE_MODULE_DIR/cmd
+CRED_FILE_PATH=$B2SAFE_MODULE_DIR/conf
 #
 # credentials for server id
 SERVER_ID=
@@ -37,6 +40,9 @@ USERS=
 LOG_LEVEL=
 LOG_DIR=
 SHARED_SPACE=
+# end set default parameters for installation
+#
+DATE_TODAY=`date +%Y%m%d`
 # end default parameters for setup
 
 
@@ -68,6 +74,26 @@ copy_trunk() {
             mkdir $B2SAFE_MODULE_DIR
             echo "cp -r $TRUNK_DIR $B2SAFE_MODULE_DIR"
             cp -rf $TRUNK_DIR/* $B2SAFE_MODULE_DIR
+            mkdir $B2SAFE_MODULE_DIR/microservices/obj
+            echo "update Makefile with correct builddir"
+            if [ ! -e ${B2SAFE_MODULE_DIR}/Makefile.org.${DATE_TODAY} ]
+            then
+               cp ${B2SAFE_MODULE_DIR}/Makefile ${B2SAFE_MODULE_DIR}/Makefile.org.${DATE_TODAY} 
+            fi
+            cat ${B2SAFE_MODULE_DIR}/Makefile | \
+            awk -v IRODS_DIR=$IRODS_DIR '{
+                if ( $1 ~ /buildDir/ ) {
+                    $2=IRODS_DIR
+                    $0=$1" = "$2
+                } print $0
+            }' >  ${B2SAFE_MODULE_DIR}/Makefile.new
+            if [ $? -eq 0 ]
+            then
+                mv ${B2SAFE_MODULE_DIR}/Makefile.new  ${B2SAFE_MODULE_DIR}/Makefile
+            else
+                echo "ERROR: updating ${B2SAFE_MODULE_DIR}/Makefile failed!"
+                STATUS=1
+            fi
         else
             echo "ERROR: $TRUNK_DIR not present!"
             STATUS=1
@@ -103,7 +129,7 @@ create_links() {
     COUNT=0
     EUDAT_SERVER_CONFIG=$IRODS_DIR/server/config/server.config
 
-    for file in `find $B2SAFE_MODULE_DIR/rulebase/*.re | sort `
+    for file in `find $B2SAFE_MODULE_DIR/rulebase/*.re | grep -v ".org" | sort `
     do
         LINK=eudat${COUNT}
         grep "^reRuleSet.*$LINK.*"  $EUDAT_SERVER_CONFIG > /dev/null
@@ -117,8 +143,8 @@ create_links() {
             echo "rm $EUDAT_LINKFILE"
             rm $EUDAT_LINKFILE
         fi
-        echo "ln -s $file $EUDAT_LINKFILE"
-        ln -s $file $EUDAT_LINKFILE
+        echo "ln -sf $file $EUDAT_LINKFILE"
+        ln -sf $file $EUDAT_LINKFILE
 
         let COUNT=COUNT+1
     done
@@ -133,16 +159,18 @@ update_server_config() {
 
     if [ -n "$EUDAT_RULEFILES" ]
     then
+       if [ ! -e ${EUDAT_SERVER_CONFIG}.org.${DATE_TODAY} ]
+       then
+           cp ${EUDAT_SERVER_CONFIG} ${EUDAT_SERVER_CONFIG}.org.${DATE_TODAY} 
+       fi
         cat $EUDAT_SERVER_CONFIG | \
             awk -v EUDAT_RULEFILES=$EUDAT_RULEFILES '{
                 if ($1 ~ /reRuleSet/) {
                     $2=$2EUDAT_RULEFILES
                 } print $0
             }' > $EUDAT_SERVER_CONFIG.new
-
             if [ $? -eq 0 ]
             then
-                mv $EUDAT_SERVER_CONFIG      $EUDAT_SERVER_CONFIG.org
                 mv $EUDAT_SERVER_CONFIG.new  $EUDAT_SERVER_CONFIG
             else
                 echo "ERROR: updating $EUDAT_SERVER_CONFIG failed!"
@@ -157,9 +185,12 @@ configure_irods_hooks() {
 
     IRODS_COREFILE=$IRODS_DIR/server/config/reConfigs/core.re
     TMP_FILE=/tmp/irodshooks.re
+    if [ ! -e ${IRODS_COREFILE}.org.${DATE_TODAY} ]
+    then
+        cp $IRODS_COREFILE ${IRODS_COREFILE}.org.${DATE_TODAY} 
+    fi
 
     status=$(awk '/acPostProcForPut/{f=1}/(\*\.replicate)|(\*\.pid\.create)/{g=1;exit}END{print g&&f ?1:0}' $IRODS_COREFILE)
-
     if [ $status -eq 0 ]
     then
 
@@ -167,12 +198,12 @@ configure_irods_hooks() {
 
 acPostProcForPut {
     ON(\$objPath like "\*.replicate") {
-        processReplicationCommandFile();
+        processReplicationCommandFile(\$objPath);
     }
 }
 acPostProcForPut {
     ON(\$objPath like "\*.pid.create") {
-        processPIDCommandFile();
+        processPIDCommandFile(\$objPath);
     }
 }
 
@@ -183,7 +214,6 @@ EOF
             cat $TMP_FILE $IRODS_COREFILE > $IRODS_COREFILE.new
             if [ $? -eq 0 ]
             then
-                mv $IRODS_COREFILE      $IRODS_COREFILE.org
                 mv $IRODS_COREFILE.new  $IRODS_COREFILE
             else
                 echo "ERROR: creating $IRODS_COREFILE.new failed!"
@@ -201,16 +231,19 @@ EOF
 update_irods_core_resource() {
 
     IRODS_COREFILE=$IRODS_DIR/server/config/reConfigs/core.re
+    if [ ! -e ${IRODS_COREFILE}.org.${DATE_TODAY} ]
+    then
+        cp $IRODS_COREFILE ${IRODS_COREFILE}.org.${DATE_TODAY} 
+    fi
     cat $IRODS_COREFILE | \
         awk -v DEFAULT_RESOURCE=$DEFAULT_RESOURCE '{
             if ( $1 ~ /acSetRescSchemeForCreate|acSetRescSchemeForRepl/ ) {
-                $2="{msiSetDefaultResc(\""DEFAULT_RESOURCE"\",\"null\");}"
+                $2="{msiSetDefaultResc(\""DEFAULT_RESOURCE"\",\"null\"); }"
                 $0=$1" "$2
             } print $0
         }' >  $IRODS_COREFILE.new
         if [ $? -eq 0 ]
         then
-            mv $IRODS_COREFILE      $IRODS_COREFILE.org
             mv $IRODS_COREFILE.new  $IRODS_COREFILE
         else
             echo "ERROR: updating $IRODS_COREFILE failed!"
@@ -222,7 +255,7 @@ update_irods_core_resource() {
 
 install_python_scripts() {
 
-    for file in `find $B2SAFE_MODULE_DIR/cmd/*  | grep -v ".new" | grep -v ".org" | sort `
+    for file in `find $B2SAFE_MODULE_DIR/cmd/* | egrep -v ".new|.org|.~" | sort `
     do
         SHORTFILE="${file##*/}"
         EXTENSION="${file##*.}"
@@ -232,8 +265,8 @@ install_python_scripts() {
             echo "rm $PYTHON_LINKFILE"
             rm $PYTHON_LINKFILE
         fi
-        echo "ln -s $file $PYTHON_LINKFILE"
-        ln -s $file $PYTHON_LINKFILE
+        echo "ln -sf $file $PYTHON_LINKFILE"
+        ln -sf $file $PYTHON_LINKFILE
 
         # make the file executable
         if [ "$EXTENSION" == "py" ]
@@ -249,6 +282,10 @@ install_python_scripts() {
 update_get_epic_api_parameters() {
 
     B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
     cat $B2SAFE_LOCALFILE | \
         awk -F= -v CRED_STORE_TYPE=$CRED_STORE_TYPE -v CRED_FILE_PATH=$CRED_FILE_PATH -v SERVER_ID=$SERVER_ID '{
             if ( $1 ~ /^ +\*credStoreType/ ) {
@@ -266,7 +303,6 @@ update_get_epic_api_parameters() {
         }' >  $B2SAFE_LOCALFILE.new
     if [ $? -eq 0 ]
     then
-        mv $B2SAFE_LOCALFILE      $B2SAFE_LOCALFILE.org
         mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
     else
         echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
@@ -280,8 +316,17 @@ update_credentials() {
 
     echo -n "enter the password belonging to the credentals of username: $USERNAME for prefix: $PREFIX :"
     read -s PASSWORD
+    echo ""
 
-    CRED_FILE_PATH_EXAMPLE=$B2SAFE_MODULE_DIR/cmd/credentials_example
+    if [ ! -e ${CRED_FILE_PATH}.org.${DATE_TODAY} ]
+    then
+        if [ -e $CRED_FILE_PATH ]
+        then
+           cp $CRED_FILE_PATH ${CRED_FILE_PATH}.org.${DATE_TODAY} 
+        fi
+    fi
+
+    CRED_FILE_PATH_EXAMPLE=$B2SAFE_MODULE_DIR/conf/credentials_example
     cat $CRED_FILE_PATH_EXAMPLE | \
         awk -v BASE_URI=$BASE_URI -v USERNAME=$USERNAME -v PREFIX=$PREFIX -v PASSWORD=$PASSWORD '{
             if ( $1 ~ /baseuri/ ) {
@@ -299,10 +344,90 @@ update_credentials() {
         }' >  $CRED_FILE_PATH.new
     if [ $? -eq 0 ]
     then
-        mv $CRED_FILE_PATH       $CRED_FILE_PATH.org
         mv $CRED_FILE_PATH.new   $CRED_FILE_PATH
     else
         echo "ERROR: updating $CRED_FILE_PATH failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
+
+update_get_auth_parameters() {
+
+    AUTH_MAP_PATH=$B2SAFE_MODULE_DIR/conf/authz.map.json
+    B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v AUTH_MAP_PATH=$AUTH_MAP_PATH '{
+            if ( $1 ~ /^ +\*authZMapPath/ ) {
+                $1=$1"=\""AUTH_MAP_PATH"\";"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
+
+update_get_log_parameters() {
+
+    LOG_MANAGER_CONF=$B2SAFE_MODULE_DIR/conf/log.manager.conf
+    B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v LOG_MANAGER_CONF=$LOG_MANAGER_CONF '{
+            if ( $1 ~ /^ +\*logConfPath/ ) {
+                $1=$1"=\""LOG_MANAGER_CONF"\";"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
+
+update_log_manager_conf() {
+
+    LOG_MANAGER_CONF=$B2SAFE_MODULE_DIR/conf/log.manager.conf
+
+    if [ ! -e ${LOG_MANAGER_CONF}.org.${DATE_TODAY} ]
+    then
+        cp $LOG_MANAGER_CONF ${LOG_MANAGER_CONF}.org.${DATE_TODAY} 
+    fi
+
+    cat $LOG_MANAGER_CONF | \
+        awk -v LOG_LEVEL=$LOG_LEVEL -v LOG_DIR=$LOG_DIR '{
+            if ( $1 ~ /log_level/ ) {
+                $0="\"log_level\": \""LOG_LEVEL"\","
+            }
+            if ( $1 ~ /log_dir/ ) {
+                $0="\"log_dir\": \""LOG_DIR"\","
+            } print $0
+        }' >  $LOG_MANAGER_CONF.new
+    if [ $? -eq 0 ]
+    then
+        mv $LOG_MANAGER_CONF.new   $LOG_MANAGER_CONF
+    else
+        echo "ERROR: updating $LOG_MANAGER_CONF failed!"
         STATUS=1
     fi
 
@@ -405,11 +530,25 @@ fi
 
 #
 # update the 'getAuthZParameters' rule in './server/config/reConfigs/local.re'
+# update authz.map.json
 #
+if [ $? -eq 0 ]
+then
+    echo "update_authz_map_json"
+    update_get_auth_parameters
+    #update_authz_map_json
+fi
 
 #
 # update the "getLogParameters" rule in "./server/config/reConfigs/local.re"
+# update log.manager.conf
 #
+if [ $? -eq 0 ]
+then
+    echo "update_log_manager_conf"
+    update_get_log_parameters
+    update_log_manager_conf
+fi
 
 #
 # create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.

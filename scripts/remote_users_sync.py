@@ -61,11 +61,11 @@ class SyncRemoteUsers:
         loglevel = self._getConfOption('Common', 'loglevel')
         self.filepath = self._getConfOption('Common', 'usersfile')
         self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
-        
+     
         main_project = _args.group
         subproject = _args.subgroup
         remove = _args.remove
-        
+
         ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
         self.logger.setLevel(ll[loglevel])
@@ -135,8 +135,8 @@ class SyncRemoteUsers:
             self.logger.info('No data to write to {0}'.format(self.dnsfilepath))
 
         sys.exit(0)
-    
-    
+
+
     def _getConfOption(self, section, option):
         """
         get the options from the configuration file
