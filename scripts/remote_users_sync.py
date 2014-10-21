@@ -13,16 +13,19 @@ from pprint import pformat
 import os
 import ConfigParser
 
+from utilities.drivers.hbpIncf import *
+from utilities.drivers.euhit import *
+from utilities.drivers.myproxy import *
 from utilities.drivers.eudatunity import *
 
-logging.basicConfig()
+logger = logging.getLogger('remote.users.sync')
 
 class SyncRemoteUsers:
     
     def __init__(self):
         """initialize the object"""
 
-        self.logger = logging.getLogger('remote.users.sync')
+        self.logger = logger
 
 
     def main(self):
@@ -57,7 +60,8 @@ class SyncRemoteUsers:
         logfilepath = self._getConfOption('Common', 'logfile')
         loglevel = self._getConfOption('Common', 'loglevel')
         self.filepath = self._getConfOption('Common', 'usersfile')
-
+        self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
+     
         main_project = _args.group
         subproject = _args.subgroup
         remove = _args.remove
@@ -75,34 +79,60 @@ class SyncRemoteUsers:
         rfh.setFormatter(formatter)
         self.logger.addHandler(rfh)
         
+        userparam = {k:v for k,v in self.config.items(main_project)}
+        data = None
         # Get the json file containing the list of projects, sub-groups and 
         # related members
-        with open(self.filepath, "r") as jsonFile:
-            data = json.load(jsonFile)
-
-        if main_project in data:
-            if subproject:
-                if subproject not in data[main_project]["groups"]:
-                    self.logger.error('\'' + subproject + '\' group not found.')
+        try:
+            with open(self.filepath, "r") as jsonFile:
+                try:
+                    data = json.load(jsonFile)
+                    if not main_project in data: 
+                        if 'type' not in userparam or userparam['type'] != 'attributes':
+                            data[main_project] = {"groups": {}, "members": []}
+                except (ValueError) as ve:
+                    self.logger.error('the file ' + self.filepath + ' is not a valid json.')
                     sys.exit(1)
-        else:
-            self.logger.error('\'' + main_project + '\' group not found.')
-            sys.exit(1)
+        except (IOError, OSError) as e:
+            with open(self.filepath, "w+") as jsonFile:
+                if 'type' not in userparam or userparam['type'] != 'attributes':
+                    data = {main_project: {"groups": {}, "members": []}}
+                    jsonFile.write(json.dumps(data,indent=2))
+        if subproject and not subproject in data[main_project]['groups']:
+            data[main_project]['groups'][subproject] = []
 
-        userparam = {k:v for k,v in self.config.items(main_project)}
+        userdata = None
+        # Get the json file containing the list of distinguished names and users
+        try:
+            with open(self.dnsfilepath, "r") as jsonFile:
+                userdata = json.load(jsonFile)
+        except (IOError, OSError) as e:
+            with open(self.dnsfilepath, "w+") as jsonFile:
+                userdata = {}
+                jsonFile.write(json.dumps(userdata,indent=2))
+
         if (main_project == 'EUDAT'):
             self.logger.info('Syncronizing local json file with eudat user DB...')
             eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
-            local_users_by_org = data[main_project]["groups"]
-            data = eudatRemoteSource.synchronize_user_db(local_users_by_org, \
-                                                         data, remove)
+            data = eudatRemoteSource.synchronize_user_db(data)
+            userdata = eudatRemoteSource.synchronize_user_attributes(userdata)
+        else:
+            self.logger.info('Nothing to sync') 
+            sys.exit(0)
+        
+        if data: 
+            with open(self.filepath, "w") as jsonFile:
+                jsonFile.write(json.dumps(data,indent=2))
+            self.logger.info('{0} correctly written!'.format(self.filepath))
+        else:
+            self.logger.info('No data to write to {0}'.format(self.filepath))
 
-        if data == None: sys.exit(1)
-
-        with open(self.filepath, "w") as jsonFile:
-            jsonFile.write(json.dumps(data,indent=2))
-        self.logger.info('{0} correctly written!'.format(self.filepath))
-        jsonFile.close()
+        if userdata: 
+            with open(self.dnsfilepath, "w") as jsonFile:
+                jsonFile.write(json.dumps(userdata,indent=2))
+            self.logger.info('{0} correctly written!'.format(self.dnsfilepath))
+        else:
+            self.logger.info('No data to write to {0}'.format(self.dnsfilepath))
 
         sys.exit(0)
 
