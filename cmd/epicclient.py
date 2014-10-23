@@ -932,7 +932,7 @@ def test(args):
            "/TEST_CR1 (should be prefix + '/TEST_CR1')")
     fail += test_result(ec.createHandle(credentials.prefix + "/TEST_CR1",
                                         "http://www.test.com/1"),
-                        credentials.prefix + "/TEST_CR1")
+                        str(credentials.prefix + "/TEST_CR1"))
 
     print
     print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"

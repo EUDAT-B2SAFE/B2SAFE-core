@@ -62,7 +62,7 @@
 EUDATAuthZ(*user, *action, *target, *response) {
     getAuthZParameters(*authZMapPath);
     logDebug("checking authorization for *user to perform: *action *target");
-    msiExecCmd("authZ.manager.py", "*authZMapPath check *user '*action' '*target'",
+    msiExecCmd("authZmanager.py", "*authZMapPath check *user '*action' '*target'",
                "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *response);
     if (*response == "False") {
@@ -101,7 +101,7 @@ EUDATAuthZ(*user, *action, *target, *response) {
 EUDATLog(*message, *level) {
     getLogParameters(*logConfPath);
     logInfo("logging message '*message'");
-    msiExecCmd("log.manager.py", "*logConfPath log *level *message",
+    msiExecCmd("logmanager.py", "*logConfPath log *level *message",
                "null", "null", "null", *out);
 }
 
@@ -131,7 +131,7 @@ EUDATQueue(*action, *message, *number) {
         *options = "-n "++str(*number);
     }
     logInfo("logging action '*action' for message '*message'");
-    msiExecCmd("log.manager.py", "*logConfPath *action *options *message",
+    msiExecCmd("logmanager.py", "*logConfPath *action *options *message",
                "null", "null", "null", *out);
     if (*action == 'pop' || *action == 'queuesize') {
         msiGetStdoutInExecCmdOut(*out, *message);
