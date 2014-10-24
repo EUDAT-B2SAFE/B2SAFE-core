@@ -127,7 +127,7 @@ EUDATQueue(*action, *message, *number) {
     if (*action == 'pop' || *action == 'queuesize') {
         *message = "";
     }
-    if (*action == 'pop' && *number > 1) {
+    if (*action == 'pop' && int(*number) > 1) {
         *options = "-n "++str(*number);
     }
     logInfo("logging action '*action' for message '*message'");
@@ -136,7 +136,7 @@ EUDATQueue(*action, *message, *number) {
     if (*action == 'pop' || *action == 'queuesize') {
         msiGetStdoutInExecCmdOut(*out, *message);
     }
-    if (*action == 'pop' && *number > 1) {
+    if (*action == 'pop' && int(*number) > 1) {
         *message = triml(*message, "[");
         *message = trimr(*message, "]");
     }
