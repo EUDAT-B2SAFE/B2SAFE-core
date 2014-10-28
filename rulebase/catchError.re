@@ -1,9 +1,15 @@
-# Module: Catch all possible errors during data transfer related with
-#		- PID
-#		- checksum
-#		- size
-#		- error_code
-#
+################################################################################
+#                                                                              #
+# EUDAT error management policies                                              #
+#                                                                              #
+################################################################################
+
+# List of the functions:
+# 
+# EUDATCatchErrorChecksum(*source,*destination)
+# EUDATCatchErrorSize(*source,*destination)
+# EUDATProcessErrorUpdatePID(*updfile)
+# EUDATCatchErrorDataOwner(*path,*status)
 
 #
 # Catch error with Checksum (edited from function checkReplicas in eudat.re)
@@ -184,13 +190,3 @@ EUDATCatchErrorDataOwner(*path,*status){
     	logInfo("Identity of user is confirmed! ");
     }    	
 }
-
-#
-# Catch error if user_on_session is trying to transfer data from one Collection where access right is not allowed.
-# This function is used for transferCollection
-#
-# TODO: ...
-#
-#catchErrorCollectionOwner(*path_of_transfered_collection) {
-#
-#}

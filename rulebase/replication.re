@@ -18,6 +18,8 @@
 # EUDATCheckReplicas(*source, *destination)
 #---- collection management ---
 # EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive)
+# EUDATIntegrityCheck(*srcColl,*destColl)
+# EUDATVerifyCollection(*srcColl)
 
 #
 # Update Logging Files
@@ -225,18 +227,11 @@ EUDATCheckReplicas(*source, *destination) {
 EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive) {
 
     logInfo("[EUDATTransferCollection] Transfering *path_of_transfered_coll to *target_of_transfered_coll");
+
     #Verify that source input path is a collection
-    msiIsColl(*path_of_transfered_coll,*Result, *Status);
-    if(*Result == 0) {
-        logError("Input path *path_of_transfered_coll is not a collection");
-        fail;
-    }
+    EUDATVerifyCollection(*path_of_transfered_coll);
     #Verify that destination input path is a collection
-    msiIsColl(*target_of_transfered_coll, *Result, *Status);
-    if(*Result == 0) {
-        logError("Input path *target_of_transfered_coll is not a collection");
-        fail;
-    }
+    EUDATVerifyCollection(*target_of_transfered_coll);
 
     msiSplitPath(*path_of_transfered_coll,*sourceParent,*sourceChild);
     msiStrlen(*sourceParent,*pathLength);
@@ -298,94 +293,65 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 }
 
 #
-# Show status of Collection (Size, count of data objects, collection owner, location, date) and save it  
-# This function is optional and run independently to support observing status of replication
-# Result will be saved into a file in iRODS *logStatisticFilePath
-# 
-# TODO additional feature: only data objects of User on Session ($userNameClient 
-#      and $rodsZoneClient) at *path_of_collection will be recorded in case collection 
-#      contains data of many people.
-# TODO check if it is possible to use msiGetCollectionSize.
-#
+# This function will check all errors between source-Collection and destination-Collection
+# Data with error will be pushed into fail.log which are able to be transfered later.
 # Parameter:
-# 	*path_of_collection		[IN]	Path of collection in iRODS (ex. /COMMUNITY/DATA)
-#	*logStatisticFilePath	[IN]	Path of statistic file in iRODS
+# 	*srcColl	[IN]	Path of transfered Collection
+#	*destColl	[IN]	Path of replicated Collection
 #
 # Author: Long Phan, JSC
 #
-#EUDATGetStatCollection(*path_of_collection, *logStatisticFilePath) {
+EUDATIntegrityCheck(*srcColl,*destColl) {
+        # Verify that input path is a collection
+        EUDATVerifyCollection(*srcColl);
+        EUDATVerifyCollection(*destColl);
+        msiSplitPath(*srcColl,*sourceParent,*sourceChild);
+        msiStrlen(*srcColl,*pathLength);
+
+        *Work=``{
+                msiGetObjectPath(*File,*source,*status);
+                logInfo("*source");
+                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+                *destination = "``++"*destColl"++``"++ "/" ++ "*subCollection";
+                logInfo("*destination");
+                EUDATSearchPID(*source, *ppid);
+                if (*ppid == "empty") {
+                        logInfo("PPID is empty");
+                        *status_transfer_success = bool("false");
+                        *cause = "PPID is empty";
+                        EUDATUpdateLogging(*status_transfer_success,*source,*destination, *cause);
+                } else {
+                        logInfo("PPID is created *ppid");
+                }
+                # FIXME: is it possible to get CPID at source-location ?
+                EUDATSearchPID(*destination, *cpid);
+                if (*cpid == "empty") {
+                        logInfo("CPID is empty");
+                        *status_transfer_success = bool("false");
+                        *cause = "CPID is empty";
+                        EUDATUpdateLogging(*status_transfer_success,*source,*destination, *cause);
+                } else {
+                        logInfo("CPID is created *cpid");
+                }
+                EUDATCheckError(*source,*destination);
+            }``;
+        msiCollectionSpider(*srcColl,*File,*Work,*Status);
+}
+
+
 #
-#		# --- create optional content of logfile for collection ---
-#		*contents = "------------- Log Information of Collection *path_of_collection --------------- \n";
-#		msiGetCollectionACL(*path_of_collection,"",*Buf);		
-#		*contents = *contents ++ "Collection Owner: \n*Buf \n";
-#	
-#	# ------ This code-part only works partially, not in all case of collection's path 	 ----------
-#	# ------ it's similar like iquest "SELECT RESC_LOC, RESC_NAME WHERE COLL_NAME = '*path'" ----------
-#	# ------ but it does not work when iCAT does not save information about Input-Path 	 ----------
-#	#	msiExecStrCondQuery("SELECT RESC_LOC, RESC_NAME WHERE COLL_NAME = '*path_of_collection'" ,*BS);
-#	#	foreach   ( *BS )    {
-#	#        	msiGetValByKey(*BS,"RESC_LOC", *resc_loc);
-#	#        	msiGetValByKey(*BS,"RESC_NAME", *resc_name);
-#	#    	}
-#	#	*contents = *contents ++ "Resource Name: *resc_name\nResource Location: *resc_loc \n";
-#	# -------------------------------------------------------------------------------------------------
-#		
-#		msiGetSystemTime(*time,"human");		
-#		*contents = *contents ++ "Date.Time: *time \n\n";
-#				
-#		msiSplitPath(*logStatisticFilePath, *coll, *name);
-#						
-#		# --- record *contents of collection and all sub_collection from *path_of_collection ---
-#			*wildcard = "%";
-#			
-#			# loop on collection
-#			*ContInxOld = 1;
-#			# Path:
-#			*COLLPATH = "*path_of_collection"++"*wildcard";
-#			*Condition = "COLL_NAME like '*COLLPATH'";
-#				
-#			*sum = 0;
-#			*count = 0;
-#			msiStrlen(*path_of_collection,*originallength);
-#			*comparelink = *path_of_collection ++ "/";
-#			msiStrlen(*comparelink,*pathlength);
-#			
-#			msiMakeGenQuery("COLL_NAME,count(DATA_NAME), sum(DATA_SIZE)",*Condition, *GenQInp);
-#			msiExecGenQuery(*GenQInp, *GenQOut);
-#			msiGetContInxFromGenQueryOut(*GenQOut,*ContInxNew);
-#			
-#			while(*ContInxOld > 0) {
-#				foreach(*GenQOut) {			
-#					msiGetValByKey(*GenQOut, "COLL_NAME", *collname);			
-#					msiGetValByKey(*GenQOut, "DATA_NAME", *dc);
-#					msiGetValByKey(*GenQOut, "DATA_SIZE", *ds);
-#										
-#					msiStrlen(*collname,*lengthtemp);
-#					# msiSubString of *collname and compare with *path_of_collection	
-#					msiSubstr(*collname,"0","*pathlength",*subcollname);
-#					
-#					if (*subcollname == *comparelink || *originallength == *lengthtemp) {
-#						*contents = "*contents" ++ "*collname count = *dc, sum = *ds\n";
-#						*count = *count + double(*dc);
-#						*sum = *sum + double(*ds);
-#					}		
-#					
-#				}
-#				
-#				*ContInxOld = *ContInxNew;
-#				# get more rows in case data > 256 rows.
-#				if (*ContInxOld > 0) {msiGetMoreRows(*GenQInp,*GenQOut,*ContInxNew);}
-#			}
-#				
-#		#writeLine("stdout","In *logStatisticFilePath \n--Number of files: *count\n"++"Capacity:*sum \n");
-#				
-#		*contents = *contents ++ "\nIn *logStatisticFilePath \n--Number of files: *count\n"++"-- Capacity: *sum \n";
-# #-----------------------------------------------------------------------------------------------											
-#		if (*logStatisticFilePath == "") {
-#			writeLine("stdout","*contents");
-#		} else {
-#			writeFile(*logStatisticFilePath, *contents);
-#		}
-#								
-#}
+# Verify that the object is a collection
+# 
+# Parameter:
+# 	*srcColl	[IN]	Path of Collection
+#
+# Author: Long Phan, JSC
+#
+EUDATVerifyCollection(*srcColl) {
+    logDebug("Verify that source input path *srcColl is a collection")
+    msiIsColl(*srcColl,*Result, *Status);
+    if(*Result == 0) {
+        logError("Input path *srcColl is not a collection");
+        fail;
+    }
+}

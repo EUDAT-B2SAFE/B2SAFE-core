@@ -26,14 +26,13 @@
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
+# EUDATeURLsearch(*PID, *URL)
 # EUDATePIDremove(*path, *force)
 # EUDATeiPIDeiChecksumMgmtColl(*sourceColl)
 # EUDATiRORupdate(*source, *pid)
 # EUDATeParentUpdate(*PID, *PFName, *PFValue)
 # 
 
-# Deprecated
-# addPIDWithChecksum(*path, *newPID)
 
 #
 # Generate a new PID for a digital object.

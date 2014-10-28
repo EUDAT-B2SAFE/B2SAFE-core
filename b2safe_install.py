@@ -155,10 +155,8 @@ print BLUE + BOLD + 'CAUTION: ' \
             + IRODS_DIR + '/server/config/reConfigs/eucerr.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/euaf.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/eudat-authZ-filters.re\n' \
-            + IRODS_DIR + '/server/config/reConfigs/authZ.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/local.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/euloc.re \n' \
-            + IRODS_DIR + '/server/config/reConfigs/integritycheck.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/euint.re \n' \
             '2)your ' + IRODS_DIR + '/server/bin/cmd/ may contain' \
             ' symbolic links to ' \
@@ -328,23 +326,13 @@ symlink(B2_MOD_DIR + "/rulebase/catchError.re", \
         IRODS_DIR + "/server/config/reConfigs/catchError.re", \
         IRODS_DIR + "/server/config/reConfigs/eucerr.re")
 
-symlink(B2_MOD_DIR + "/rulebase/authZ.re", \
-        IRODS_DIR + "/server/config/reConfigs/euaf.re", \
-        IRODS_DIR + "/server/config/reConfigs/euaf.re", \
-        IRODS_DIR + "/server/config/reConfigs/eudat-authZ-filters.re")
-
 symlink(B2_MOD_DIR + "/rulebase/local.re", \
         IRODS_DIR + "/server/config/reConfigs/euloc.re", \
         IRODS_DIR + "/server/config/reConfigs/local.re", \
         IRODS_DIR + "/server/config/reConfigs/euloc.re")
 
-symlink(B2_MOD_DIR + "/rulebase/integritycheck.re", \
-        IRODS_DIR + "/server/config/reConfigs/euint.re", \
-        IRODS_DIR + "/server/config/reConfigs/integritycheck.re", \
-        IRODS_DIR + "/server/config/reConfigs/euint.re")
-
 print '3. edit <irods>/server/config/server.config and append '\
-',eudat,eurepl,eupids,eucerr,euaf,euloc,euint'\
+',eudat,eurepl,eupids,eucerr,euloc'\
 ',to reRuleSet (make sure to include the comma and no spaces)'
 
 filename = IRODS_DIR + "/server/config/server.config"

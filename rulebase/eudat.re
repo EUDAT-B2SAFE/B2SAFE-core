@@ -19,6 +19,7 @@
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
+# EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime)
 # EUDATiCHECKSUMretrieve(*path, *checksum)
 # EUDATiCHECKSUMget(*path, *checksum)
 # EUDATgetObjectTimeDiff(*filePath, *mode, *age)
@@ -217,10 +218,10 @@ logInfo(*msg) {
 }
 
 logDebug(*msg) {
-#    logWithLevel("debug", *msg);
-# replaced "debug" with "info" to print even without
+    logWithLevel("debug", *msg);
+# replace "debug" with "info" to print even without
 # changing the log level of iRODS
-     logWithLevel("info", *msg);
+#   logWithLevel("info", *msg);
 }
 
 logError(*msg) {
