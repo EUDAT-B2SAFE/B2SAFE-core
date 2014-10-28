@@ -26,7 +26,7 @@
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
-# EUDATePIDremove(*path)
+# EUDATePIDremove(*path, *force)
 # EUDATeiPIDeiChecksumMgmtColl(*sourceColl)
 # EUDATiRORupdate(*source, *pid)
 # EUDATeParentUpdate(*PID, *PFName, *PFValue)
@@ -393,10 +393,7 @@ EUDATeCHECKSUMupdate(*PID, *path) {
 }
 
 #
-# This function update the URL field of the PID of $objPath
-#
-# Environment variable used:
-#   $objPath        
+# This function update the URL field of the PID of $objPath    
 #
 # Arguments:
 #   *PID                [IN] The PID associated to $objPath
@@ -414,6 +411,24 @@ EUDATeURLupdate(*PID, *newURL) {
 #TODO the field 10320/loc needs to be updated too
 }
 
+#
+# This function search the URL field of the PID
+#
+# Arguments:
+#   *PID                [IN] The PID associated to $objPath
+#   *newURL             [IN] The new URL to be associated to the PID
+#
+# Author: Giacomo Mariani, CINECA
+#
+EUDATeURLsearch(*PID, *URL) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    logInfo("EUDATeURLsearch -> search URL in PID *PID");
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath read *PID --key URL ",
+               "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *URL);
+    logInfo("EUDATeURLsearch -> response = *URL");
+}
+
 
 #
 # This function remove an ePID... even if its 10320/loc field is not empty!
@@ -424,9 +439,9 @@ EUDATeURLupdate(*PID, *newURL) {
 #
 # Author: Giacomo Mariani, CINECA
 #
-EUDATePIDremove(*path) {
+EUDATePIDremove(*path, *force) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
-    logInfo("EUDATePIDremove -> Removing PID associated to: $userNameClient, $objPath ($filePath)");
+    logInfo("EUDATePIDremove -> Removing PID associated to: $userNameClient, *path");
 
     if (EUDATSearchPID(*path, *pid)) {
         msiExecCmd("epicclient.py","*credStoreType *credStorePath read --key 10320/LOC *pid", "null", "null", "null", *out2);
@@ -441,11 +456,20 @@ EUDATePIDremove(*path) {
             # The PID record could be associated to a replica.
             # The field 10320/LOC of the parent PID record should be updated
         }
+        else if (*force == bool("true")){
+            logInfo("EUDATePIDremove -> The PID record *pid contains pointers to other DO copies");
+            logInfo("EUDATePIDremove -> It will be deleted anyway");
+            msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
+                       "null", "null", "null", *out3);
+            msiGetStdoutInExecCmdOut(*out3, *response3);
+            logInfo("EUDATePIDremove -> delete handle response = *response3");
+        }
         else {
             # The PID record contains pointers to other DO copies.
             # What should we do?
             # Maybe all the copies should be deleted together with the master copy.
             logInfo("EUDATePIDremove -> The PID record *pid contains pointers to other DO copies");
+            logInfo("EUDATePIDremove -> Nothing will be deleted");
         }
     }
     else {
@@ -535,21 +559,4 @@ EUDATeParentUpdate(*PID, *PFName, *PFValue) {
     if(*epicDebug > 1) {
         logDebug("modify handle response = *response")
     }
-}
-
-################################################################################
-#                                                                              #
-# Deprecated functions                                                         #
-#                                                                              #
-################################################################################
-
-#
-# Parameters:
-#   *path       [IN]    the path of the replica to store with the PID record
-#   *newPID     [OUT]   the pid generated for this replica 
-#
-# Author: CINECA, edited and added by Elena Erastova, RZG
-#
-addPIDWithChecksum(*path, *newPID) {
-	EUDATCreatePID("None", *path, "None", bool("false"), *newPID);
 }
