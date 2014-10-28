@@ -18,6 +18,12 @@ simplejson
 download from http://pypi.python.org/pypi/simplejson/
 python setup.py install
 
+lxml
+pip install lxml
+
+defusedxml
+pip install defusedxml
+
 ubuntu: apt-get install python-httplib2 python-simplejson
 
 apt-get install pylint
@@ -26,8 +32,8 @@ apt-get install pylint
 
 import httplib2
 import simplejson
-# FIXME xml.dom.minidom is not secure against maliciously crafted XML
-from xml.dom import minidom
+#from xml.dom import minidom
+from defusedxml import minidom
 from lxml import etree
 from lxml.etree import tostring
 import base64
@@ -146,74 +152,6 @@ class EpicClient(object):
         print "Processing fails with statuscode = " + str(statuscode)
         return None
 
-#    def _checkresponsecode2(self, method, statuscode):
-#        """
-#        Process the returned HTTP status-code from HTTP.request
-#        (http://code.tutsplus.com/tutorials
-#            /a-beginners-guide-to-http-and-rest--net-16340
-#        https://developer.yahoo.com/social/rest_api_guide
-#            /http-response-codes.html)
-#        http://tools.ietf.org/html/rfc2616
-#        """
-#        output = True
-#        # HTTP-request GET, PUT, DELETE
-#        if statuscode == 200:
-#            self._debugmsg(str(method),
-#                           "Request completed. No error, operation successful "
-#                           + str(statuscode))
-#        # HTTP-request POST
-#        elif statuscode == 201:
-#            self._debugmsg(str(method), "Successful creation of a resource "
-#                           + str(statuscode))
-#        # HTTP-request POST, PUT, DELETE
-#        elif statuscode == 202:
-#            self._debugmsg(str(method), "The request was received "
-#                           + str(statuscode))
-#        # HTTP-request POST, PUT, DELETE
-#        elif statuscode == 204:
-#            self._debugmsg(str(method),
-#                           "The request was processed successfully, " +
-#                           "but no response body is needed " + str(statuscode))
-#        elif statuscode == 304:
-#            self._debugmsg(str(method), "Resource has not been modified "
-#                           + str(statuscode))
-#            output = False
-#        # HTTP-request GET, PUT, DELETE
-#        elif statuscode == 400:
-#            self._debugmsg(str(method), "Bad Request " + str(statuscode))
-#            output = False
-#        # HTTP-request GET, PUT, DELETE
-#        elif statuscode == 401:
-#            self._debugmsg(str(method), "Action requires user authentication "
-#                           + str(statuscode))
-#            output = False
-#        elif statuscode == 404:
-#           self._debugmsg(str(method), "Resource not found " + str(statuscode))
-#            output = False
-#        # HTTP-request GET, PUT, DELETE
-#        elif statuscode == 405:
-#           self._debugmsg(str(method), "Method Not Allowed " + str(statuscode))
-#            output = False
-#        # HTTP-request PUT, DELETE
-#        elif statuscode == 409:
-#            self._debugmsg(str(method), "Conflict " + str(statuscode))
-#            output = False
-#        elif statuscode == 500:
-#            self._debugmsg(str(method), "Internal Server Error "
-#                           + str(statuscode))
-#            output = None
-#        elif statuscode == 501:
-#            self._debugmsg(str(method), "Requested HTTP operation not "
-#                                        "supported " + str(statuscode))
-#            output = None
-#        elif statuscode == 503:
-#            self._debugmsg(str(method), "Service Unavailable " + str(
-#                statuscode))
-#        else:
-#            self._debugmsg(str(method), "Processing fails " + str(statuscode))
-#            output = None
-#
-#        return output
 
     # *************************** Public Methods *****************************
 
@@ -229,28 +167,10 @@ class EpicClient(object):
 
         """
 
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix + '/?' + key + '=' + value
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix + '/?' + key + '=' + value
-
         uri = self._geturi(prefix, key, value, '')
         self._debugmsg('searchHandle', "URI " + uri)
-
-        #       hdrs = None
-        #       auth = base64.encodestring(self.cred.username + ':'
-        #               + self.cred.password)
-        #       if self.cred.accept_format:
-        #            	hdrs = {'Accept': self.cred.accept_format,
-        #                       'Authorization': 'Basic ' + auth}
         hdrs = self._getheader("SEARCH")
         response, content = self.http.request(uri, method='GET', headers=hdrs)
-        #       if response.status == 200:
-        #            self._debugmsg('searchHandle', "Request completed")
-        #       else:
-        #            self._debugmsg('searchHandle', "Response status: "
-        #                   + str(response.status))
-        #            return None
         output = True
         output = self._checkresponsecode("searchHandle", response.status)
         if not output or output is None or not content:
@@ -281,32 +201,10 @@ class EpicClient(object):
 
         """
 
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix
-
         uri = self._geturi(prefix, '', '', suffix)
-
-        # if suffix != '':
-        #    uri += "/" + suffix.partition("/")[2]
-
         self._debugmsg('retrieveHandle', "URI " + uri)
-        # hdrs = None
-        # auth = base64.encodestring(self.cred.username + ':'
-        #       + self.cred.password)
-        # if self.cred.accept_format:
-        #     hdrs = {'Accept': self.cred.accept_format,
-        #       'Authorization': 'Basic ' + auth}
         hdrs = self._getheader("READ")
         response, content = self.http.request(uri, method='GET', headers=hdrs)
-        #    if response.status == 200:
-        #        self._debugmsg('retrieveHandle', "Request completed")
-        #    else:
-        #        self._debugmsg('retrieveHandle', "Response status: " + str(
-        # response.status))
-        #         return None
-        # output = True
         output = self._checkresponsecode("retrieveHandle", response.status)
         if output is False or output is None or not content:
             return None
@@ -353,19 +251,6 @@ class EpicClient(object):
         """
         self._debugmsg('createHandle', "PREFIX = " + prefix)
         self._debugmsg('createHandle', "SUFFIX = " + suffix)
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix
-
-        # if suffix != '':
-        #    uri += "/" + suffix.partition("/")[2]
-
-        # auth = base64.encodestring(self.cred.username + ':'
-        #       + self.cred.password)
-        # hdrs = {'If-None-Match': '*', 'Content-Type': 'application/json',
-        #        'Authorization': 'Basic ' + auth }
-
         uri = self._geturi(prefix, '', '', suffix)
         self._debugmsg('createHandleWithLocation', "URI " + uri)
         hdrs = self._getheader("CREATE")
@@ -385,18 +270,11 @@ class EpicClient(object):
                 etree.SubElement(root, 'location', id=str(idn), href=str(item))
 
         loc10320 = tostring(root)
-        # print extratype[0].split(';')[0]
-        # print extratype[1].split(';')[0]
-        # print len(extratype)
-        # print extratype[0]
-        # print extratype[1]
         if ((extratype is not None) and (len(extratype) is 2) and
             ("EUDAT/ROR" in extratype[0]) and
                 ("EUDAT/PPID" in extratype[1])):
                 eudat_ror = extratype[0].split('=')[1]
                 eudat_ppid = extratype[1].split('=')[1]
-                # print eudat_ror
-                # print eudat_ppid
         else:
             self._debugmsg('createHandle', "ExtraType = None")
             extratype = None
@@ -440,20 +318,6 @@ class EpicClient(object):
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
-        # response code 201 for POST
-        # response, _ = self.http.request(uri, method='POST', headers=hdrs,
-        #               body=new_handle_json)
-        #        if response.status == 201:
-        #            self._debugmsg('createHandleWithLocation',
-        #                           "Request completed")
-        #        elif response.status == 400:
-        #            self._debugmsg('createHandleWithLocation', 'body json:'
-        #                           + new_handle_json)
-        #            return None
-        #        else:
-        #            self._debugmsg('createHandleWithLocation', "Not Created:
-        #                           Response status: " + str(response.status))
-        #            return None
         output = True
         output = self._checkresponsecode("createHandle", response.status)
         if not output or output is None:
@@ -488,19 +352,7 @@ class EpicClient(object):
 
         """
 
-        # if prefix.startswith(self.cred.baseuri):
-        #    prefix = prefix[len(self.cred.baseuri):]
-
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix
-
-        # if suffix != '':
-        #    uri += "/" + suffix.partition("/")[2]
-
         uri = self._geturi(prefix, key, value, suffix)
-        # print "URI = ", uri
         self._debugmsg('modifyHandle', "URI " + uri)
 
         hdrs = self._getheader("UPDATE")
@@ -515,15 +367,12 @@ class EpicClient(object):
 
         keyfound = False
 
-        if (value is "") or (value is None) or (value is ''):
+        if (value is None) or (value is '') or (value is ""):
             for item in handle:
                 if 'type' in item and item['type'] == key:
                     self._debugmsg('modifyHandle', 'Remove item ' + key)
                     del item['data']
                     del item['parsed_data']
-                    # set value of field = NONE
-                    # handle[len(handle):] = ['NONE']
-                    # handle.remove(item)
                     break
         else:
             for item in handle:
@@ -531,21 +380,6 @@ class EpicClient(object):
                     keyfound = True
                     self._debugmsg('modifyHandle', "Found key " + key +
                                    " value=" + str(item['parsed_data']))
-#                    if value == str(item['parsed_data']):
-#                        self._debugmsg('modifyHandle', "Value is the same, "
-#                                                       "update timestamp")
-#                        # Reset/ Update new timestamp
-#                        # item['timestamp'] = 'UPDATE NEW TIME STAMP'
-#                        item['parsed_data'] == 'None'
-#                        del item['data']
-#                        handle_json = simplejson.dumps(handle)
-#                        response, _ = self.http.request(uri, method='PUT',
-#                                                headers=hdrs, body=handle_json)
-#                        item['parsed_data'] = value
-#                        # if item['parsed_data'] == 'None':
-#                        #    item['parsed_data'] = value
-#                        break
-#                    else
                     item['parsed_data'] = value
                     del item['data']
                     break
@@ -553,20 +387,9 @@ class EpicClient(object):
             if keyfound is False:
                 self._debugmsg('modifyHandle', "Value of keyfound is false, "
                                "create new key")
-                # THIS Following if-block is unused, comparing to line 424
-                # if value is "" or None or '':
-                #    self._debugmsg('modifyHandle', "No value for Key " + key +
-                #                    "Create new Key without Value is not
-                # desire"
-                #                    "Quitting....")
-                # what is the reason for returning True here?
-                # Reason: Create new Key without Value is not desire
-                #    print "QUITING................."
-                #    return True
                 self._debugmsg('modifyHandle',
                                "Key " + key + " created. Generating new hash")
                 handleitem = {'type': key, 'parsed_data': value}
-                # handle.append(handleitem)
                 handle[len(handle):] = [handleitem]
 
         handle_json = simplejson.dumps(handle)
@@ -574,16 +397,6 @@ class EpicClient(object):
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=handle_json)
-        # FIXME this can't be true; there are many status codes
-        # FIXME in the 200 range that do not indicate a "OK" status
-        # FIXME So this testB2SafeCmd is probably not good enough
-        #       if response.status < 200 or response.status >= 300:
-        #            self._debugmsg('modifyHandle', "Not Modified:
-        #                           Response status: " + str(response.status))
-        #            return False
-        #        else:
-        #            self._debugmsg('modifyHandle', "Request completed")
-        # output = True
         output = self._checkresponsecode("modifyHandle", response.status)
         if output is None or False:
             return False
@@ -601,7 +414,7 @@ class EpicClient(object):
         """
 
         uri = self._geturi(prefix, '', '', suffix)
-        if key is "":
+        if not key or key is "":
             hdrs = self._getheader("DELETE")
             self._debugmsg('deleteHandle', "DELETE Handle " + prefix + "/"
                            + suffix + " of URI " + uri)
@@ -624,10 +437,6 @@ class EpicClient(object):
                     self._debugmsg('deleteHandle', "Found key " + key +
                                    " value=" + str(item['parsed_data']))
                     self._debugmsg('deleteHandle', "Remove Key's Field")
-                    # handle.remove(item)
-                    # print "Element = ", item
-                    # i = handle.index(item)
-                    # print "Index = ", i
                     del handle[handle.index(item)]
                     break
 
@@ -642,7 +451,6 @@ class EpicClient(object):
                 response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                                 body=handle_json)
 
-        # output = True
         output = self._checkresponsecode("deleteHandle", response.status)
         self._debugmsg('deleteHandle', "OUTPUT = " + str(output))
         if (output is None) or (output is False):
@@ -661,12 +469,6 @@ class EpicClient(object):
 
         """
 
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix
-        # if suffix != '':
-        #    uri += "/" + suffix.partition("/")[2]
         uri = self._geturi(prefix, '', value, suffix)
 
         loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
@@ -721,14 +523,6 @@ class EpicClient(object):
 
         """
 
-        # if self.cred.baseuri.endswith('/'):
-        #    uri = self.cred.baseuri + prefix
-        # else:
-        #    uri = self.cred.baseuri + '/' + prefix
-
-        # if suffix != '':
-        #    uri += "/" + suffix.partition("/")[2]
-
         uri = self._geturi(prefix, '', '', suffix)
 
         loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
@@ -750,11 +544,9 @@ class EpicClient(object):
                     if self.modifyHandle(prefix, "10320/LOC", content, suffix):
                         return True
 
-                # FIXME is this at the correct indent level??
                 self._debugmsg('removeLocationFromHandle', "the location " +
                                value + " cannot be removed")
                 return False
-                # return True
 
 
 ################################################################################
@@ -771,7 +563,6 @@ class LocationType(object):
     """
 
     def __init__(self, field, debug=False):
-        # FIXME xml.dom.minidom is not secure against maliciously crafted XML
         self.domfield = minidom.parseString(field)
         self.debug = debug
 
@@ -935,33 +726,9 @@ class Credentials(object):
                 sys.exit(-1)
 
         elif self.store == "irods":
-            # self._debugmsg("irods","Function getting credential store in iRODS
-            # is in testing ...")
             print "Function getting credential store in iRODS is in testing ..."
             # FIXME: is there better way to exit ?.
             sys.exit(-1)
-
-        # Deprecated Code:
-        #        elif self.store == "irods":
-        #            try:
-        #                irods = __import__("irods")
-        #            except ImportError as err:
-        #                print "error: failed to import module 'irods':", err
-        #                sys.exit(-1)
-
-        # FIXME add try/except block for specific exceptions
-        #            myEnv, _ = irods.getRodsEnv()
-        #            conn, _ = irods.rcConnect(myEnv.getRodsHost(),
-        #                      myEnv.getRodsPort(), myEnv.getRodsUserName(),
-        #                                             myEnv.getRodsZone())
-        #            if self.debug:
-        #                print (myEnv.getRodsHost(), myEnv.getRodsPort(),
-        #                       myEnv.getRodsUserName(), myEnv.getRodsZone())
-        #            irods.clientLogin(conn)
-        #            testconn = irods.iRodsOpen(conn, self.filename, 'r')
-        #            tmp = simplejson.loads(testconn.read())
-        #            testconn.close()
-        #            conn.disconnect()
         else:
             print "error: invalid store '%s', aborting" % self.store
             sys.exit(-1)
@@ -1020,14 +787,12 @@ def create(args):
     credentials.parse()
 
     uid = uuid.uuid1()
-    # pid = credentials.prefix + "/" + str(uid)
     suffix = str(uid)
 
     client = EpicClient(credentials)
     extype = None
     if args.extratype is not None:
         extype = args.extratype.split(';')
-    # print extype
     if args.loc10320 is not None:
         l10320 = args.loc10320.split(';')
     else:
@@ -1050,8 +815,6 @@ def modify(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-    # print "PREFIX = ", prefix
-    # print "SUFFIX = ", suffix
     result = client.modifyHandle(prefix, args.key, args.value, suffix)
 
     sys.stdout.write(str(result))
@@ -1066,8 +829,6 @@ def delete(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-    # print "PREFIX = ", prefix
-    # print "SUFFIX = ", suffix
     result = client.deleteHandle(prefix, args.key, suffix)
 
     sys.stdout.write(str(result))
@@ -1180,24 +941,14 @@ def test(args):
     print
     print ("Deleting EMAIL parameter from " + credentials.prefix +
            "/TEST_CR1 (should be True)")
-    # fail += test_result(client.modifyHandle(credentials.prefix + "/TEST_CR1",
-    # "EMAIL", None), True)
-    # causes TypeError: cannot concatenate 'str' and 'NoneType' obj clients
-    # None should be changed into "", parameter for 'EMAIL' is empty
     fail += test_result(client.deleteHandle(credentials.prefix, "EMAIL",
                                             "TEST_CR1"), True)
 
     print
     print ("Retrieving Value of EMAIL from " + credentials.prefix +
            "/TEST_CR1 (should be None)")
-    # FIXME this actually gives an empty string: ""
-    # FIXME the problem seems to be that modifyHandle() does not actually
-    # FIXME delete the field when value is None
-    # FIXME So either modifyHandle() is bugged when "value is None" or
-    # FIXME this testB2SafeCmd is wrong; it doesn't result in "None"
-    # FIXME Explain in above lines.
     fail += test_result(client.getValueFromHandle(credentials.prefix, "EMAIL",
-                        "/TEST_CR1"), None)
+                        "TEST_CR1"), None)
 
     print
     print ("Updating handle info with a new 10320/loc type location "
@@ -1261,7 +1012,6 @@ if __name__ == "__main__":
                              "(os=filespace, irods=iRODS storage)")
     parser.add_argument("credpath", default="NULL",
                         help="path to the credentials")
-    # parser.add_argument("-d", "--debug", help="Show debug output")
 
     subparsers = parser.add_subparsers(title='Actions',
                                        description='Handle record management'
@@ -1301,7 +1051,7 @@ if __name__ == "__main__":
     parser_delete.add_argument("handle",
                                help="the handle value of the digital object "
                                     "instance to delete")
-    parser_delete.add_argument("key",
+    parser_delete.add_argument("--key",
                                help="the key-field of handle, field == '' in "
                                     "case delete complete handle ")
     parser_delete.set_defaults(func=delete)
@@ -1328,8 +1078,8 @@ if __name__ == "__main__":
     parser_relation.add_argument("cpid", help="child handle value")
     parser_relation.set_defaults(func=relation)
 
-    parser_test = subparsers.add_parser('testB2SafeCmd',
-                                        help='Run testB2SafeCmd suite')
+    parser_test = subparsers.add_parser('test',
+                                        help='run tests')
     parser_test.set_defaults(func=test)
 
     _args = parser.parse_args()
