@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#
 # epicclient.py
 #
 # * use 4 spaces!!! not tabs
@@ -1120,7 +1121,7 @@ def test(args):
     fail += test_result(client.createHandle(credentials.prefix,
                                             "http://www.testB2SafeCmd.com/1",
                                             None, None, None, "TEST_CR1"),
-                        credentials.prefix + "/TEST_CR1")
+                        str(credentials.prefix + "/TEST_CR1"))
 
     print
     print "Retrieving handle info from " + credentials.prefix + "/TEST_CR1"

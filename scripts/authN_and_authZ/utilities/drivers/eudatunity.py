@@ -7,6 +7,7 @@ import base64
 from pprint import pformat
 
 class EudatRemoteSource:
+
     def _debugMsg(self, method, msg):
         """Internal: Print a debug message if debug is enabled.
 
@@ -22,18 +23,16 @@ class EudatRemoteSource:
 
         self.main_project = 'EUDAT'
 
-        missingp = []    
-        key = 'host'
-        if key in conf: self.host = conf[key]
-        else: missingp.append(key)
-        key = 'username'
-        if key in conf: self.username = conf[key]
-        else: missingp.append(key)
-        key = 'password'
-        if key in conf: self.password = conf[key]
-        else: missingp.append(key)
+        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix']
+        missingp = []
+        for key in confkeys:
+            if not key in conf: missingp.append(key)
         if len(missingp) > 0:
-            self.logger.error('missing parameters: ' + pformat(missingp))
+            self.logger.warning('missing parameters: ' + pformat(missingp))
+        self.conf = conf
+
+        self.remote_users_list = self.getRemoteUsers()
+#        print(pformat(remote_users_list))
             
 
     def queryUnity(self, sublink):
@@ -41,9 +40,9 @@ class EudatRemoteSource:
         :param argument: url to unitydb with entity (entityID) or group (groupName)
         :return:
         """
-        auth = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
+        auth = base64.encodestring('%s:%s' % (self.conf['username'], self.conf['password']))[:-1]
         header = "Basic %s" % auth
-        url = self.host + sublink
+        url = self.conf['host'] + sublink
         request = urllib2.Request(url)
         request.add_header("Authorization",header)
         try:
@@ -71,17 +70,24 @@ class EudatRemoteSource:
         final_list = {}
         list_member = []
         users_map = {}
+        attribs_map = {}
         for member_id in group_list['members']:
             user_record = self.queryUnity("entity/"+str(member_id))
+            attr_list = {}
             for identity in user_record['identities']:
                 if identity['typeId'] == "userName":
                     list_member.append(identity['value'])
                     users_map[member_id] = identity['value']
-## TODO: if typeId = "persistent" get value and combine 
-##       with eudat CA root issuer DN to build dynamically the user DN
+                elif identity['typeId'] == "persistent":
+                    # Here we build the DN: the way to build it could change
+                    # in the future.
+                    userDN = '/CN=' + users_map[member_id] + '/CN=' \
+                             + identity['value'] + self.conf['carootdn']
+                    attr_list['DN'] = [userDN]
+            attribs_map[users_map[member_id]] = attr_list
 
-        # Append list_member to final_list
         final_list['members'] = list_member
+        final_list['attributes'] = attribs_map
 
         # Query and get list of all user from Groups in Unity
         list_group = {}
@@ -92,44 +98,41 @@ class EudatRemoteSource:
                 user_list.append(users_map[member_id])
             list_group[group_name[1:]] = user_list
 
-        # Append list_group to final_list
         final_list['groups'] = list_group
         
         return final_list
 
 
-    def synchronize_user_db(self, local_users_list, data, remove=False):
+    def synchronize_user_db(self, data):
         """
         Synchronize the remote users' list with a local json file (user db)
         """
 
-        remote_users_list = self.getRemoteUsers()
-        
-        for org,members in remote_users_list['groups'].iteritems():
+        for org,members in self.remote_users_list['groups'].iteritems():
 
-            #if subgroup org doesn't exist, create it
-            org = 'eudat_' + org
-            if (org not in data[self.main_project]["groups"]):
-                self.logger.info('Creating sub-group \''+ org + '\'')
-                data[self.main_project]["groups"][org] = []
-
-            # add new members
-            self.logger.info('Adding users that have been added to ' + org + ' ...')
+            self.logger.info('Adding users belonging to ' + org + ' ...')
+            org = self.conf['ns_prefix'] + org
+            data[self.main_project]["groups"][org] = []
             for member in members:
-                member = 'eudat_' + member
-                if member not in data[self.main_project]["groups"][org]:
-                    data[self.main_project]["groups"][org].append(member)
-                    self.logger.debug('\tadded user %s' % (member,))
+                member = self.conf['ns_prefix'] + member
+                data[self.main_project]["groups"][org].append(member)
+                self.logger.debug('\tadded user %s' % (member,))
 
-        # remove users that don't exist in remote groups
-        if remove:
-            for org,members in local_users_list.iteritems():
-                self.logger.info('Removing users that have been removed from ' + org + '...') 
-                for member in members:
-                    remote_org = org[6:]
-                    remote_member = member[6:]
-                    if remote_member not in remote_users_list[remote_org]:
-                        data[self.main_project]["groups"][org].remove(member)
-                        self.logger.debug('\tremoved user %s' % (member,))
+        return data
+
+
+    def synchronize_user_attributes(self, data):
+        """
+        Synchronize the remote users' attributes with a local json file
+        for the time beeing just the DNs are considered
+        """
+       
+        for user,attrs in self.remote_users_list['attributes'].iteritems():
+
+            self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
+            user = self.conf['ns_prefix'] + user
+            data[user] = attrs['DN']
+            self.logger.debug('\tadded user ' + user + '\' DNs: ' 
+                              + pformat(attrs['DN']))
 
         return data

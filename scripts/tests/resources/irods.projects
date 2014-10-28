@@ -1,0 +1,40 @@
+{
+  "Big_Repo": {
+    "PI": "sherlock_holmes", 
+    "groups": {
+      "bigrepo_mazinga": [
+        "bigrepo_gonagai"
+      ], 
+      "group2": [
+        "user21"
+      ], 
+      "group3": [], 
+      "group4": [
+        "user9", 
+        "user10",
+        "user66" 
+      ]
+    }, 
+    "members": [
+      "tizio", 
+      "caio", 
+      "test_user"
+    ],
+    "DiskQuota": "1000"
+  },
+  "EUDAT": {
+    "members": [
+      "user_epos"
+    ], 
+    "groups": {},
+    "DiskQuota": "5000"
+  },
+  "TADUE_prj": {
+    "members": [], 
+    "groups": {
+      "group_one": [
+        "user_one"
+      ]
+    }
+  }
+}

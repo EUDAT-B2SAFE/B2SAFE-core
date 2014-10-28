@@ -682,7 +682,8 @@ print BLUE + BOLD + 'Please, complete the following steps ' \
       '  ubuntu: apt-get install pylint \n '\
       '- install queuelib library to run logging-mechanism \n '\
       '- test the epic api interaction by running the '\
-      '"' + IRODS_DIR + '/modules/B2SAFE/cmd/epicclient.py test"'\
+      '"' + IRODS_DIR + '/modules/B2SAFE/cmd/epicclient.py os '\
+      + IRODS_DIR + '/modules/B2SAFE/conf/credentials test"'\
       ' script manually and with "iexecmd epicclient.py" \n '\
       '- test replication by changing and triggering test rules '\
       'in' + IRODS_DIR + '/modules/B2SAFE/rules' + BACK

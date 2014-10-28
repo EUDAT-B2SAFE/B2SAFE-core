@@ -371,7 +371,7 @@ recall_files()
   #Do the actual recall
   tmp_final_recall_output=`$MKTEMP`
   log $DEBUG "Calling the actual dsmrecall."
-  dsmrecall -p -FILElist=$recall_collection_fin $FS_NAME > $tmp_final_recall_output
+  dsmrecall -FILElist=$recall_collection_fin $FS_NAME > $tmp_final_recall_output
   log $INFO "The actual dsmrecall called."
   [ $EXTRA_DEBUG -le $LOG_PRIORITY ] && cat $tmp_final_recall_output
 

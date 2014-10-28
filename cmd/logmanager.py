@@ -173,7 +173,7 @@ def queuesize(args):
 
 
 def test(args):
-    '''do a series of tests'''
+    '''do a serie of tests'''
     
     def read_log_last_line(logger, logfile):
         '''local helper func: read the last line of the log file'''
@@ -182,16 +182,13 @@ def test(args):
         
         try:
             filehandle = open(logfile, "r")
-            # read last line in file
             linelist = filehandle.readlines()
             filehandle.close()
         except (OSError, IOError) as er:
             print "problem while reading file %s" % logfile
             print "Error:", er
             return False
-        #print linelist
         lastline = linelist[len(linelist)-1]
-        #print "Info in last line is ", linelist[len(linelist)-1]
         if 'test log message' in lastline:
             return True
         
@@ -232,31 +229,33 @@ def test(args):
     print "Test: log message"
     fail += test_result(read_log_last_line(logger, logfile), True)
 
-    oldsize = len(queue)
     print
-    print "Test: size Queue before push", oldsize
+    print "Test: queue size before push"
+    fail += test_result(len(queue), 0)
 
     print
     print "Test: push info to the queue"
     queue.push('test message')
-    oldsize += 1
+    print "OK"
 
     print
-    print "Test: size Queue after push ", oldsize
-    if len(queue) == oldsize:
-        print "OK"
-    else:
-        fail += 1
-        print "size of queue", len(queue)
+    print "Test: queue size after push "
+    fail += test_result(len(queue), 1)
 
     print
     print "Test: pop info from queue"
     fail += test_result('test message', queue.pop())
-    queue.close()
+    
+    print
+    print "Test: check queue size, again (should be 0)"
+    fail += test_result(len(queue), 0)
 
+    queue.close()
     if fail == 0:
+        print
         print "All tests passed OK"
     else:
+        print
         print "%d tests failed" % fail
 
 

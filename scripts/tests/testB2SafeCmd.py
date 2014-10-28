@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from testB2SafeCmd.testEpicClient import EpicClientTestCase
 from testB2SafeCmd.testLogManager import LogManagerTestCase
 from testB2SafeCmd.testAuthzManager import AuthzManagerTestCase
