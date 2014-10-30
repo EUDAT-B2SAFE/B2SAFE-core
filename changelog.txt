@@ -1,3 +1,15 @@
+B2SAFE module 2.3 [2014/10/30]
+Unless you need to apply the patches mentioned in the documentation, there
+is no need to recompile the module.
+- completed the implementation of the integrity check tools
+- extended the authentication mechanism to import automatically X.509 certificate DN
+- improved the EPIC client, adding more command line options, optimizing the code
+  and improving security against XML vulnerabilities.
+- added new rules: EUDATiCHECKSUMdate, EUDATeURLsearch, EUDATIntegrityCheck, EUDATVerifyCollection
+- added a script named quota_stats.py to calculate the storage stats (used space, number of objects)
+  per collection
+- added new document "tutorial" in the docs directory
+
 B2SAFE module 2.2.1 [2014/08/22]
 This is mainly a bug fix release with minor updates related to deployment, 
 test and integrity check scripts. 

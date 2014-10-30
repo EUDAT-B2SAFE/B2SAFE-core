@@ -233,15 +233,12 @@ EUDATGetRorPid(*pid, *ror) {
 }
 
 #
-# This function create a PID for $objPath and store its value and the checksum in the iCAT if it does not exist.
-# Otherwhise the function modify the PID.
-#
-# Environment variable used:
-#   $objPath
+# This function creates a PID and stores its value and the checksum in the iCAT if it does not exist.
+# Otherwhise the function modifies the PID.
 #
 # Arguments:
 #   *path            [IN]    Path of the source file
-#   *pid             [OUT]   PID of the source file
+#   *PID             [OUT]   PID of the source file
 #   *ePIDcheck       [IN]    Specify whether you want to search for ePID (bool("true")) or not
 #   *iCATuse         [IN]    Specify whether you want to use the iCAT (bool("true")) or not
 #   *minTime         [IN]    Specify the minimum age of the digital object before looking for ePID
