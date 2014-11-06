@@ -153,11 +153,9 @@ print BLUE + BOLD + 'CAUTION: ' \
             + IRODS_DIR + '/server/config/reConfigs/eurepl.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/catchError.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/eucerr.re \n' \
-            + IRODS_DIR + '/server/config/reConfigs/euaf.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/eudat-authZ-filters.re\n' \
             + IRODS_DIR + '/server/config/reConfigs/local.re \n' \
             + IRODS_DIR + '/server/config/reConfigs/euloc.re \n' \
-            + IRODS_DIR + '/server/config/reConfigs/euint.re \n' \
             '2)your ' + IRODS_DIR + '/server/bin/cmd/ may contain' \
             ' symbolic links to ' \
             'B2SAFE scripts of the previous version. They may have (but not ' \
@@ -349,21 +347,17 @@ for line in source:
         if (line.find('eudat') < 0) and \
 (line.find('replication') < 0):
             destination.write(line.strip("\n") + \
-",eudat,eurepl,eupids,eucerr,euaf,euloc,euint" + "\n")
+",eudat,eurepl,eupids,eucerr,euloc" + "\n")
         elif (line.find('eudat') > -1) and \
 (line.find('replication') < 0) and (line.find('eurepl') < 0):
             destination.write(line.strip("\n") + \
-",eurepl,eupids,eucerr,euaf,euloc,euint" + "\n")
+",eurepl,eupids,eucerr,euloc" + "\n")
         elif (line.find('eudat') > -1) and \
 (line.find('replication') > -1):
             line1 = line.replace("replication","eurepl")
             line1 = line1.replace("pid-service","eupids")
             line1 = line1.replace("catchError","eucerr")
-            line1 = line1.replace("eudat-authZ-filters","euaf")
-            line1 = line1.replace("authZ","euaf")
-            line1 = line1.replace("eudat-authZ-filters","euaf")
             line1 = line1.replace("local","euloc")
-            line1 = line1.replace("integritycheck","euint")
             destination.write(line1)
         else:
             destination.write(line)
