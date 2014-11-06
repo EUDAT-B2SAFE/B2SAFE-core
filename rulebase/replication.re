@@ -109,7 +109,8 @@ EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
         logDebug("PID exist, Replication's beginning ...... ");
         getSharedCollection(*path_of_transfered_file,*sharedCollection);
         msiSplitPath(*path_of_transfered_file, *collection, *file);
-        msiReplaceSlash(*target_of_transfered_file, *controlfilename);
+        #msiReplaceSlash(*target_of_transfered_file, *controlfilename);
+        EUDATReplaceSlash(*target_of_transfered_file, *controlfilename);
         logDebug("ReplicateFile: *sharedCollection*controlfilename");            
             
         # Catch Error CAT_NO_ACCESS_PERMISSION before replication
@@ -203,7 +204,8 @@ EUDATCheckReplicas(*source, *destination) {
         EUDATiRORupdate(*source, *pid);
         logInfo("replication from *source to *destination");
         getSharedCollection(*source,*collectionPath);
-        msiReplaceSlash(*destination,*filepathslash);
+        #msiReplaceSlash(*destination,*filepathslash);
+	EUDATReplaceSlash(*destination, *filepathslash);
         triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
     }
 }
