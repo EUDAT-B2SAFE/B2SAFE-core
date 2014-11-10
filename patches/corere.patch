@@ -9,7 +9,7 @@
 +#     parameter contains the command to be executed, arguments, execution address, hint path.
 +#     if a parameter is not provided, then it is the empty string
 +acPreProcForExecCmd(*cmd, *args, *addr, *hint) {
-+	if (*cmd != "authZ_manager_py") {
++	if (*cmd != "authZmanager.py") {
 +           EUDATAuthZ("$userNameClient#$rodsZoneClient", *cmd, *args, *response);
 +       }
 +}
