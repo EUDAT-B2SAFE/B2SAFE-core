@@ -470,7 +470,7 @@ class SynchronizationTask():
             self.logger.debug("Updating the dn mapping for user: " + user)
             out = self.irodsu.getUserDN(user)
             dn_list = []
-            if (out.strip() != 'No rows found'):
+            if (out is not None and out.strip() != 'No rows found'):
                 for line in out.splitlines():
                     # remove the username from the beginning of the line (e.g. "rossim /O=IT/OU=...")
                     dn_list.append(line[len(user)+1:])
