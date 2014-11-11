@@ -287,6 +287,7 @@ class SynchronizationTask():
                             quota = self.toBytes(
                                          int(project[self.conf.quota_attribute]),
                                          self.conf.quota_unity)
+                        self.irods_users[user] = {}
                 else:
                     if self.conf.quota_active:
                         quota_limit = self.irodsu.listIrodsUserQuota(user)
