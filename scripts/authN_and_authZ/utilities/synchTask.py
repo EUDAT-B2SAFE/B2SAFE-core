@@ -197,11 +197,11 @@ class SynchronizationTask():
                         else:
                             self.logger.debug("created group %s related to the project %s",
                                               sg, proj_name)
-                        if not self.conf.irods_subgroup_home:
-                            self.irodsu.deleteGroupHome(sg)
-                            self.logger.debug("deleted group %s's home "
-                                            + "related to the project %s", sg,
-                                         proj_name)
+                            if not self.conf.irods_subgroup_home:
+                                self.irodsu.deleteGroupHome(sg)
+                                self.logger.debug("deleted group %s's home "
+                                                + "related to the project %s",
+                                                  sg, proj_name)
                     else:
                         newGroupFlag = True
                         print 'created group ' + sg + ' ' \
@@ -212,7 +212,10 @@ class SynchronizationTask():
 
                 for user in project['groups'][sg]:
 
-                    if not(user in self.irods_users.keys()):
+                    userinfo = self.irodsu.getIrodsUser(user)
+                    if (userinfo is not None) and \
+                       ("No rows found" in userinfo.splitlines()[0]):
+#                    if not(user in self.irods_users.keys()):
                         if not(self.dryrun):
                             response = self.irodsu.createIrodsUsers(user)
                             if response[0] != 0:
@@ -287,7 +290,6 @@ class SynchronizationTask():
                             quota = self.toBytes(
                                          int(project[self.conf.quota_attribute]),
                                          self.conf.quota_unity)
-                        self.irods_users[user] = {}
                 else:
                     if self.conf.quota_active:
                         quota_limit = self.irodsu.listIrodsUserQuota(user)

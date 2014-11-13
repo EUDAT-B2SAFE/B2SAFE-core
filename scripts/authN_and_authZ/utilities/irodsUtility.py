@@ -15,14 +15,12 @@ class IRODSUtils():
     """
     
 
-    def __init__(self, admin_user, home_dir, logger_parent=None, debug=False):
+    def __init__(self, home_dir, logger_parent=None, debug=False):
         """initialize the object"""
         
         if logger_parent: logger_name = logger_parent + ".IrodsUtils"
         else: logger_name = "IrodsUtils"
         self.logger = logging.getLogger(logger_name)
-##TODO get automatically the username with ienv
-        self.irods_admin_user = admin_user
         self.irods_home_dir = home_dir
         if debug:
             self.logger.setLevel(logging.DEBUG)
@@ -66,6 +64,13 @@ class IRODSUtils():
         return out
 
 
+    def getIrodsUser(self,user):
+        """list info related to a single iRODS user"""
+
+        (rc, out) = self.execute_icommand(["iadmin", "lu", user])
+        return out
+
+
     def listIrodsUsers(self):
         """list the iRODS users"""
 
@@ -77,7 +82,7 @@ class IRODSUtils():
         """create iRODS users"""
 
         (rc, out) = self.execute_icommand(["iadmin", "mkuser", user, "rodsuser"])
-        return out
+        return (rc, out)
 
 
     def listIrodsUserQuota(self, user):
@@ -144,14 +149,22 @@ class IRODSUtils():
         """query the iRODS DB"""
 
         (rc, out) = self.execute_icommand(["iquest", query])
-        return out
+        return (rc, out)
 
 
     def deleteGroupHome(self,group_name):
         """delete the home of the irods group without deleting the group"""
 
+        (rc1, out1) = self.execute_icommand(["ienv"])
+        if out1:
+            for row in out1.splitlines():
+                triplet = row.split(':')
+                duplet = (triplet[1].strip()).split('=')
+                if (duplet[0] == 'irodsUserName'):
+                    irods_admin_user = duplet[1]
+
         (rc, out) = self.execute_icommand(["ichmod", "-M", "own", 
-                                           self.irods_admin_user, 
+                                           irods_admin_user, 
                                            self.irods_home_dir + group_name])
         if (rc != 0):
             (rc2, out2) = self.execute_icommand(["irm", "-r", 
