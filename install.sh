@@ -3,7 +3,7 @@
 # procedure to install the B2SAFE module using a bash script
 #
 # set tabstop=4
-# set expendtab
+# set expandtab
 #
 #set -x
 #
@@ -62,6 +62,45 @@ read_parameters() {
     fi
 
     return $STATUS
+}
+
+remove_obsoletes() {
+
+    removefilelist[0]="cmd/authZ.manager.py cmd/log.manager.py"
+    removefilelist[1]="rulebase/authZ.re rulebase/integritycheck.re"
+    removefilelist[2]="rules/test1.r rules/test2.r rules/test3.r rules/test4.r rules/test5.r rules/test6.r rules/test7.r rules/test8.r rules/test9.r rules/test.r"
+    removefilelist[3]="scripts/conf/remote.users.sync.conf scripts/eudat-get-checksum-verify-candidates.sh scripts/eudat-update-checksums.sh scripts/eudat-verify-checksums-disc.sh"
+    removefilelist[4]="scripts/install.conf scripts/install.sh scripts/remote.users.sync.py scripts/statpid.py"
+    removefilelist[5]="scripts/testB2SafeCmd.conf scripts/testB2SafeCmd/epicclient2beta.py scripts/testB2SafeCmd/__init__.py scripts/testB2SafeCmd/logmanager.py scripts/testB2SafeCmd.py scripts/testB2SafeCmd/testEpicClient.py scripts/testB2SafeCmd/testLogManager.py"
+    removefilelist[6]="scripts/test/irods.external"
+    removefilelist[7]="scripts/updatePidChecksum.r"
+    removefilelist[8]="scripts/utilities/drivers/eudatunity.py scripts/utilities/drivers/__init__.py scripts/utilities/__init__.py"
+
+    removedirlist[0]="scripts/test scripts/conf scripts/testB2SafeCmd scripts/utilities/drivers scripts/utilities"
+
+    for list in "${removefilelist[@]}"
+    do 
+        for file in $list
+        do
+            if [ -f "${B2SAFE_MODULE_DIR}/$file" ]
+            then
+                #ls ${B2SAFE_MODULE_DIR}/$file
+                rm -v ${B2SAFE_MODULE_DIR}/$file
+            fi
+        done
+    done
+
+    for list in "${removedirlist[@]}"
+    do 
+        for directory in $list
+        do
+            if [ -d "${B2SAFE_MODULE_DIR}/$directory" ]
+            then
+                #ls ${B2SAFE_MODULE_DIR}/$directory
+                rmdir -v ${B2SAFE_MODULE_DIR}/$directory
+            fi
+        done
+    done
 }
 
 copy_trunk() {
@@ -129,7 +168,17 @@ create_links() {
     COUNT=0
     EUDAT_SERVER_CONFIG=$IRODS_DIR/server/config/server.config
 
-    for file in `find $B2SAFE_MODULE_DIR/rulebase/*.re | grep -v ".org" | sort `
+    #delete old symbolic links
+    for file in `find $IRODS_DIR/server/config/reConfigs/eudat*.re | sort `
+    do
+        if [ -h "$file" ]
+        then
+            rm -v $file
+        fi
+    done
+
+    # create new symbolic links
+    for file in `find $B2SAFE_MODULE_DIR/rulebase/*.re | sort `
     do
         LINK=eudat${COUNT}
         grep "^reRuleSet.*$LINK.*"  $EUDAT_SERVER_CONFIG > /dev/null
@@ -177,6 +226,17 @@ update_server_config() {
                 STATUS=1
             fi
     fi
+
+    echo "*********************************************************************"
+    echo ""
+    echo "Please check the file: ${EUDAT_SERVER_CONFIG} by hand                "
+    echo "    grep ^reRuleSet ${EUDAT_SERVER_CONFIG}                           "
+    echo ""
+    echo "It should only have the following eudat{n}.re files mentioned:       "
+    echo "    `cd $IRODS_DIR/server/config/reConfigs/ ; ls -C eudat*.re`       "
+    echo ""
+    echo "*********************************************************************"
+
 
     return $STATUS
 }
@@ -444,6 +504,15 @@ update_log_manager_conf() {
 #
 echo "read_parameters"
 read_parameters
+
+#
+# remove obsolete files or files which have moved to a different directory
+#
+if [ $? -eq 0 ]
+then
+    echo "remove obsolete files and directory's"
+    remove_obsoletes
+fi
 
 #
 # copy trunk to modules dir in irods
