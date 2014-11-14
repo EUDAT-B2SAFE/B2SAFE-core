@@ -151,7 +151,10 @@ class SynchronizationTask():
 
         self.logger.info("deleting the quota limit")
         quotas = self._parseQuotas()
-        del quotas[proj_name]
+        if proj_name in quotas.keys():
+            del quotas[proj_name]
+        else:
+            self.logger.debug("no project quota to delete")
 
         return self._writeQuota(quotas)
 
