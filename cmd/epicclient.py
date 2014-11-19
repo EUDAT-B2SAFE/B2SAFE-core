@@ -3,6 +3,8 @@
 # epicclient.py
 #
 # * use 4 spaces!!! not tabs
+# * set tabstop=4
+# * set expandtab
 # * See PEP-8 Python style guide http://www.python.org/dev/peps/pep-0008/
 # * use pylint
 #
@@ -270,51 +272,20 @@ class EpicClient(object):
                 etree.SubElement(root, 'location', id=str(idn), href=str(item))
 
         loc10320 = tostring(root)
-        if ((extratype is not None) and (len(extratype) is 2) and
-            ("EUDAT/ROR" in extratype[0]) and
-                ("EUDAT/PPID" in extratype[1])):
-                eudat_ror = extratype[0].split('=')[1]
-                eudat_ppid = extratype[1].split('=')[1]
-        else:
-            self._debugmsg('createHandle', "ExtraType = None")
-            extratype = None
 
-        if checksum and extratype:
-            new_handle_json = simplejson.dumps([{'type': 'URL',
-                                                 'parsed_data': location},
-                                                {'type': '10320/LOC',
-                                                 'parsed_data': loc10320},
-                                                {'type': 'CHECKSUM',
-                                                 'parsed_data': checksum},
-                                                {'type': 'EUDAT/ROR',
-                                                 'parsed_data': eudat_ror},
-                                                {'type': 'EUDAT/PPID',
-                                                 'parsed_data': eudat_ppid}])
-        elif checksum:
-            new_handle_json = simplejson.dumps([{'type': 'URL',
-                                                 'parsed_data': location},
-                                                {'type': '10320/LOC',
-                                                 'parsed_data': loc10320},
-                                                {'type': 'CHECKSUM',
-                                                 'parsed_data': checksum}])
-        elif extratype:
-            new_handle_json = simplejson.dumps([{'type': 'URL',
-                                                 'parsed_data': location},
-                                                {'type': '10320/LOC',
-                                                 'parsed_data': loc10320},
-                                                {'type': 'CHECKSUM',
-                                                 'parsed_data': 'None'},
-                                                {'type': 'EUDAT/ROR',
-                                                 'parsed_data': eudat_ror},
-                                                {'type': 'EUDAT/PPID',
-                                                 'parsed_data': eudat_ppid}])
-        else:
-            new_handle_json = simplejson.dumps([{'type': 'URL',
-                                                 'parsed_data': location},
-                                                {'type': '10320/LOC',
-                                                 'parsed_data': loc10320},
-                                                {'type': 'CHECKSUM',
-                                                 'parsed_data': 'None'}])
+        handle_array = [{'type': 'URL', 'parsed_data': location}]
+        handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320}) 
+        if ((checksum) and (checksum is not None)):
+            handle_array.append({'type': 'CHECKSUM', 'parsed_data': checksum}) 
+        if ((extratype) and (extratype is not None)):
+            for key_value in extratype:
+                key   = key_value.split('=')[0]
+                value = key_value.split('=')[1]
+                if (next((item for item in handle_array if item['type'] == key),
+                    None) is None):
+                    handle_array.append({'type': key, 'parsed_data': value}) 
+
+        new_handle_json = simplejson.dumps(handle_array) 
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
