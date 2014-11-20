@@ -61,11 +61,11 @@ class SyncRemoteUsers:
         loglevel = self._getConfOption('Common', 'loglevel')
         self.filepath = self._getConfOption('Common', 'usersfile')
         self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
-     
+        
         main_project = _args.group
         subproject = _args.subgroup
         remove = _args.remove
-
+        
         ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
         self.logger.setLevel(ll[loglevel])
@@ -99,7 +99,10 @@ class SyncRemoteUsers:
                     data = {main_project: {"groups": {}, "members": []}}
                     jsonFile.write(json.dumps(data,indent=2))
         if subproject and not subproject in data[main_project]['groups']:
-            data[main_project]['groups'][subproject] = []
+            if 'ns_prefix' in userparam and userparam['ns_prefix']:
+                data[main_project]['groups'][userparam['ns_prefix']+subproject] = []
+            else:
+                data[main_project]['groups'][subproject] = []
 
         userdata = None
         # Get the json file containing the list of distinguished names and users
@@ -113,7 +116,8 @@ class SyncRemoteUsers:
 
         if (main_project == 'EUDAT'):
             self.logger.info('Syncronizing local json file with eudat user DB...')
-            eudatRemoteSource = EudatRemoteSource(userparam, self.logger)
+            eudatRemoteSource = EudatRemoteSource(main_project, subproject,
+                                                  userparam, self.logger)
             data = eudatRemoteSource.synchronize_user_db(data)
             userdata = eudatRemoteSource.synchronize_user_attributes(userdata)
         else:
@@ -135,8 +139,8 @@ class SyncRemoteUsers:
             self.logger.info('No data to write to {0}'.format(self.dnsfilepath))
 
         sys.exit(0)
-
-
+    
+    
     def _getConfOption(self, section, option):
         """
         get the options from the configuration file

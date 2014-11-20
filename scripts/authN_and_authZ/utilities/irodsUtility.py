@@ -163,12 +163,12 @@ class IRODSUtils():
                 if (duplet[0] == 'irodsUserName'):
                     irods_admin_user = duplet[1]
 
-        (rc, out) = self.execute_icommand(["ichmod", "-M", "own", 
+        (rc, out) = self.execute_icommand(["ichmod", "-Mr", "own", 
                                            irods_admin_user, 
                                            self.irods_home_dir + group_name])
         if (rc != 0):
             (rc2, out2) = self.execute_icommand(["irm", "-r", 
-                                                 self.irods_home_dir+group_name])
+                                                 self.irods_home_dir + group_name])
             if (rc2 != 0): return False
             else: return True
         else:
