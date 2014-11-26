@@ -484,13 +484,12 @@ EUDATePIDremove(*path, *force) {
 # Author: Elena Erastova, RZG
 #
 EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
-    *Work=``{
-        msiGetObjectPath(*File,*source,*status);
-        logInfo("EUDATeiPIDeiChecksumMgmtColl: File *source");
-	EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
-        EUDATiRORupdate(*source, *pid);
-        }``;
-        msiCollectionSpider(*sourceColl,*File,*Work,*Status);
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*sourceColl/%') {
+        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+        logInfo("EUDATeiPIDeiChecksumMgmtColl: object *objPath");
+	EUDATeiPIDeiChecksumMgmt(*objPath, *pid, bool("true"), bool("true"), 0);
+        EUDATiRORupdate(*objPath, *pid);
+    }
 }
 
 #
