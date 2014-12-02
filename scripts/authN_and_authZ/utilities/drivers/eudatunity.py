@@ -24,7 +24,8 @@ class EudatRemoteSource:
         self.main_project = main_project
         self.subproject = subproject
 
-        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix']
+        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix', 
+                    'gridftp_cert_dn']
         missingp = []
         for key in confkeys:
             if not key in conf: missingp.append(key)
@@ -160,6 +161,8 @@ class EudatRemoteSource:
         for user,attrs in filtered_list.iteritems():
 
             self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
+            if self.conf['gridftp_cert_dn']:
+                attrs['DN'].append(self.conf['gridftp_cert_dn'])
             user = self.conf['ns_prefix'] + user
             data[user] = attrs['DN']
             self.logger.debug('\tadded user ' + user + '\' DNs: ' 

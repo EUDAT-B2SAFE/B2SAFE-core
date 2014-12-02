@@ -8,6 +8,7 @@ import json
 import pprint
 import sys
 import collections
+import shutil
 
 from pprint import pformat
 from utilities.mailSender import MailSender
@@ -512,10 +513,25 @@ class SynchronizationTask():
                                      dn, user)
                         if not(self.dryrun):
                             self.irodsu.removeUserDN(user,dn)
+                            if self.conf.notification_active:
+                                message = "removed user " + user + "'s DN: " + dn
+                                mailsnd = MailSender()
+                                mailsnd.send(message, self.conf.notification_sender,
+                                             self.conf.notification_receiver)
                             self.logger.info("the dn %s has been removed for "
                                         + "user %s", dn, user)
                             if (self.conf.gridftp_active
                                 and dn != self.conf.gridftp_server_dn):
+                                statinfo = os.stat(self.conf.gridmapfile)
+                                # If the original gridmafile has size > 0 then
+                                # create a backup
+                                if statinfo.st_size > 0:
+                                    try:
+                                        dest = self.conf.gridmapfile + ".bak"
+                                        shutil.copy(self.conf.gridmapfile, dest)
+                                    except IOError as e:
+                                        self.logger.error("Impossible to create"
+                                                          " a backup: " + e.strerror)
                                 with open(self.conf.gridmapfile, 'w+') as mapf:
                                     content = mapf.readlines()
                                     for line in content:
