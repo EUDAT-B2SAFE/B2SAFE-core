@@ -170,7 +170,12 @@ getSharedCollection(*zonePath, *collectionPath) {
 # Author: Willem Elbers, MPI-TLA
 #
 writeFile(*file, *contents) {
+#    *err = errorcode(msiObjStat(*file, *objStat));
+#    if (*err >= 0) {
+#        msiDataObjUnlink("objPath=*file++++replNum=0++++forceFlag=", *status);
+#    }
     msiDataObjCreate("*file", "forceFlag=", *filePointer);
+    logDebug("[writeFile] Created object: *file");
     msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
     msiDataObjClose(*filePointer, *outStatus);
 }
@@ -482,6 +487,7 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
     if (*ror == "None"){
         getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
         *ror = "*epicApi"++"*pid";  
+        logDebug("No ROR available, so new ROR defined: *ror");
     }
     writeFile("*commandFile","*pid;*source;*destination;*ror");
 }
@@ -695,7 +701,7 @@ doReplication(*pid, *source, *destination, *ror, *status) {
 #
 updateMonitor(*file) {
     logInfo("updateMonitor(*file)");
-    delay("<PLUSET>1m</PLUSET>") {
+    delay("<PLUSET>1m</PLUSET><EF>10m REPEAT UNTIL SUCCESS OR 12 TIMES</EF>") {
         if(errorcode(msiObjStat(*file,*out)) >= 0) {
             logInfo("*file exists");
             processPIDCommandFile(*file);

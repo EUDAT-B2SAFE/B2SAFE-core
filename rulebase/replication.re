@@ -19,7 +19,6 @@
 #---- collection management ---
 # EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive)
 # EUDATIntegrityCheck(*srcColl,*destColl)
-# EUDATVerifyCollection(*srcColl)
 
 #
 # Update Logging Files
@@ -61,8 +60,8 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
     
     *status_transfer_success = bool("true");
     *cause = "";
-    msiIsData(*target_of_transfered_file, *result, *status);
-    if (int(*result) == 0) {
+    *err = errorcode(msiObjStat(*target_of_transfered_file, *objStat));
+    if (*err < 0) {
         *cause = "missing replicated object";
         *status_transfer_success = bool("false");
     } else if (EUDATCatchErrorChecksum(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
@@ -231,9 +230,17 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
     logInfo("[EUDATTransferCollection] Transfering *path_of_transfered_coll to *target_of_transfered_coll");
 
     #Verify that source input path is a collection
-    EUDATVerifyCollection(*path_of_transfered_coll);
+    msiGetObjType(*path_of_transfered_coll, *type);
+    if (*type != '-c') {
+        logError("Input path *path_of_transfered_coll is not a collection");
+        fail;
+    }
     #Verify that destination input path is a collection
-    EUDATVerifyCollection(*target_of_transfered_coll);
+    msiGetObjType(*target_of_transfered_coll, *type);
+    if (*type != '-c') {
+        logError("Input path *target_of_transfered_coll is not a collection");
+        fail;
+    }
 
     msiSplitPath(*path_of_transfered_coll,*sourceParent,*sourceChild);
     msiStrlen(*sourceParent,*pathLength);
@@ -242,56 +249,64 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
     if (*incremental == bool("true")) {
         # if recursive
         if (*recursive == bool("true")) {
-            *Work=``{
-                msiGetObjectPath(*File,*source,*status);
-                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
-                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
-                msiIsData(*destination, *result, *status);
-                if (int(*result) == 0) {
-                    EUDATTransferSingleFile(*source,*destination);
+            foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path_of_transfered_coll/%') {
+             	*objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+             	msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+             	*destination = "*target_of_transfered_coll/*subCollection";
+                *err = errorcode(msiObjStat(*destination, *objStat));
+                if (*err < 0) {
+                    EUDATTransferSingleFile(*objPath, *destination);
                 }
-            }``;
+                else {
+                    logDebug("Destination path *destination already exists, replication is not required");
+                }
+	    }
         }
         # if not recursive
         else {
-            *Work=``{
-                msiGetObjectPath(*File,*source,*status);
-                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+            foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path_of_transfered_coll/%') {
+                *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+                msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
                 *depth_level = split(*subCollection, "/");
-                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
-                msiIsData(*destination, *result, *status);
-                if (int(*result) == 0 && size(*depth_level) == 2) {
-                    EUDATTransferSingleFile(*source,*destination);
+                *destination = "*target_of_transfered_coll/*subCollection";
+                *err = errorcode(msiObjStat(*destination, *objStat));
+                if (*err < 0 && size(*depth_level) == 2) {
+                    EUDATTransferSingleFile(*objPath, *destination);
                 }
-            }``;
+                else {
+                    logDebug("Destination path *destination already exists or");
+                    logDebug(" *subCollection is beyond depth level 2: *depth_level");
+                }
+            }
         }
     }
     # if not incremental
     else {
         # if recursive
         if (*recursive == bool("true")) {
-            *Work=``{
-                msiGetObjectPath(*File,*source,*status);
-                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
-                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
-                EUDATTransferSingleFile(*source,*destination);
-            }``;
+            foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path_of_transfered_coll/%') {
+                *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+                msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+                *destination = "*target_of_transfered_coll/*subCollection";
+                EUDATTransferSingleFile(*objPath, *destination);
+            }
         }
         # if not recursive
         else {
-	    *Work=``{
-                msiGetObjectPath(*File,*source,*status);
-                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
+	    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path_of_transfered_coll/%') {
+                *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+                msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
                 *depth_level = split(*subCollection, "/");
-                *destination = "``++"*target_of_transfered_coll"++``"++ "/" ++ "*subCollection";
+                *destination = "*target_of_transfered_coll/*subCollection";
                 if (size(*depth_level) == 2) {
-                    EUDATTransferSingleFile(*source,*destination);
+                    EUDATTransferSingleFile(*objPath, *destination);
                 }
-            }``;
+                else {
+                    logDebug("Sub collection path *subCollection is beyond depth level 2: *depth_level");
+                }
+            }
         }
     }
-
-    msiCollectionSpider(*path_of_transfered_coll,*File,*Work,*Status);         
 }
 
 #
@@ -305,55 +320,43 @@ EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*inc
 #
 EUDATIntegrityCheck(*srcColl,*destColl) {
         # Verify that input path is a collection
-        EUDATVerifyCollection(*srcColl);
-        EUDATVerifyCollection(*destColl);
+        msiGetObjType(*srcColl, *type);
+        if (*type != '-c') {
+            logError("Input path *srcColl is not a collection");
+            fail;
+        }
+        msiGetObjType(*destColl, *type);
+        if (*type != '-c') {
+            logError("Input path *destColl is not a collection");
+            fail;
+	}
         msiSplitPath(*srcColl,*sourceParent,*sourceChild);
         msiStrlen(*srcColl,*pathLength);
 
-        *Work=``{
-                msiGetObjectPath(*File,*source,*status);
-                logInfo("*source");
-                msiSubstr(*source,str(int("``++"*pathLength"++``")+1),"null",*subCollection);
-                *destination = "``++"*destColl"++``"++ "/" ++ "*subCollection";
-                logInfo("*destination");
-                EUDATSearchPID(*source, *ppid);
+        foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path_of_transfered_coll/%') {
+            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+            msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+            *destination = "*destColl/*subCollection";
+
+                EUDATSearchPID(*objPath, *ppid);
                 if (*ppid == "empty") {
-                        logInfo("PPID is empty");
+                        logDebug("PPID is empty");
                         *status_transfer_success = bool("false");
                         *cause = "PPID is empty";
-                        EUDATUpdateLogging(*status_transfer_success,*source,*destination, *cause);
+                        EUDATUpdateLogging(*status_transfer_success, *objPath, *destination, *cause);
                 } else {
-                        logInfo("PPID is created *ppid");
+                        logDebug("PPID exists: *ppid");
                 }
                 # FIXME: is it possible to get CPID at source-location ?
                 EUDATSearchPID(*destination, *cpid);
                 if (*cpid == "empty") {
-                        logInfo("CPID is empty");
+                        logDebug("CPID is empty");
                         *status_transfer_success = bool("false");
                         *cause = "CPID is empty";
-                        EUDATUpdateLogging(*status_transfer_success,*source,*destination, *cause);
+                        EUDATUpdateLogging(*status_transfer_success, *objPath, *destination, *cause);
                 } else {
-                        logInfo("CPID is created *cpid");
+                        logDebug("CPID exists: *cpid");
                 }
-                EUDATCheckError(*source,*destination);
-            }``;
-        msiCollectionSpider(*srcColl,*File,*Work,*Status);
-}
-
-
-#
-# Verify that the object is a collection
-# 
-# Parameter:
-# 	*srcColl	[IN]	Path of Collection
-#
-# Author: Long Phan, JSC
-#
-EUDATVerifyCollection(*srcColl) {
-    logDebug("Verify that source input path *srcColl is a collection")
-    msiIsColl(*srcColl,*Result, *Status);
-    if(*Result == 0) {
-        logError("Input path *srcColl is not a collection");
-        fail;
-    }
+                EUDATCheckError(*objPath, *destination);
+            }
 }
