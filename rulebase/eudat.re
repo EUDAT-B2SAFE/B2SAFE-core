@@ -27,6 +27,9 @@
 # EUDATgetObjectAge(*filePath, *age) 
 # EUDATfileInPath(*path,*subColl)
 # EUDATCreateAVU(*Key,*Value,*Path)
+# EUDATgetLastAVU(*Path, *Key, *Value)
+# EUDATModifyAVU(*Path, *Key, *Value)
+# EUDATcountMetaKeys( *Path, *Key, *Value )
 # getCollectionName(*path_of_collection,*Collection_Name)
 #---- command file triggers ---
 # triggerReplication(*commandFile,*pid,*source,*destination)
@@ -40,6 +43,11 @@
 # updateMonitor(*file)
 #---- data staging ---
 # EUDATiDSSfileWrite(*DSSfile)
+#---- repository packages ---
+# EUDATrp_checkMeta(*source,*AName,*AValue)
+# EUDATrp_ingestObject( *source )
+# EUDATrp_transferInitiated( *source )
+# EUDATrp_transferFinished( *source )
 
 ################################################################################
 #                                                                              #
@@ -326,7 +334,7 @@ EUDATiCHECKSUMretrieve(*path, *checksum) {
     logInfo("EUDATiCHECKSUMretrieve -> Looking at *path");
     msiSplitPath(*path, *coll, *name);
     *d = SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll';
-    #Loop over all resources, possibly the checksum was not computed forr all of them
+    #Loop over all resources, possibly the checksum was not computed for all of them
     foreach(*c in *d) {
         msiGetValByKey(*c, "DATA_CHECKSUM", *checksumTmp);
         msiGetValByKey(*c, "DATA_RESC_NAME", *resc);      
@@ -446,6 +454,72 @@ EUDATCreateAVU(*Key,*Value,*Path) {
     writeKeyValPairs('serverLog', *Keyval, " is : ");
     msiGetObjType(*Path,*objType);
     msiAssociateKeyValuePairsToObj(*Keyval, *Path, *objType);
+}
+
+#-----------------------------------------------------------------------------
+# get the single value of a specific metadata in ICAT
+#
+# Parameters:
+# *Path  [IN] target object
+# *Key   [IN] name of the MD
+# *Value [OUT] value of the MD
+#
+# Author: Pascal Dugénie, CINES
+#-----------------------------------------------------------------------------
+EUDATgetLastAVU(*Path, *Key, *Value)
+{
+    msiSplitPath(*Path,*parent,*child);
+    msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" , *B );
+    foreach ( *B ) {
+        msiGetValByKey( *B , "META_DATA_ATTR_VALUE" , *Value );
+    }
+}
+
+#-----------------------------------------------------------------------------
+# Change a value in iCAT
+#
+# Parameters:
+# *Path  [IN] target object to assign a new value
+# *Key   [IN] target key to assign a new value
+# *Value [IN] new value to be assigned
+#
+# Author: Pascal Dugénie, CINES
+#-----------------------------------------------------------------------------
+EUDATModifyAVU(*Path, *Key, *Value)
+{
+    msiSplitPath( *Path, *parent, *child );
+    msiGetObjType( *Path, *objType );
+    rp_countMetaKeys( *Path, *Key, *key_exist );
+    logInfo( "Set *Key into *newval (key_exist=*key_exist)" );
+    if ( *key_exist != "0" ){
+        msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'", *B );
+        foreach ( *B ) {
+            msiGetValByKey( *B, "META_DATA_ATTR_VALUE", *val ) ;
+        }
+        msiAddKeyVal( *mdkey, *Key, *val );
+        msiRemoveKeyValuePairsFromObj( *mdkey, *Path, *objType );
+    }
+    msiAddKeyVal( *mdkey, *Key, *Value );
+    msiAssociateKeyValuePairsToObj( *mdkey, *Path, *objType );
+}
+
+#-----------------------------------------------------------------------------
+# count metadata in ICAT
+#
+# Parameters:
+# *Path [IN] target object
+# *Key  [IN] name of the MD
+# *Value [OUT] number of AVUs with name=Key
+#
+# Author: Pascal Dugénie, CINES
+#-----------------------------------------------------------------------------
+EUDATcountMetaKeys( *Path, *Key, *Value )
+{
+    msiSplitPath(*Path, *parent , *child );
+    msiExecStrCondQuery( "SELECT count(META_DATA_ATTR_VALUE) WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" , *B );
+    foreach ( *B ) {
+        msiGetValByKey( *B , "META_DATA_ATTR_VALUE" , *Value );
+    }
 }
 
 #
@@ -764,4 +838,111 @@ EUDATiDSSfileWrite(*DSSfile) {
     logDebug("Test PID -> acPostProcForCopy Write OK.");
     msiDataObjClose(*DSSf,*Status);
     logDebug("Test PID -> acPostProcForCopy Close OK.");
+}
+
+################################################################################
+#                                                                              #
+# Repository Packages                                                          #
+#                                                                              #
+################################################################################
+
+#-----------------------------------------------------------------------------
+# Check if the ADMIN_Status value is set to Ready ToArchive and then kicks off ingestion
+#
+# Parameters:
+# *source [IN] target object
+# *AName [IN] name of the MD that has been modified
+# *AValue [IN] value of the MD that has been modified
+#
+# Author: Pascal Dugénie, CINES
+# updated : Stéphane Coutin (CINES) - 26/8/14 (Use ROR instead of EUDAT_ROR as attribute name)
+#-----------------------------------------------------------------------------
+EUDATrp_checkMeta(*source,*AName,*AValue)
+{
+    if ((*AName == "n:ADMIN_Status") && ( *AValue == "v:ReadyToArchive"))
+    {
+        EUDATrp_ingestObject(*source);
+    }
+}
+
+#-----------------------------------------------------------------------------
+# Manage the ingestion in B2SAFE
+# Check the checksum
+# Create PID
+#
+# Parameters:
+# *source [IN] target object to assign a PID
+#
+# Author: Stephane Coutin (CINES)
+# updated : Stéphane Coutin (CINES)
+# 23/10/14 (use EUDATiCHECKSUMget to avoid duplicate checksum calculation)
+#-----------------------------------------------------------------------------
+EUDATrp_ingestObject( *source )
+{
+    rp_getRpIngestParameters(*protectArchive, *archiveOwner);
+    logInfo("ingestObject-> Check for (*source)");
+    EUDATiCHECKSUMget(*source, *checksum);
+    EUDATModifyAVU(*source, "INFO_Checksum" , *checksum );
+    EUDATgetLastAVU(*Path, "OTHER_original_checksum", *orig_checksum);
+    if ( *checksum == *orig_checksum )
+    {
+        logInfo("ingestObject-> Checksum is same as original = *checksum");
+        EUDATModifyAVU(*source, "ADMIN_Status" , "Checksum_ok" ) ;
+        # Extract the ROR value from iCat
+        *RorValue = ""
+# TODO: clarify how the 'EUDAT/ROR' should be added as iCAT metadata pair
+#       rp_getMeta( *source, "EUDAT/ROR" , *RorValue )
+        EUDATCreatePID("None", *source, *RorValue, bool("true"), *PID);
+        # test PID creation
+        if((*PID == "empty") || (*PID == "None") || (*PID == "error")) {
+            logInfo("ingestObject-> ERROR while creating the PID for *source PID = *PID");
+            EUDATModifyAVU(*source, "ADMIN_Status" , "ErrorPID" ) ;
+        }
+        else {
+            logInfo("ingestObject-> PID created for *source PID = [*PID] ROR = [*RorValue]");
+            EUDATModifyAVU(*source, "ADMIN_Status" , "Archive_ok" ) ;
+            if (*protectArchive) {
+                logInfo("ingestObject-> changing *source owner to = *archiveOwner with read access to$userNameClient");
+                msiSetACL("default","read",$userNameClient,*source);
+                msiSetACL("default","own",*archiveOwner,*source);
+            }
+        }
+    }
+    else
+    {
+        logInfo("ingestObject-> Checksum (*checksum) is different than original (*orig_checksum)");
+        EUDATModifyAVU(*source, "ADMIN_Status" , "ErrorChecksum" ) ;
+    }
+}
+
+#-----------------------------------------------------------------------------
+# Process executed when a transfer has been initiated
+# (this process is triggered by the iputPreProc hook)
+#
+# Parameters:
+# *source [IN] target object to assign a new value
+#
+# Author: Pascal Dugénie, CINES
+#-----------------------------------------------------------------------------
+EUDATrp_transferInitiated( *source )
+{
+   EUDATModifyAVU(*source, "ADMIN_Status" , "TransferStarted" ) ;
+   msiGetSystemTime( *TimeNow, "human" );
+   EUDATModifyAVU(*source, "INFO_TimeOfStart", *TimeNow ) ;
+}
+
+#-----------------------------------------------------------------------------
+# Process executed after a transfer is finished
+# (this process is triggered by the iputPostProc hook)
+#
+# Parameters:
+# *source [IN] target object to assign a new value
+#
+# Author: Pascal Dugénie, CINES
+#-----------------------------------------------------------------------------
+EUDATrp_transferFinished( *source )
+{
+   EUDATModifyAVU(*source, "ADMIN_Status" , "TransferFinished" ) ;
+   msiGetSystemTime( *TimeNow, "human" );
+   EUDATModifyAVU(*source, "INFO_TimeOfTransfer" , *TimeNow ) ;
 }

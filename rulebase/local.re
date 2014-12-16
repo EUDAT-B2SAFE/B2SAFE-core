@@ -21,3 +21,17 @@ getAuthZParameters(*authZMapPath) {
 getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf";
 }
+
+#
+# This function is used to set up some parameters for the site.
+#
+# Arguments:
+# *protectArchive [OUT] Boolean, if 'true', the replicated file will become read only for the service user
+# *archiveOwner [OUT] This is the iRods user owning the archive
+#
+# Author: S Coutin (CINES)
+#
+rp_getRpIngestParameters(*protectArchive, *archiveOwner) {
+   *protectArchive = false;
+   *archiveOwner = "rodsA";
+}
