@@ -21,7 +21,7 @@
 # EUDATIntegrityCheck(*srcColl,*destColl)
 
 #
-# Update Logging Files
+# Update the logging files specific for EUDAT B2SAFE
 # 
 # Parameters:
 #    *status_transfer_success    [IN] Status of transfered file (true or false)     
@@ -47,11 +47,11 @@ EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file,
 }
 
 #
-# Check Error of Checksum and Size during transfer
+# Checks differences about checksum and size between two files
 # 
 # Parameters:
-#    *path_of_transfered_file    [IN] path of transfered file in iRODS
-#    *target_of_transfered_file    [IN] destination of replication in iRODS
+#    *path_of_transfered_file    [IN] path of source file in iRODS
+#    *target_of_transfered_file    [IN] path of target file in iRODS
 #
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca

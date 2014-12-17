@@ -9,7 +9,7 @@ One is based on the python script:
 <irods>/modules/B2SAFE/b2safe_install.py
 And on its configuration file:
 <irods>/modules/B2SAFE/b2safe.conf
-The other is besed on the shell script:
+The other is based on the shell script:
 <irods>/modules/B2SAFE/install.sh
 And on its configuration file:
 <irods>/modules/B2SAFE/install.conf
@@ -84,7 +84,7 @@ Manually:
         - make sure all users involved in the replication can write in this collection.
 
 8.0.1 change "#!/usr/bin/env python" in the python scripts in modules/B2SAFE/cmd/ to your python installation
-8.0.2 install httplib2, simplejson and pylint:
+8.0.2 install httplib2, simplejson, lxml, defusedxml, and pylint:
 	httplib2
 	download from http://code.google.com/p/httplib2
 	python setup.py install
@@ -93,9 +93,10 @@ Manually:
 	download from http://pypi.python.org/pypi/simplejson/
 	python setup.py install
 
-	ubuntu: apt-get install python-httplib2 python-simplejson
-
-	ubuntu: apt-get install pylint
+        pip install lxml
+        pip install defusedxml
+        apt-get install pylint
+        yum install pylint
   
 8.1 test the epic api interaction by running the "./cmd/epicclient.py test" script manually and with "iexecmd epicclient.py"
 8.2 test the replication by changing and triggering "replicate.r" rule in <irods>/modules/B2SAFE/rules

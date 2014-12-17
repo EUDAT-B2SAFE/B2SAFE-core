@@ -12,7 +12,7 @@
 # EUDATCatchErrorDataOwner(*path,*status)
 
 #
-# Catch error with Checksum (edited from function checkReplicas in eudat.re)
+# Check if 2 replicas have the same checksum
 #
 # Parameters:
 #	*source         [IN] path source of data object
@@ -51,7 +51,7 @@ EUDATCatchErrorChecksum(*source,*destination){
 }
 
 #
-# Catch error Size of file
+# Check if 2 replicas have the same size.
 #
 # Parameters:
 #	*source		[IN] path source of data object
@@ -91,12 +91,10 @@ EUDATCatchErrorSize(*source,*destination) {
 
 
 #
-# Process error update PID at Parent_PID. Error update PID will be processed during replication_workflow, called by updateMonitor
+# Process error update PID at Parent_PID. 
+# Error update PID will be processed during replication_workflow, called by updateMonitor.
 # Save path of transferred data object into fail_log
 # ----> add line "processErrorUpdatePID(*file) inside function updateMonitor in eudat.re below logInfo("*file does not exist yet"); to save path of wrong_updated_DataObject 
-#
-# TODO: Need Test
-# TODO: to be updated with the new logging mechanism
 #
 # Author: Long Phan, JSC; Elena Erastova, RZG
 #
@@ -169,7 +167,7 @@ EUDATProcessErrorUpdatePID(*updfile) {
 }
 
 #
-# Catch error Data Owner if user is not owner of Data from *path
+# Check if a user is or is not owner of the data object
 # (Reference: https://www.irods.org/index.php/iRODS_Error_Codes or /iRODS/lib/core/include/rodsErrorTable.h)
 #
 # Parameters:

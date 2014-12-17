@@ -97,10 +97,11 @@ EUDATAuthZ(*user, *action, *target, *response) {
 ################################################################################
 
 #
-#It manages the writing and reading of log messages to/from external log services.
+# It manages the writing and reading of log messages to/from external log services.
+# The current implementation writes the logs to specific log file.
 #
-#Return
-# no response is expected
+# Return
+#  no response is expected
 #
 # Parameters:
 #   *message        [IN]    the message to be logged
@@ -116,11 +117,11 @@ EUDATLog(*message, *level) {
 }
 
 #
-#It implements a FIFO queue for messages to/from external log services.
+# It implements a FIFO queue for messages to/from external log services.
 #
-#Return
-# no response is expected for action "push"
-# The first message of the queue for action "pop"
+# Return
+#  no response is expected for action "push"
+#  The first message of the queue for action "pop"
 #
 # Parameters:
 #   *action         [IN]    the queueing action, which the user would like to perform
@@ -282,7 +283,7 @@ EUDATGetZoneNameFromPath(*path,*out) {
 }
 
 #
-# The function checks if date of the last computation of iCHECKSUM was set and set the date if not.
+# Checks if date of the last computation of iCHECKSUM was set and set the date if not.
 # The date is stored as metadata attribute of name 'eudat_dpm_checksum_date:<name of resc>'
 #
 # Environment variable used:
@@ -291,7 +292,8 @@ EUDATGetZoneNameFromPath(*path,*out) {
 #   *coll               [IN]    the collection of the data object
 #   *name               [IN]    the name of the data object
 #   *resc               [IN]    the resource on which the object is located
-#   *modTime            [IN]    time of thee last modification of the object -will be assumed as time of the first computation of the iCHECKSUM
+#   *modTime            [IN]    time of thee last modification of the object
+#                               - will be assumed as time of the first computation of the iCHECKSUM
 #
 # Author: Michal Jankowski, PSNC
 #
@@ -324,7 +326,7 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 # Arguments:
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
-#   *status             [REI]   false if no value is found, trou elsewhere
+#   *status             [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #
@@ -377,8 +379,8 @@ EUDATiCHECKSUMget(*path, *checksum) {
 }
 
 #
-# Calculate the difference between the creation time and the modification time of an object.
-# In seconds.
+# Calculate the difference between the creation time or the current time
+# and the modification time of an object. In seconds.
 #
 # Arguments:
 #   *filePath      [IN]   The full iRODS path of the object
@@ -409,6 +411,16 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
     logDebug("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
 }
 
+#
+# Calculate the difference between the current time and the modification time of an object.
+# In seconds.
+#
+# Arguments:
+#   *filePath      [IN]   The full iRODS path of the object
+#   *age           [OUT]  The age of the object in seconds
+#
+# Author: Claudio Cacciari, CINECA
+#
 EUDATgetObjectAge(*filePath, *age) {
     EUDATgetObjectTimeDiff(*filePath, "2", *age);
 }
@@ -567,7 +579,7 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
 }
 
 #
-# Start a PID created by writing a .pid.create command file
+# Start a PID creation by writing a .pid.create command file
 #
 # Parameters:
 #   *commandFile    [IN]    the absolute filename to store the command in
@@ -582,6 +594,9 @@ triggerCreatePID(*commandFile,*pid,*destination,*ror) {
     writeFile("*commandFile", "create;*pid;*destination;*ror");
 }
 
+#
+# Start a PID update. 
+# The PID is that of the parent of the current replicated object.
 #
 # Author: Willem Elbers, MPI-TLA
 #
@@ -646,13 +661,16 @@ processReplicationCommandFile(*cmdPath) {
 }
 
 #
-# Read a .replicate file and perform the replication
-# format = "command1,command2,command2,..."
+# Read a .replicate file
 #
 # command format = "source_pid;source_path;destination_path"
 #
 # Parameters:
-#   *cmdPath    [IN]    the path to the .replicate file
+#   *cmdPath     [IN]   the path to the .replicate file
+#   *pid         [OUT]  source pid
+#   *source      [OUT]  source path
+#   *destination [OUT]  destination path
+#   *ror         [OUT]  ror
 #
 # Author: Willem Elbers, MPI-TLA
 # Edited: Elena Erastova, RZG
@@ -794,7 +812,9 @@ updateMonitor(*file) {
 ################################################################################
 
 #
-# Rules to write the file used to store the list of PIDs and URLs
+# Writes the file used to store the list of PIDs and URLs
+# This is a list of key-value pairs used by data staging service via gridFTP.
+# The tuples are PID-object path.
 #
 # Arguments:
 #   *path          [IN]    The path of the file to write in.

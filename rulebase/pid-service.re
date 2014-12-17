@@ -19,7 +19,7 @@
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
 # EUDATGetRorPid(*pid, *ror)
-# EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime)
+# EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
 # EUDATePIDcreate(*path, *PID)
@@ -240,12 +240,12 @@ EUDATGetRorPid(*pid, *ror) {
 #   *path            [IN]    Path of the source file
 #   *PID             [OUT]   PID of the source file
 #   *ePIDcheck       [IN]    Specify whether you want to search for ePID (bool("true")) or not
-#   *iCATuse         [IN]    Specify whether you want to use the iCAT (bool("true")) or not
+#   *iCATCache       [IN]    Specify whether you want to use the iCAT (bool("true")) or not
 #   *minTime         [IN]    Specify the minimum age of the digital object before looking for ePID
 #
 # Author: Giacomo Mariani, CINECA
 #
-EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
+EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
     logInfo("EUDATeiPIDeiChecksumMgmt -> Look if the PID is in the iCAT");
     # Search for iPID and, if it exists, enter the if below
     if (EUDATiFieldVALUEretrieve(*path, "PID", *PID)) {
@@ -271,7 +271,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         if ( *PID == "empty" ) { 
             logInfo("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet");
             EUDATePIDcreate(*path, *newPID);
-            if (*iCATuse == bool("true")) {
+            if (*iCATCache == bool("true")) {
                 # Add PID into iCAT
                 EUDATiPIDcreate(*path, *newPID);
             }
@@ -279,7 +279,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATuse, *minTime) {
         else {
             logInfo("EUDATeiPIDeiChecksumMgmt -> Modifying the PID in epic server: *PID");  
             EUDATeCHECKSUMupdate(*PID, *path);
-            if (*iCATuse) {EUDATiPIDcreate(*path, *PID)};
+            if (*iCATCache) {EUDATiPIDcreate(*path, *PID)};
         }
     }
 }
@@ -298,7 +298,7 @@ EUDATiPIDcreate(*path, *PID) {
 }
 
 #
-# The function retrieves the value of the required field.
+# The function retrieves the value of the required field from iCAT.
 #
 # Arguments:
 #   *path               [IN]    the iRODS path of the object involved in the query

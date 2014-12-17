@@ -34,7 +34,6 @@ apt-get install pylint
 
 import httplib2
 import simplejson
-#from xml.dom import minidom
 from defusedxml import minidom
 from lxml import etree
 from lxml.etree import tostring
