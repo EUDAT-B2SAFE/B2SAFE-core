@@ -463,15 +463,23 @@ class SynchronizationTask():
                                    ), self.conf.quota_unity)
             if not(self.dryrun):
                 if self.conf.quota_active:
-                    self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
-                    self.logger.debug("set the new quota limit for user %s to %s GB", 
-                                      user, str(self.fromBytes(total_quota_limit,
-                                                               self.conf.quota_unity)))
+                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+                        self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
+                        self.logger.debug("set the new quota limit for user %s to %s GB", 
+                                          user, str(self.fromBytes(total_quota_limit,
+                                                                   self.conf.quota_unity)))
+                    else:
+                        self.logger.debug("no need to set new quota limit for user %s", user)
             else:
                 if self.conf.quota_active:
-                    print("set the new quota limit for user " + user + " to "
-                          + str(self.fromBytes(total_quota_limit, 
-                                self.conf.quota_unity)) + " GB")
+                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+                        print("set the new quota limit for user " + user + " to "
+                              + str(self.fromBytes(total_quota_limit, 
+                                    self.conf.quota_unity)) + " GB")
+                    else:
+                        print("no need to set new quota limit for user " + user)
 
             # managing the dn of a user
             self.logger.debug("Updating the dn mapping for user: " + user)
