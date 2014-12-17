@@ -189,7 +189,7 @@ class UserSync():
 
         sync_task = SynchronizationTask( irods_users, irods_projects, projects,
                                          dn_map, self.conf, dryrun, 'UserSync',
-                                         True)
+                                         self.conf.irods_debug)
         sync_task.addProjects()
         sync_task.updateProjects()
         sync_task.deleteProjects()
@@ -261,7 +261,7 @@ class Configuration():
         self.internal_project_list = \
             self._getConfOption('iRODS', 'internal_project_list').split(',')
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
-        self.irods_subgroup_home = self._getConfOption('iRODS', 'irods_subgroup_home')
+        self.irods_subgroup_home = self._getConfOption('iRODS', 'irods_subgroup_home', True)
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
 
         

@@ -8,6 +8,7 @@ import json
 import pprint
 import sys
 import collections
+import shutil
 
 from pprint import pformat
 from utilities.mailSender import MailSender
@@ -151,7 +152,10 @@ class SynchronizationTask():
 
         self.logger.info("deleting the quota limit")
         quotas = self._parseQuotas()
-        del quotas[proj_name]
+        if proj_name in quotas.keys():
+            del quotas[proj_name]
+        else:
+            self.logger.debug("no project quota to delete")
 
         return self._writeQuota(quotas)
 
@@ -197,11 +201,11 @@ class SynchronizationTask():
                         else:
                             self.logger.debug("created group %s related to the project %s",
                                               sg, proj_name)
-                        if not self.conf.irods_subgroup_home:
-                            self.irodsu.deleteGroupHome(sg)
-                            self.logger.debug("deleted group %s's home "
-                                            + "related to the project %s", sg,
-                                         proj_name)
+                            if not self.conf.irods_subgroup_home:
+                                self.irodsu.deleteGroupHome(sg)
+                                self.logger.debug("deleted group %s's home "
+                                                + "related to the project %s",
+                                                  sg, proj_name)
                     else:
                         newGroupFlag = True
                         print 'created group ' + sg + ' ' \
@@ -212,7 +216,10 @@ class SynchronizationTask():
 
                 for user in project['groups'][sg]:
 
-                    if not(user in self.irods_users.keys()):
+                    userinfo = self.irodsu.getIrodsUser(user)
+                    if (userinfo is not None) and \
+                       ("No rows found" in userinfo.splitlines()[0]):
+#                    if not(user in self.irods_users.keys()):
                         if not(self.dryrun):
                             response = self.irodsu.createIrodsUsers(user)
                             if response[0] != 0:
@@ -456,21 +463,29 @@ class SynchronizationTask():
                                    ), self.conf.quota_unity)
             if not(self.dryrun):
                 if self.conf.quota_active:
-                    self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
-                    self.logger.debug("set the new quota limit for user %s to %s GB", 
-                                      user, str(self.fromBytes(total_quota_limit,
-                                                               self.conf.quota_unity)))
+                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+                        self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
+                        self.logger.debug("set the new quota limit for user %s to %s GB", 
+                                          user, str(self.fromBytes(total_quota_limit,
+                                                                   self.conf.quota_unity)))
+                    else:
+                        self.logger.debug("no need to set new quota limit for user %s", user)
             else:
                 if self.conf.quota_active:
-                    print("set the new quota limit for user " + user + " to "
-                          + str(self.fromBytes(total_quota_limit, 
-                                self.conf.quota_unity)) + " GB")
+                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+                        print("set the new quota limit for user " + user + " to "
+                              + str(self.fromBytes(total_quota_limit, 
+                                    self.conf.quota_unity)) + " GB")
+                    else:
+                        print("no need to set new quota limit for user " + user)
 
             # managing the dn of a user
             self.logger.debug("Updating the dn mapping for user: " + user)
             out = self.irodsu.getUserDN(user)
             dn_list = []
-            if (out.strip() != 'No rows found'):
+            if (out is not None and out.strip() != 'No rows found'):
                 for line in out.splitlines():
                     # remove the username from the beginning of the line (e.g. "rossim /O=IT/OU=...")
                     dn_list.append(line[len(user)+1:])
@@ -506,10 +521,25 @@ class SynchronizationTask():
                                      dn, user)
                         if not(self.dryrun):
                             self.irodsu.removeUserDN(user,dn)
+                            if self.conf.notification_active:
+                                message = "removed user " + user + "'s DN: " + dn
+                                mailsnd = MailSender()
+                                mailsnd.send(message, self.conf.notification_sender,
+                                             self.conf.notification_receiver)
                             self.logger.info("the dn %s has been removed for "
                                         + "user %s", dn, user)
                             if (self.conf.gridftp_active
                                 and dn != self.conf.gridftp_server_dn):
+                                statinfo = os.stat(self.conf.gridmapfile)
+                                # If the original gridmafile has size > 0 then
+                                # create a backup
+                                if statinfo.st_size > 0:
+                                    try:
+                                        dest = self.conf.gridmapfile + ".bak"
+                                        shutil.copy(self.conf.gridmapfile, dest)
+                                    except IOError as e:
+                                        self.logger.error("Impossible to create"
+                                                          " a backup: " + e.strerror)
                                 with open(self.conf.gridmapfile, 'w+') as mapf:
                                     content = mapf.readlines()
                                     for line in content:

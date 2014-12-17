@@ -197,8 +197,6 @@ class QuotaStats():
             elif usage and (proj_name in usage.keys()):
                 logger.info("Running in dryrun mode")
                 quota = usage[proj_name]['used_space']
-            elif usage and (proj_name in usage.keys()):
-                quotaGB = usage[proj_name]['used_space']
             else:
                 logger.info("No storage information available")
                 quota = 0

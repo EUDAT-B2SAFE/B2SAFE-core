@@ -15,15 +15,17 @@ class EudatRemoteSource:
         if self.debug:
             print "[", method, "]", msg
 
-    def __init__(self, conf, parent_logger=None):
+    def __init__(self, main_project, subproject, conf, parent_logger=None):
         """initialize the object"""
         
         if (parent_logger): self.logger = parent_logger
         else: self.logger = logging.getLogger('eudat')
 
-        self.main_project = 'EUDAT'
+        self.main_project = main_project
+        self.subproject = subproject
 
-        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix']
+        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix', 
+                    'gridftp_cert_dn']
         missingp = []
         for key in confkeys:
             if not key in conf: missingp.append(key)
@@ -74,16 +76,31 @@ class EudatRemoteSource:
         for member_id in group_list['members']:
             user_record = self.queryUnity("entity/"+str(member_id))
             attr_list = {}
+            self.logger.debug("Query: entity/" + str(member_id) + 
+                              ", user record: " + pformat(user_record))
+            identity_types = {}
             for identity in user_record['identities']:
-                if identity['typeId'] == "userName":
-                    list_member.append(identity['value'])
-                    users_map[member_id] = identity['value']
-                elif identity['typeId'] == "persistent":
-                    # Here we build the DN: the way to build it could change
-                    # in the future.
-                    userDN = '/CN=' + users_map[member_id] + '/CN=' \
-                             + identity['value'] + self.conf['carootdn']
-                    attr_list['DN'] = [userDN]
+                self.logger.debug("identity['typeId'] = " + identity['typeId'])
+                self.logger.debug("identity['value'] = " + identity['value'])
+                identity_types[identity['typeId']] = identity['value']
+                             
+            if "userName" in identity_types.keys():
+                list_member.append(identity_types['userName'])
+                users_map[member_id] = identity_types['userName']
+            elif "identifier" in identity_types.keys():
+                list_member.append(identity_types['identifier'])
+                users_map[member_id] = identity_types['identifier']
+            else:
+                list_member.append(str(member_id))
+                users_map[member_id] = str(member_id)
+
+            if "persistent" in identity_types.keys():
+                # Here we build the DN: the way to build it could change
+                # in the future.
+                userDN = '/CN=' + users_map[member_id] + '/CN=' \
+                       + identity['value'] + self.conf['carootdn']
+                attr_list['DN'] = [userDN]
+
             attribs_map[users_map[member_id]] = attr_list
 
         final_list['members'] = list_member
@@ -107,8 +124,15 @@ class EudatRemoteSource:
         """
         Synchronize the remote users' list with a local json file (user db)
         """
+        
+        if self.subproject is not None:
+            filtered_list = {org:members for (org,members)
+                             in self.remote_users_list['groups'].iteritems()
+                             if org == self.subproject}
+        else:
+            filtered_list = self.remote_users_list['groups']
 
-        for org,members in self.remote_users_list['groups'].iteritems():
+        for org,members in filtered_list.iteritems():
 
             self.logger.info('Adding users belonging to ' + org + ' ...')
             org = self.conf['ns_prefix'] + org
@@ -126,10 +150,19 @@ class EudatRemoteSource:
         Synchronize the remote users' attributes with a local json file
         for the time beeing just the DNs are considered
         """
+
+        if self.subproject is not None:
+            filtered_list = {user:attrs for (user,attrs)
+                             in self.remote_users_list['attributes'].iteritems()
+                             if user in self.remote_users_list['groups'][self.subproject]}
+        else:
+            filtered_list = self.remote_users_list['attributes']
        
-        for user,attrs in self.remote_users_list['attributes'].iteritems():
+        for user,attrs in filtered_list.iteritems():
 
             self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
+            if self.conf['gridftp_cert_dn']:
+                attrs['DN'].append(self.conf['gridftp_cert_dn'])
             user = self.conf['ns_prefix'] + user
             data[user] = attrs['DN']
             self.logger.debug('\tadded user ' + user + '\' DNs: ' 
