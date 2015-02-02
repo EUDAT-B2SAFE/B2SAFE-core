@@ -551,7 +551,7 @@ path = os.environ["PATH"]
 if path.find('icommands') < 0:
     path = path + ":" + IRODS_DIR + "/clients/icommands/bin"
     os.putenv('PATH', path)
-    os.system('bash')
+#    os.system('bash')
 status, output = commands.getstatusoutput("ils " + SHARED_SPACE)
 
 if status != 0:
