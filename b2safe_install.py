@@ -31,6 +31,8 @@ for line in lines:
         ird = line.split()
     if line.find('IRODS_CONF_DIR') > -1:
         ircod = line.split()
+    if line.find('IRODS_SERVER_CONF_DIR') > -1:
+        irscod = line.split()
     if line.find('SOURCE_DIR') > -1:
         tr = line.split()
     if line.find('CONF_DIR:') > -1:
@@ -61,6 +63,7 @@ fr.close()
 
 IRODS_DIR = ird[1]
 IRODS_CONF_DIR = ircod[1]
+IRODS_SERVER_CONF_DIR = irscod[1]
 SOURCE_DIR = tr[1]
 CONF_DIR = cod[1]
 DEFAULT_RESOURCE = dr[1]
@@ -240,7 +243,7 @@ print '3. edit <irods>/server/config/server.config and append '\
 ',eudat,eurepl,eupids,eucerr,euloc'\
 ',to reRuleSet (make sure to include the comma and no spaces)'
 
-filename = IRODS_CONF_DIR + "/server.config"
+filename = IRODS_SERVER_CONF_DIR + "/server.config"
 try:
     os.rename(filename, filename+"~")
 except OSError:
