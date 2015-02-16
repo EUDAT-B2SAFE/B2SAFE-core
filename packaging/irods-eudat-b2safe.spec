@@ -80,7 +80,16 @@ rm -rf %{buildroot}
 %attr(-,%{_irodsUID},%{_irodsGID}) /var/log/irods
 %doc
 
+%post
+cat << EOF
 
+The package b2safe has been installed in %{_irodsPackage}.
+To install/configure it in iRODS do following:
+
+cd %{_irodsPackage}/packaging
+./install.sh
+
+EOF
 
 %changelog
 * Fri Feb 13 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
