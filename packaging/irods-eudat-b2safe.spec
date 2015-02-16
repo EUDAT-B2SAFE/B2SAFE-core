@@ -18,7 +18,7 @@ Requires:	irods-icat
 %define _irodsUID %(id -un `whoami`)
 %define _irodsGID %(id -gn `whoami`)
 %define _b2safehomepackaging %(pwd)
-%define _irodsPackage /opt/eudat-b2safe
+%define _irodsPackage /opt/eudat/b2safe
  
 %description
 B2SAFE is a robust, safe, and highly available service which allows
