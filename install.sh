@@ -3,7 +3,7 @@
 # procedure to install the B2SAFE module using a bash script
 #
 # set tabstop=4
-# set expendtab
+# set expandtab
 #
 #set -x
 #
@@ -15,19 +15,18 @@ STATUS=0
 EUDAT_RULEFILES=''
 
 # start default parameters for setup
-IRODS_DIR=/opt/irods3.3/iRODS
+IRODS_CONF_DIR=/etc/irods
 #
-# the directory where trunk of B2SAFE is housed
-TRUNK_DIR=/home/rods/svn/iRODS-modules/BE2SAFE/trunk
+IRODS_DIR=/var/lib/irods/iRODS
 #
-B2SAFE_MODULE_DIR=$IRODS_DIR/modules/B2SAFE
+B2SAFE_PACKAGE_DIR=/opt/eudat/b2safe
 #
 # the default iRODS resource to use
 DEFAULT_RESOURCE=eudat
 #
 # credentials type and location
 CRED_STORE_TYPE=os
-CRED_FILE_PATH=$B2SAFE_MODULE_DIR/conf
+CRED_FILE_PATH=$B2SAFE_PACKAGE_DIR/conf
 #
 # credentials for server id
 SERVER_ID=
@@ -64,72 +63,22 @@ read_parameters() {
     return $STATUS
 }
 
-copy_trunk() {
-
-    if [ -e $IRODS_DIR ]
-    then
-        if [ -e $TRUNK_DIR ]
-        then
-            echo "mkdir $B2SAFE_MODULE_DIR"
-            mkdir $B2SAFE_MODULE_DIR
-            echo "cp -r $TRUNK_DIR $B2SAFE_MODULE_DIR"
-            cp -rf $TRUNK_DIR/* $B2SAFE_MODULE_DIR
-            mkdir $B2SAFE_MODULE_DIR/microservices/obj
-            echo "update Makefile with correct builddir"
-            if [ ! -e ${B2SAFE_MODULE_DIR}/Makefile.org.${DATE_TODAY} ]
-            then
-               cp ${B2SAFE_MODULE_DIR}/Makefile ${B2SAFE_MODULE_DIR}/Makefile.org.${DATE_TODAY} 
-            fi
-            cat ${B2SAFE_MODULE_DIR}/Makefile | \
-            awk -v IRODS_DIR=$IRODS_DIR '{
-                if ( $1 ~ /buildDir/ ) {
-                    $2=IRODS_DIR
-                    $0=$1" = "$2
-                } print $0
-            }' >  ${B2SAFE_MODULE_DIR}/Makefile.new
-            if [ $? -eq 0 ]
-            then
-                mv ${B2SAFE_MODULE_DIR}/Makefile.new  ${B2SAFE_MODULE_DIR}/Makefile
-            else
-                echo "ERROR: updating ${B2SAFE_MODULE_DIR}/Makefile failed!"
-                STATUS=1
-            fi
-        else
-            echo "ERROR: $TRUNK_DIR not present!"
-            STATUS=1
-        fi
-    else
-        echo "ERROR: $IRODS_DIR not present!"
-        STATUS=1
-    fi
-
-    return $STATUS
-}
-
-enable_module() {
-
-    cd $IRODS_DIR ; $IRODS_DIR/scripts/configure --enable-B2SAFE
-    if [ $? -eq 0 ]
-    then
-        echo "make clean"
-        cd $IRODS_DIR ; make clean
-        echo "make"
-        cd $IRODS_DIR ; make
-        echo "$IRODS_DIR/irodsctl restart"
-        $IRODS_DIR/irodsctl restart
-    else
-        echo "ERROR: enabling B2SAFE failed!"
-        STATUS=1
-    fi
-    return $STATUS
-}
-
 create_links() {
 
     COUNT=0
-    EUDAT_SERVER_CONFIG=$IRODS_DIR/server/config/server.config
+    EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server.config
 
-    for file in `find $B2SAFE_MODULE_DIR/rulebase/*.re | grep -v ".org" | sort `
+    #delete old symbolic links
+    for file in `find $IRODS_CONF_DIR/eudat*.re | sort `
+    do
+        if [ -h "$file" ]
+        then
+            rm -v $file
+        fi
+    done
+
+    # create new symbolic links
+    for file in `find $B2SAFE_PACKAGE_DIR/rulebase/*.re | sort `
     do
         LINK=eudat${COUNT}
         grep "^reRuleSet.*$LINK.*"  $EUDAT_SERVER_CONFIG > /dev/null
@@ -137,7 +86,7 @@ create_links() {
         then
             EUDAT_RULEFILES="$EUDAT_RULEFILES,$LINK"
         fi
-        EUDAT_LINKFILE=$IRODS_DIR/server/config/reConfigs/$LINK.re
+        EUDAT_LINKFILE=$IRODS_CONF_DIR/$LINK.re
         if [ -e $EUDAT_LINKFILE ]
         then
             echo "rm $EUDAT_LINKFILE"
@@ -155,7 +104,7 @@ create_links() {
 
 update_server_config() {
 
-    EUDAT_SERVER_CONFIG=$IRODS_DIR/server/config/server.config
+    EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server.config
 
     if [ -n "$EUDAT_RULEFILES" ]
     then
@@ -178,12 +127,23 @@ update_server_config() {
             fi
     fi
 
+    echo "*********************************************************************"
+    echo ""
+    echo "Please check the file: ${EUDAT_SERVER_CONFIG} by hand                "
+    echo "    grep ^reRuleSet ${EUDAT_SERVER_CONFIG}                           "
+    echo ""
+    echo "It should only have the following eudat{n}.re files mentioned:       "
+    echo "    `cd $IRODS_DIR/server/config/reConfigs/ ; ls -C eudat*.re`       "
+    echo ""
+    echo "*********************************************************************"
+
+
     return $STATUS
 }
 
 configure_irods_hooks() {
 
-    IRODS_COREFILE=$IRODS_DIR/server/config/reConfigs/core.re
+    IRODS_COREFILE=$IRODS_CONF_DIR/core.re
     TMP_FILE=/tmp/irodshooks.re
     if [ ! -e ${IRODS_COREFILE}.org.${DATE_TODAY} ]
     then
@@ -230,7 +190,7 @@ EOF
 
 update_irods_core_resource() {
 
-    IRODS_COREFILE=$IRODS_DIR/server/config/reConfigs/core.re
+    IRODS_COREFILE=$IRODS_CONF_DIR/core.re
     if [ ! -e ${IRODS_COREFILE}.org.${DATE_TODAY} ]
     then
         cp $IRODS_COREFILE ${IRODS_COREFILE}.org.${DATE_TODAY} 
@@ -255,7 +215,7 @@ update_irods_core_resource() {
 
 install_python_scripts() {
 
-    for file in `find $B2SAFE_MODULE_DIR/cmd/* | egrep -v ".new|.org|.~" | sort `
+    for file in `find $B2SAFE_PACKAGE_DIR/cmd/* | egrep -v ".new|.org|.~" | sort `
     do
         SHORTFILE="${file##*/}"
         EXTENSION="${file##*.}"
@@ -271,7 +231,7 @@ install_python_scripts() {
         # make the file executable
         if [ "$EXTENSION" == "py" ]
         then
-            chmod +x $file
+            chmod u+x $file
         fi
 
     done
@@ -281,7 +241,7 @@ install_python_scripts() {
 
 update_get_epic_api_parameters() {
 
-    B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
     if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
     then
         cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
@@ -323,10 +283,12 @@ update_credentials() {
         if [ -e $CRED_FILE_PATH ]
         then
            cp $CRED_FILE_PATH ${CRED_FILE_PATH}.org.${DATE_TODAY} 
+           # set access mode to file
+           chmod 600 ${CRED_FILE_PATH}.org.${DATE_TODAY}
         fi
     fi
 
-    CRED_FILE_PATH_EXAMPLE=$B2SAFE_MODULE_DIR/conf/credentials_example
+    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_example
     cat $CRED_FILE_PATH_EXAMPLE | \
         awk -v BASE_URI=$BASE_URI -v USERNAME=$USERNAME -v PREFIX=$PREFIX -v PASSWORD=$PASSWORD '{
             if ( $1 ~ /baseuri/ ) {
@@ -350,13 +312,16 @@ update_credentials() {
         STATUS=1
     fi
 
+    # set access mode to file
+    chmod 600 $CRED_FILE_PATH
+
     return $STATUS
 }
 
 update_get_auth_parameters() {
 
-    AUTH_MAP_PATH=$B2SAFE_MODULE_DIR/conf/authz.map.json
-    B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    AUTH_MAP_PATH=$B2SAFE_PACKAGE_DIR/conf/authz.map.json
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
     if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
     then
         cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
@@ -381,8 +346,8 @@ update_get_auth_parameters() {
 
 update_get_log_parameters() {
 
-    LOG_MANAGER_CONF=$B2SAFE_MODULE_DIR/conf/log.manager.conf
-    B2SAFE_LOCALFILE=$B2SAFE_MODULE_DIR/rulebase/local.re
+    LOG_MANAGER_CONF=$B2SAFE_PACKAGE_DIR/conf/log.manager.conf
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
     if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
     then
         cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
@@ -407,7 +372,7 @@ update_get_log_parameters() {
 
 update_log_manager_conf() {
 
-    LOG_MANAGER_CONF=$B2SAFE_MODULE_DIR/conf/log.manager.conf
+    LOG_MANAGER_CONF=$B2SAFE_PACKAGE_DIR/conf/log.manager.conf
 
     if [ ! -e ${LOG_MANAGER_CONF}.org.${DATE_TODAY} ]
     then
@@ -446,24 +411,6 @@ echo "read_parameters"
 read_parameters
 
 #
-# copy trunk to modules dir in irods
-#
-if [ $? -eq 0 ]
-then
-    echo "copy_trunk"
-    copy_trunk
-fi
-
-#
-# enable module
-#
-if [ $? -eq 0 ]
-then
-    echo "enable_module"
-    enable_module
-fi
-
-#
 # create symbolic links to the eudat rulebase
 #
 if [ $? -eq 0 ]
@@ -473,8 +420,9 @@ then
 fi
 
 #
-# edit <irods>/server/config/server.config
-# append ",eudat,replication,pid-service,catchError,eudat-authZ-filters,local" to reRuleSet
+# edit /etc/irods/server.config
+# append eudat specific rules to to reRuleSet.
+# we use links in the type of eudatxy.re.
 # (make sure to include the comma and no spaces)
 #
 if [ $? -eq 0 ]
@@ -493,7 +441,7 @@ then
 fi
 
 #
-# properly configure the default resource in <irods>/server/config/reConfigs/core.re
+# properly configure the default resource in /etc/irods/core.re
 #
 if [ $? -eq 0 ]
 then
@@ -511,7 +459,7 @@ then
 fi
 
 #
-# update the 'getEpicApiParameters' rule in './server/config/reConfigs/local.re'
+# update the 'getEpicApiParameters' rule in '/opt/eudat/b2safe/rulebase/local.re'
 #
 if [ $? -eq 0 ]
 then
@@ -528,6 +476,7 @@ then
     update_credentials
 fi
 
+exit
 #
 # update the 'getAuthZParameters' rule in './server/config/reConfigs/local.re'
 # update authz.map.json
