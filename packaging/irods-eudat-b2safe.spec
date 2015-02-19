@@ -85,10 +85,12 @@ rm -rf %{buildroot}
 
 %post
 # create configuration file if it does not exist yet
-if [ -n "%{_irodsPackage}/packaging/install.config" ]
+INSTALL_CONF=%{_irodsPackage}/packaging/install.conf
+
+if [ ! -e $INSTALL_CONF ]
 then
 
-cat > %{_irodsPackage}/packaging/install.config << EOF
+cat > $INSTALL_CONF << EOF
 #
 # parameters for installation of irods module B2SAFE
 #
@@ -111,7 +113,7 @@ SERVER_ID="irods://<fully_qualified_hostname>:1247"
 #
 # epic usage parameters
 BASE_URI="https://<fully_qualified_hostname_epic_server>/<instance>/handles/"
-USERNAME=<username_for_proefix>
+USERNAME=<username_for_prefix>
 PREFIX=<prefix>
 #
 # users for msiexec command
@@ -127,6 +129,8 @@ SHARED_SPACE=/Zone0/replicate
 
 EOF
 
+chown %{_irodsUID}:%{_irodsGID} $INSTALL_CONF
+
 fi
 
 # show actions to do after installation
@@ -135,7 +139,9 @@ cat << EOF
 The package b2safe has been installed in %{_irodsPackage}.
 To install/configure it in iRODS do following as the user %{_irodsUID} : 
 
+su - %{_irodsUID}
 cd %{_irodsPackage}/packaging
+# update install.conf with correct parameters with your favorite editor
 ./install.sh
 
 EOF
