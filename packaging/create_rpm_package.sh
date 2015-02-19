@@ -9,6 +9,16 @@ then
 	exit 1
 fi
 
+# check existence of rpmbuild
+which rpmbuild > /dev/null 2>&1
+STATUS=$?
+
+if [ $STATUS -gt 0 ]
+then
+	echo "Please install rpmbuild. It is not present at the machine"
+	exit 1
+fi 
+
 # create build directory's
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
