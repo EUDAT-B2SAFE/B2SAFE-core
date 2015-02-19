@@ -1,5 +1,14 @@
 #!/bin/bash
 #
+USERNAME=`whoami`
+
+if [ "$USERNAME" = "root" ]
+then
+	echo "We are NOT allowed to run as root, exit"
+        echo "Run this script/procedure as the user who run's iRODS"
+	exit 1
+fi
+
 # create build directory's
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
