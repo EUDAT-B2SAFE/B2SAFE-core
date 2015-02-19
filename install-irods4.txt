@@ -1,0 +1,34 @@
+*** Installation ***
+
+The following describes the procedure to enable B2SAFE pre-release-3.0 for iRODS v4.0.3.
+
+Assumptions:
+iRODSv4.0.3 (Aug'14) installed.
+<irods>	/var/lib/irods
+<absolute-irods-path> /var/lib/irods/iRODS
+<etcirods> /etc/irods
+
+- Install B2SAFE files (e.g. git, zip, etc.)
+For example, under the <irods>/ directory.
+Set permissions (ref. <etcirods>/service_account.config).
+
+cd <irods>
+git clone, unzip ... 
+
+configure b2safe.config
+- choose a conf dir for the B2SAFE package (ex. CONF_DIR: /<etcirods>/b2safe-core)
+- choose a log dir (ex. /<etcirods>/b2safe-core/log)
+- choose the iRODS shared dir (ex. /myZone/replicate) AND create it
+
+- run b2safe_install.py
+
+- Install httplib2, simplejson, lxml, defusedxml, queuelib and pylint:
+- test epic client
+
+- change the following rule in eudat.re, setting the *collectionPath 
+  according to the shared dir set before:
+
+getSharedCollection(*zonePath, *collectionPath) {
+    EUDATGetZoneNameFromPath(*zonePath, *zoneName)
+    *collectionPath = "*zoneName/replicate/";
+}
