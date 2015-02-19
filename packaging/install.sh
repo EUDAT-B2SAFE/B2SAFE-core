@@ -71,7 +71,7 @@ create_links() {
     #delete old symbolic links
     for file in `find $IRODS_CONF_DIR/eudat*.re | sort `
     do
-        if [ -h "$file" ]
+        if [ -h $file ]
         then
             rm -v $file
         fi
