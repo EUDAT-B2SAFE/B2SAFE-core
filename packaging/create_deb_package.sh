@@ -62,9 +62,9 @@ cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/control << EOF
 
 Package: $PRODUCT
 Version: ${VERSION}-${RELEASE}
-Section: base
+Section: unknown
 Priority: optional
-Architecture: noarch
+Architecture: all
 Depends: irods-icat (>= 4.0.0)
 Maintainer: Robert Verkerk <robert.verkerk@surfsara.nl>
 Description: B2SAFE for iRODS package
@@ -74,6 +74,75 @@ Description: B2SAFE for iRODS package
  manner.
 
 EOF
+
+# create postinstall scripts
+cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinstall << EOF
+# script for postinstall actions
+
+# create configuration file if it does not exist yet
+INSTALL_CONF=${IRODS_PACKAGE_DIR}/packaging/install.conf
+
+if [ ! -e \$INSTALL_CONF ]
+then
+
+cat > \$INSTALL_CONF << EOF2
+#
+# parameters for installation of irods module B2SAFE
+#
+# the absolute directory where the irods config is installed
+IRODS_CONF_DIR=/etc/irods
+#
+# the absolute directory where irods is installed
+IRODS_DIR=/var/lib/irods/iRODS
+#
+# the directory where B2SAFE will be stored as a package
+B2SAFE_PACKAGE_DIR=${IRODS_PACKAGE_DIR}
+#
+# the default iRODS resource to use. Will be set in core.re
+DEFAULT_RESOURCE=demoResc
+#
+# credentials type and location
+CRED_STORE_TYPE=os
+CRED_FILE_PATH=\$B2SAFE_PACKAGE_DIR/conf/credentials
+SERVER_ID="irods://<fully_qualified_hostname>:1247"
+#
+# epic usage parameters
+BASE_URI="https://<fully_qualified_hostname_epic_server>/<instance>/handles/"
+USERNAME=<username_for_prefix>
+PREFIX=<prefix>
+#
+# users for msiexec command
+USERS="user0#Zone0 user1#Zone1"
+#
+# loglevel and log directory
+# possible log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL=DEBUG
+LOG_DIR=/var/log/irods
+#
+#
+SHARED_SPACE=/Zone0/replicate
+
+EOF2
+
+fi
+
+
+
+# show package installation/configuration info 
+cat << EOF1
+
+The package b2safe has been installed in ${IRODS_PACKAGE_DIR}.
+To install/configure it in iRODS do following as the user which runs iRODS 
+
+su - <iRODSuser>
+cd ${IRODS_PACKAGE_DIR}/packaging
+# update install.conf with correct parameters with your favorite editor
+./install.sh
+
+EOF1
+
+EOF
+
 
 
 # build rpm
