@@ -76,7 +76,7 @@ Description: B2SAFE for iRODS package
 EOF
 
 # create postinstall scripts
-cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinstall << EOF
+cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinst << EOF
 # script for postinstall actions
 
 # create configuration file if it does not exist yet
@@ -127,7 +127,6 @@ EOF2
 fi
 
 
-
 # show package installation/configuration info 
 cat << EOF1
 
@@ -143,6 +142,8 @@ EOF1
 
 EOF
 
+#make sure the file is executable
+chmod +x  $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinst
 
 
 # build rpm
