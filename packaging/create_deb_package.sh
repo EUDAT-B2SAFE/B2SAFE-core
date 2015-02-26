@@ -3,6 +3,8 @@
 #set -x
 
 USERNAME=`whoami`
+IRODSUID=`id -un $USERNAME`
+IRODSGID=`id -gn $USERNAME`
 B2SAFEHOMEPACKAGING="$(cd $(dirname "$0"); pwd)"
 B2SAFEHOME=`dirname $B2SAFEHOMEPACKAGING`
 RPM_BUILD_ROOT="${HOME}/debbuild/"
@@ -58,6 +60,7 @@ chmod 700 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging/*.sh
 # create packaging directory
 mkdir -p  $RPM_BUILD_ROOT${PACKAGE}/DEBIAN
 
+# create control file
 cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/control << EOF
 
 Package: $PRODUCT
@@ -124,6 +127,9 @@ SHARED_SPACE=/Zone0/replicate
 
 EOF2
 
+# set correct owner of file
+chown $IRODSUID:$IRODSGID \$INSTALL_CONF
+
 fi
 
 
@@ -131,9 +137,9 @@ fi
 cat << EOF1
 
 The package b2safe has been installed in ${IRODS_PACKAGE_DIR}.
-To install/configure it in iRODS do following as the user which runs iRODS 
+To install/configure it in iRODS do following as the user "$USERNAME" which runs iRODS 
 
-su - <iRODSuser>
+su - $USERNAME
 cd ${IRODS_PACKAGE_DIR}/packaging
 # update install.conf with correct parameters with your favorite editor
 ./install.sh
