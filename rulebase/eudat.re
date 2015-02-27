@@ -496,13 +496,16 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 # *Value [IN] new value to be assigned
 #
 # Author: Pascal Dugénie, CINES
+# Modified : S Coutin 23/01/2015
 #-----------------------------------------------------------------------------
 EUDATModifyAVU(*Path, *Key, *Value)
 {
     msiSplitPath( *Path, *parent, *child );
     msiGetObjType( *Path, *objType );
-    rp_countMetaKeys( *Path, *Key, *key_exist );
-    logInfo( "Set *Key into *newval (key_exist=*key_exist)" );
+	# Modified begin 
+    EUDATcountMetaKeys( *Path, *Key, *key_exist );
+    logInfo( "Set *Key into *Value (key_exist=*key_exist)" );
+	# Modified end
     if ( *key_exist != "0" ){
         msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'", *B );
         foreach ( *B ) {
@@ -903,15 +906,20 @@ EUDATrp_ingestObject( *source )
     logInfo("ingestObject-> Check for (*source)");
     EUDATiCHECKSUMget(*source, *checksum);
     EUDATModifyAVU(*source, "INFO_Checksum" , *checksum );
-    EUDATgetLastAVU(*Path, "OTHER_original_checksum", *orig_checksum);
+# Modified begin 
+    EUDATgetLastAVU(*source, "OTHER_original_checksum", *orig_checksum);
+# Modified end
     if ( *checksum == *orig_checksum )
     {
         logInfo("ingestObject-> Checksum is same as original = *checksum");
         EUDATModifyAVU(*source, "ADMIN_Status" , "Checksum_ok" ) ;
         # Extract the ROR value from iCat
-        *RorValue = ""
+# Modified begin 
 # TODO: clarify how the 'EUDAT/ROR' should be added as iCAT metadata pair
-#       rp_getMeta( *source, "EUDAT/ROR" , *RorValue )
+#       current version assumes the ROR is available in the EUDAT/ROR AVU, as this is done by repository package
+#       *RorValue = ""
+	EUDATgetLastAVU( *source, "EUDAT/ROR" , *RorValue );
+# Modified end 
         EUDATCreatePID("None", *source, *RorValue, bool("true"), *PID);
         # test PID creation
         if((*PID == "empty") || (*PID == "None") || (*PID == "error")) {
