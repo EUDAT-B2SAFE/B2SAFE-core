@@ -98,7 +98,7 @@ IRODS_CONF_DIR=/etc/irods
 # the absolute directory where irods is installed
 IRODS_DIR=/var/lib/irods/iRODS
 #
-# the directory where B2SAFE will be stored as a package
+# the directory where B2SAFE is installed as a package
 B2SAFE_PACKAGE_DIR=${IRODS_PACKAGE_DIR}
 #
 # the default iRODS resource to use. Will be set in core.re
@@ -106,7 +106,7 @@ DEFAULT_RESOURCE=demoResc
 #
 # credentials type and location
 CRED_STORE_TYPE=os
-CRED_FILE_PATH=\$B2SAFE_PACKAGE_DIR/conf/credentials
+CRED_FILE_PATH=\\\$B2SAFE_PACKAGE_DIR/conf/credentials
 SERVER_ID="irods://<fully_qualified_hostname>:1247"
 #
 # epic usage parameters

@@ -100,7 +100,7 @@ IRODS_CONF_DIR=/etc/irods
 # the absolute directory where irods is installed
 IRODS_DIR=/var/lib/irods/iRODS
 #
-# the directory where B2SAFE will be stored as a package
+# the directory where B2SAFE is installed as a package
 B2SAFE_PACKAGE_DIR=%{_irodsPackage}
 #
 # the default iRODS resource to use. Will be set in core.re
