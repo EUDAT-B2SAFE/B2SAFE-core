@@ -69,7 +69,7 @@ create_links() {
     EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server.config
 
     #delete old symbolic links
-    for file in `find $IRODS_CONF_DIR/eudat*.re | sort `
+    for file in $IRODS_CONF_DIR/eudat*.re
     do
         if [ -h $file ]
         then
@@ -78,7 +78,7 @@ create_links() {
     done
 
     # create new symbolic links
-    for file in `find $B2SAFE_PACKAGE_DIR/rulebase/*.re | sort `
+    for file in $B2SAFE_PACKAGE_DIR/rulebase/*.re
     do
         LINK=eudat${COUNT}
         grep "^reRuleSet.*$LINK.*"  $EUDAT_SERVER_CONFIG > /dev/null
@@ -133,7 +133,7 @@ update_server_config() {
     echo "    grep ^reRuleSet ${EUDAT_SERVER_CONFIG}                           "
     echo ""
     echo "It should only have the following eudat{n}.re files mentioned:       "
-    echo "    `cd $IRODS_DIR/server/config/reConfigs/ ; ls -C eudat*.re`       "
+    echo "    `cd $IRODS_CONF_DIR ; ls -C eudat*.re`       "
     echo ""
     echo "*********************************************************************"
 
