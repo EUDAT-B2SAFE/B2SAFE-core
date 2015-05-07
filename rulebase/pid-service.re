@@ -22,7 +22,7 @@
 # EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
-# EUDATePIDcreate(*path, *PID)
+# EUDATePIDcreate(*path, *extraType, *PID)
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
@@ -30,7 +30,6 @@
 # EUDATePIDremove(*path, *force)
 # EUDATeiPIDeiChecksumMgmtColl(*sourceColl)
 # EUDATiRORupdate(*source, *pid)
-# EUDATeParentUpdate(*PID, *PFName, *PFValue)
 # 
 
 
@@ -47,7 +46,7 @@
 #   *newPID     [OUT]   the pid generated for this replica 
 #
 # Author: Willem Elbers, MPI-TLA
-# Edited by Elena Erastova, RZG; Long Phan, JSC
+# Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara
 #
 # TODO: NEED TESTING
 #
@@ -59,8 +58,27 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
     EUDATSearchPID(*path, *existing_pid);
 
     if((*existing_pid == "empty") || (*existing_pid == "None")) {
+        # add extraType parameters
+        *extraType = "empty";
+
+        # add ror as extratype parameter
+        if (*ror != "None" && *ror != "") {
+                logInfo("Update Parent PID with field ROR");
+                *extraType = "EUDAT/ROR=*ror";
+        }        
+
+        # add ppid as extratype parameter
+        if (*parent_pid != "None" && *parent_pid != "") {
+                logInfo("Update Parent PID with field PPID");
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/PPID=*parent_pid";
+                } else {
+                      *extraType = "EUDAT/PPID=*parent_pid";
+                } 
+        }
+
         # create PID
-        EUDATePIDcreate(*path, *newPID);
+        EUDATePIDcreate(*path, *extraType, *newPID);
 
         if (*iCATCache == bool("true")) {
             # Add PID into iCAT
@@ -73,60 +91,6 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
         *newPID = *existing_pid;
         logInfo("PID already exists (*newPID)");
     }
-
-    # add RoR to PID record if there is one defined
-#    if(*ror != "None") {
-#        *listRor = split(*ror, "/");
-#        *firstRor = elem(*listRor,0);
-#       if(*firstRor != "http:") {
-#            *ror = "*epicApi*ror";
-#        }
-#    }
-#    if(*parent_pid != "None") {
-#        *listPpid = split(*parent_pid, "/");
-#        *firstPpid = elem(*listPpid,0);
-#        if(*firstPpid != "http:") {
-#            *parent_pid = "*epicApi*parent_pid";
-#        }
-#        if(*ror == "None") {
-#            *ror = *parent_pid;
-#            *parent_pid = "None";   
-#        }
-#        else if(*ror == *parent_pid) {
-#            *parent_pid = "None";
-#        }
-#    }
-
-#    if(*ror != "None") {
-#        # add ROR to PID record
-#        EUDATeParentUpdate(*newPID, "ROR", *ror);
-#    }
-#    if(*parent_pid != "None") {
-#        # add PPID to PID record
-#        EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
-#    }
-     
-     if (*ror != "None" && *ror != "" && *parent_pid != "None" && *parent_pid != "") {
-                logInfo("Update Parent PID with fields ROR and PPID");
-
-                EUDATeParentUpdate(*newPID, "ROR", *ror);
-                EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
-
-     } else if ((*ror != "None" && *ror != "" && *parent_pid == "None") ||
-                (*ror != "None" && *ror != "" && *parent_pid == "")) {
-
-                logInfo("Update ParentPID with field ROR");
-                EUDATeParentUpdate(*newPID, "ROR", *ror);
-
-     } else if ((*parent_pid != "None" && *parent_pid != "" && *ror == "None") ||
-                (*parent_pid != "None" && *parent_pid != "" && *ror == "")) {
-
-                logInfo("Update ParentPID = *parent_pid with field PPID");
-                EUDATeParentUpdate(*newPID, "PPID", *parent_pid);
-
-     } else {
-                logInfo("field ROR and PPID are empty or invalid, No ParentUpdate");
-     }
 
 }
 
@@ -270,7 +234,10 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
         # If ePID does not exist create both ePID and iPID
         if ( *PID == "empty" ) { 
             logInfo("EUDATeiPIDeiChecksumMgmt -> No PID in epic server yet");
-            EUDATePIDcreate(*path, *newPID);
+            # add extraType parameters
+            *extraType = "empty";
+
+            EUDATePIDcreate(*path, *extraType, *newPID);
             if (*iCATCache == bool("true")) {
                 # Add PID into iCAT
                 EUDATiPIDcreate(*path, *newPID);
@@ -328,16 +295,22 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 #
 # Arguments:
 #   *path            [IN]   The full iRODS path of the object
-#   *PID             [OUT]    The created ePID.
+#   *extraType       [IN]   extra parameters
+#   *PID             [OUT]  The created ePID.
 #
 # Author: Giacomo Mariani, CINECA
+# Edited by:  Robert Verkerk, SURFsara
 #
-EUDATePIDcreate(*path, *PID) {
+EUDATePIDcreate(*path, *extraType, *PID) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
     EUDATiCHECKSUMget(*path, *checksum);
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath create *serverID"++"*path --checksum *checksum",
-               "null", "null", "null", *out);
+    *execCmd="*credStoreType *credStorePath create *serverID"++"*path --checksum *checksum";
+    if (*extraType != "empty") {
+         logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
+         *execCmd="*execCmd"++" --extratype \"*extraType\"";
+    }
+    msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *PID);
     logInfo("EUDATePIDcreate -> Created handle is: *PID");
 }
@@ -531,27 +504,3 @@ EUDATiRORupdate(*source, *pid) {
     }
 }
 
-#
-# Update the EUDAT ROR or PPID field in the PID record
-#
-# Parameters:
-#   *PID 	[IN]    the PID of the digital object whose PID record is updated
-#   *PFName     [IN]    the name of the field of the PID record to update [ROR | PPID]
-#   *PFValue    [IN]    the value of the field of the PID record to update.
-#
-# Author: Elena Erastova, RZG, edited by Claudio Cacciari, Cineca
-#
-EUDATeParentUpdate(*PID, *PFName, *PFValue) {
-	
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    # add Parent to PID record
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath modify *PID *PFName *PFValue");
-    }
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID EUDAT/*PFName *PFValue",
-               "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *response);
-    if(*epicDebug > 1) {
-        logDebug("modify handle response = *response")
-    }
-}
