@@ -360,3 +360,77 @@ EUDATIntegrityCheck(*srcColl,*destColl) {
                 EUDATCheckError(*objPath, *destination);
             }
 }
+
+#-----------------------------------------------------------------------------
+# Data object replication and PID management based on remote execution
+# It is assumed that iRODS zone federation is established
+#  and the replicated file is accessible from the source
+#
+# Parameters:
+# *remoteServer [IN] IP or name of the remote iRODS server
+# *source       [IN] source path of the data object to be replicated
+# *destination  [IN] destination path of the replicated data object
+#
+# Author: Elena Erastova, RZG
+#-----------------------------------------------------------------------------
+EUDATremoteRepl(*remoteServer, *source, *destination) {
+
+    # initial values of rzgPID, rzgROR, childPID1
+    *parentPID = "None";
+    *parentROR = "None";
+    *childPID1 = "None";
+    
+    # get PID of the source file from ICAT
+    EUDATiFieldVALUEretrieve(*source, "PID", *parentPID);
+    
+    # if there is no entry for the PID in ICAT, get it from EPIC
+    if(*parentPID == "None") {
+        EUDATSearchPID(*source, *parentPID);
+        
+        # if there is no PID create it
+        if((*parentPID == "empty") || (*parentPID == "None")) {
+            EUDATCreatePID("None",*source,"None",bool("true"),*parentPID);
+        }
+        
+        # if there is a PID in EPIC create it in ICAT
+        else {
+            EUDATiPIDcreate(*source, *parentPID);
+        }
+    }
+    
+    # get ROR of the source file from ICAT
+    EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *parentROR);
+    
+    # if there is no entry for the ROR in ICAT, get it from EPIC
+    if(*parentROR == "None") {
+        EUDATGetRorPid(*parentPID, *parentROR);
+        
+        # if there is a ROR in EPIC create it in ICAT
+        if(*parentROR != "None") {
+            EUDATCreateAVU("EUDAT/ROR", *parentROR, *source);
+        }
+    }
+    
+    # otherwise ROR for the replica will be parentPID
+    if(*parentROR == "None") {
+        *parentROR = *parentPID;
+    }
+    
+    # irsync the data object to the remote destination
+    msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
+    
+    # create a PID for the replica which is done on the remote server
+    # using remote execution
+    remote(*remoteServer,"null") {
+     EUDATCreatePID(*parentPID,*destination,*parentROR,bool("true"),*childPID);
+    }
+    
+    # get the PID for the replica from ICAT on the remote server
+    EUDATiFieldVALUEretrieve(*destination, "PID", *childPID1);
+    
+    # update parent PID with a child one 
+    # if the child exists in ICAT on the remote server
+    if(*childPID1 != "None") {
+        EUDATUpdatePIDWithNewChild(*parentPID, *childPID1);
+    }
+}
