@@ -17,8 +17,9 @@
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATCheckReplicas(*source, *destination)
 #---- collection management ---
-# EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive)
-# EUDATIntegrityCheck(*srcColl,*destColl)
+#TODO:update EUDATTransferCollection(*path_of_transfered_coll,*target_of_transfered_coll,*incremental,*recursive)
+#TODO:update EUDATIntegrityCheck(*srcColl,*destColl)
+#EUDATRegDataRepl(*source, *destination)
 
 #
 # Update the logging files specific for EUDAT B2SAFE
@@ -85,56 +86,51 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
 # Transfer single file
 #
 # Parameters:
-#    *path_of_transfered_file    [IN] path of transfered file in iRODS
-#    *target_of_transfered_file  [IN] destination of replication in iRODS
+#    *source    [IN] path of the source object in iRODS
+#    *destination  [IN] destination of replication in iRODS
 # 
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
-EUDATTransferSingleFile(*path_of_transfered_file,*target_of_transfered_file) {
+EUDATTransferSingleFile(*source, *destination, *registered) {
     
-    logInfo("[EUDATTransferSingleFile] transfering *path_of_transfered_file to *target_of_transfered_file");    
-        
-    logDebug("query PID of DataObj *path_of_transfered_file");
-    EUDATSearchPID(*path_of_transfered_file, *pid);
+    logInfo("[EUDATTransferSingleFile] transfering *source to *destination"); 
+    *status_transfer_success = bool("true");
 
-    if (*pid == "empty") {
-        logDebug("PID is empty, no replication will be executed");        
-        # Update Logging (Statistic File and Failed Files)
-        *status_transfer_success = bool("false");
-        EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
-                      *target_of_transfered_file, "empty PID");                
-    } else {
-        logDebug("PID exist, Replication's beginning ...... ");
-        getSharedCollection(*path_of_transfered_file,*sharedCollection);
-        msiSplitPath(*path_of_transfered_file, *collection, *file);
-        #msiReplaceSlash(*target_of_transfered_file, *controlfilename);
-        EUDATReplaceSlash(*target_of_transfered_file, *controlfilename);
-        logDebug("ReplicateFile: *sharedCollection*controlfilename");            
+    # Catch Error CAT_NO_ACCESS_PERMISSION before replication
+    EUDATCatchErrorDataOwner(*source,*status_identity);
             
-        # Catch Error CAT_NO_ACCESS_PERMISSION before replication
-        EUDATCatchErrorDataOwner(*path_of_transfered_file,*status_identity);
-            
-        if (*status_identity == bool("true")) {
-            *err = errorcode(triggerReplication("*sharedCollection*controlfilename.replicate",*pid,
-                                                 *path_of_transfered_file,*target_of_transfered_file));
-            if (*err < 0) {
-                logDebug("triggerReplication failed with error code *err");
+    if (*status_identity == bool("true")) {
+
+        if (*registered == "1") {
+            *status_repl = EUDATRegDataRepl(*source,*destination);
+            if (*status_repl != 0) {
+                logDebug("registered data replication failed");
                 *status_transfer_success = bool("false");
-                EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
-                              *target_of_transfered_file,"iRODS errorcode=*err");
-            } else {
-                logDebug("Perform the last checksum and checksize of transfered data object");        
-                EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file);
+                EUDATUpdateLogging(*status_transfer_success,*source,*destination,
+                                   "registered data replication failure");
             }
         } else {
-            logDebug("Action is canceled. Error is caught in function EUDATCatchErrorDataOwner"); 
-            # Update fail_log                
-            *status_transfer_success = bool("false");
-            EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_of_transfered_file,
-                               "no access permission");
-        }            
-    }        
+            msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
+            if (*rsyncStatus != 0) {
+                logDebug("replication failed");
+                *status_transfer_success = bool("false");
+                EUDATUpdateLogging(*status_transfer_success,*source,*destination,"replication failure");
+            }
+        }
+
+        if (*status_transfer_success == bool("true")) {
+            logDebug("Perform the last checksum and checksize of transfered data object");        
+            EUDATCheckError(*source,*destination);
+        }
+
+    } else {
+        logDebug("Action is canceled. Error is caught in function EUDATCatchErrorDataOwner"); 
+        # Update fail_log                
+        *status_transfer_success = bool("false");
+        EUDATUpdateLogging(*status_transfer_success,*source,*destination,"no access permission");
+    }   
+         
 }
 
 #
@@ -367,70 +363,84 @@ EUDATIntegrityCheck(*srcColl,*destColl) {
 #  and the replicated file is accessible from the source
 #
 # Parameters:
-# *remoteServer [IN] IP or name of the remote iRODS server
 # *source       [IN] source path of the data object to be replicated
 # *destination  [IN] destination path of the replicated data object
 #
-# Author: Elena Erastova, RZG
+# Authors: Elena Erastova, RZG; Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-EUDATremoteRepl(*remoteServer, *source, *destination) {
+EUDATRegDataRepl(*source, *destination) {
 
     # initial values of rzgPID, rzgROR, childPID1
     *parentPID = "None";
     *parentROR = "None";
     *childPID1 = "None";
+
+    EUDATGetZoneNameFromPath(*destination, *zoneName);
+    EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
+    logDebug("Remote zone name: *zoneName, connection contact: *zoneConn");
     
     # get PID of the source file from ICAT
+    logDebug("query PID of DataObj *source");
     EUDATiFieldVALUEretrieve(*source, "PID", *parentPID);
     
     # if there is no entry for the PID in ICAT, get it from EPIC
     if(*parentPID == "None") {
         EUDATSearchPID(*source, *parentPID);
         
-        # if there is no PID create it
-        if((*parentPID == "empty") || (*parentPID == "None")) {
-            EUDATCreatePID("None",*source,"None",bool("true"),*parentPID);
-        }
+        #TODO if there is no PID create it?
+        
+#        if((*parentPID == "empty") || (*parentPID == "None")) {
+#            EUDATCreatePID("None",*source,"None",bool("true"),*parentPID);
+#        }
         
         # if there is a PID in EPIC create it in ICAT
-        else {
-            EUDATiPIDcreate(*source, *parentPID);
-        }
+#        else {
+#            EUDATiPIDcreate(*source, *parentPID);
+#        }
     }
+
+    if (*parentPID == "empty" || (*parentPID == "None")) {
+        logDebug("PID is empty, no replication will be executed");
+        # Update Logging (Statistic File and Failed Files)
+        *status_transfer_success = bool("false");
+        EUDATUpdateLogging(*status_transfer_success,*source,*destination, "empty PID");
+    } else {
+        logDebug("PID exist, replication's beginning ...... ");
+
+        # get ROR of the source file from ICAT
+        EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *parentROR);
     
-    # get ROR of the source file from ICAT
-    EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *parentROR);
-    
-    # if there is no entry for the ROR in ICAT, get it from EPIC
-    if(*parentROR == "None") {
-        EUDATGetRorPid(*parentPID, *parentROR);
+        # if there is no entry for the ROR in ICAT, get it from EPIC
+        if(*parentROR == "None") {
+            EUDATGetRorPid(*parentPID, *parentROR);
         
-        # if there is a ROR in EPIC create it in ICAT
-        if(*parentROR != "None") {
-            EUDATCreateAVU("EUDAT/ROR", *parentROR, *source);
+            # if there is a ROR in EPIC create it in ICAT
+            if(*parentROR != "None") {
+                EUDATCreateAVU("EUDAT/ROR", *parentROR, *source);
+            }
         }
-    }
     
-    # otherwise ROR for the replica will be parentPID
-    if(*parentROR == "None") {
-        *parentROR = *parentPID;
-    }
+        # otherwise ROR for the replica will be parentPID
+        if(*parentROR == "None") {
+            *parentROR = *parentPID;
+        }
     
-    # irsync the data object to the remote destination
-    msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
+        # irsync the data object to the remote destination
+        msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
     
-    # create a PID for the replica which is done on the remote server
-    # using remote execution
-    remote(*remoteServer,"null") {
-     EUDATCreatePID(*parentPID,*destination,*parentROR,bool("true"),*childPID);
-    }
+        # create a PID for the replica which is done on the remote server
+        # using remote execution
+        remote(*zoneConn,"null") {
+            EUDATCreatePID(*parentPID,*destination,*parentROR,bool("true"),*childPID);
+        }
     
-    # get the PID for the replica from ICAT on the remote server
-    EUDATiFieldVALUEretrieve(*destination, "PID", *childPID1);
+        # get the PID for the replica from ICAT on the remote server
+        EUDATiFieldVALUEretrieve(*destination, "PID", *childPID1);
     
-    # update parent PID with a child one 
-    # if the child exists in ICAT on the remote server
-    if(*childPID1 != "None") {
-        EUDATUpdatePIDWithNewChild(*parentPID, *childPID1);
+        # update parent PID with a child one 
+        # if the child exists in ICAT on the remote server
+        if(*childPID1 != "None") {
+            EUDATUpdatePIDWithNewChild(*parentPID, *childPID1);
+        }
     }
 }

@@ -11,15 +11,19 @@
 #---- utility ---
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
-# getSharedCollection(*zonePath, *collectionPath)
-# writeFile(*file, *contents)
-# readFile(*file, *contents)
-# updateCommandName(*cmdPath, *status)
+
+#TODO:delete getSharedCollection(*zonePath, *collectionPath)
+
+#TODO:delete?  writeFile(*file, *contents)
+#TODO:delete?  readFile(*file, *contents)
+#TODO:delete updateCommandName(*cmdPath, *status)
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
 # EUDATReplaceSlash(*path, *out)
+# EUDATGetZoneNameFromPath(*path, *out)
+# EUDATGetZoneHostFromZoneName(*zoneName, *conn)
 # EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime)
 # EUDATiCHECKSUMretrieve(*path, *checksum)
 # EUDATiCHECKSUMget(*path, *checksum)
@@ -32,17 +36,17 @@
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # getCollectionName(*path_of_collection,*Collection_Name)
 #---- command file triggers ---
-# triggerReplication(*commandFile,*pid,*source,*destination)
-# triggerCreatePID(*commandFile,*pid,*destination,*ror)
-# triggerUpdateParentPID(*commandFile,*pid,*new_pid)
+#TODO:delete triggerReplication(*commandFile,*pid,*source,*destination)
+#TODO:delete triggerCreatePID(*commandFile,*pid,*destination,*ror)
+#TODO:delete triggerUpdateParentPID(*commandFile,*pid,*new_pid)
 #---- process command file ---
-# processReplicationCommandFile(*cmdPath)
-# readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror)
-# processPIDCommandFile(*cmdPath)
-# doReplication(*pid, *source, *destination, *ror, *status)
-# updateMonitor(*file)
+#TODO:delete processReplicationCommandFile(*cmdPath)
+#TODO:delete readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror)
+#TODO:delete processPIDCommandFile(*cmdPath)
+#TODO:delete doReplication(*pid, *source, *destination, *ror, *status)
+#TODO:delete updateMonitor(*file)
 #---- data staging ---
-# EUDATiDSSfileWrite(*DSSfile)
+# EUDATiDSSfileWrite(*DSSfile) # DEPRECATED
 #---- repository packages ---
 # EUDATrp_checkMeta(*source,*AName,*AValue)
 # EUDATrp_ingestObject( *source )
@@ -166,7 +170,7 @@ EUDATQueue(*action, *message, *number) {
 getSharedCollection(*zonePath, *collectionPath) {
     #msiGetZoneNameFromPath(*zonePath, *zoneName);
     EUDATGetZoneNameFromPath(*zonePath, *zoneName)
-    *collectionPath = "*zoneName/replicate/";
+    *collectionPath = "/*zoneName/replicate/";
 }
 
 #
@@ -275,11 +279,42 @@ EUDATReplaceSlash(*path, *out) {
 #
 # Author: Long Phan, JSC
 #
-EUDATGetZoneNameFromPath(*path,*out) {
+EUDATGetZoneNameFromPath(*path, *out) {
 
     *list = split("*path","/");
-    *n = elem(*list,0);
-    *out = "/"++"*n";
+    *out = elem(*list,0);
+}
+
+#
+# Gets the connection details of an iRODS Zone.
+#
+# Arguments:
+#   *zoneName      [IN]    the IRODS Zone
+#   *conn          [OUT]   the connection details related to the input iRODS Zone (hostname:port)
+#                       
+# Author: Claudio Cacciari, Cineca
+#
+#
+EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
+
+    *conn = ""
+    *res = SELECT ZONE_CONNECTION WHERE ZONE_NAME = '*zoneName';
+    foreach(*row in *res) {
+        msiGetValByKey(*row, "ZONE_CONNECTION", *conn);
+    }
+    # the local zone does not store the connection details
+    # then get them from the eudat.local rule set
+    if (*conn == "") {
+        *result = SELECT ZONE_TYPE WHERE ZONE_NAME = '*zoneName';
+        foreach(*line in *result) {
+            msiGetValByKey(*line, "ZONE_TYPE", *type);
+        }
+        if (*type == "local") {
+            getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+            # expected serverID = irods://hostname:port
+            msiSubstr("*serverID", "8", "-1", *conn);
+        }
+    }
 }
 
 #
@@ -578,7 +613,8 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
         *ror = "*epicApi"++"*pid";  
         logDebug("No ROR available, so new ROR defined: *ror");
     }
-    writeFile("*commandFile","*pid;*source;*destination;*ror");
+#    writeFile("*commandFile","*pid;*source;*destination;*ror");
+    doReplication(*pid,*source,*destination,*ror,*status);
 }
 
 #
@@ -594,7 +630,19 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
 #
 triggerCreatePID(*commandFile,*pid,*destination,*ror) {
     logInfo("triggerCreatePID(*commandFile,*pid,*destination,*ror)");
-    writeFile("*commandFile", "create;*pid;*destination;*ror");
+#    writeFile("*commandFile", "create;*pid;*destination;*ror");
+    EUDATGetZoneNameFromPath(*destination, *zoneName);
+    EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
+    logInfo("Remote zone name: *zoneName, connection contact: *zoneConn");
+    remote("*zoneConn", logInfo("Starting remote execution"))
+    {
+         writeLine("serverLog","INFO: inside remote execution");        
+    }
+#    EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
+#    getSharedCollection(*destination,*collectionPath);
+    #create .pid.update file based on absolute file path
+#    EUDATReplaceSlash(*destination, *filepathslash);
+#    triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
 }
 
 #
