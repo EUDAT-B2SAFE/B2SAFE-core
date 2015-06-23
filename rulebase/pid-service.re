@@ -280,7 +280,6 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
     *status0 = bool("false");
     msiGetObjType(*path,*type);
     if (*type == '-c')  {
-        msiCollRsync(*source,*destination,"null","IRODS_TO_IRODS",*rsyncStatus);
         *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
         foreach(*c in *d) {
             msiGetValByKey(*c, "META_COLL_ATTR_VALUE", *FVALUE);
