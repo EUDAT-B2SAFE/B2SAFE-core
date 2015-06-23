@@ -167,11 +167,11 @@ EUDATQueue(*action, *message, *number) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-getSharedCollection(*zonePath, *collectionPath) {
+#getSharedCollection(*zonePath, *collectionPath) {
     #msiGetZoneNameFromPath(*zonePath, *zoneName);
-    EUDATGetZoneNameFromPath(*zonePath, *zoneName)
-    *collectionPath = "/*zoneName/replicate/";
-}
+#    EUDATGetZoneNameFromPath(*zonePath, *zoneName)
+#    *collectionPath = "/*zoneName/replicate/";
+#}
 
 #
 # Write a command file
@@ -182,16 +182,16 @@ getSharedCollection(*zonePath, *collectionPath) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-writeFile(*file, *contents) {
+#writeFile(*file, *contents) {
 #    *err = errorcode(msiObjStat(*file, *objStat));
 #    if (*err >= 0) {
 #        msiDataObjUnlink("objPath=*file++++replNum=0++++forceFlag=", *status);
 #    }
-    msiDataObjCreate("*file", "forceFlag=", *filePointer);
-    logDebug("[writeFile] Created object: *file");
-    msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
-    msiDataObjClose(*filePointer, *outStatus);
-}
+#    msiDataObjCreate("*file", "forceFlag=", *filePointer);
+#    logDebug("[writeFile] Created object: *file");
+#    msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
+#    msiDataObjClose(*filePointer, *outStatus);
+#}
 
 #
 # Read a command file
@@ -202,13 +202,13 @@ writeFile(*file, *contents) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-readFile(*file, *contents) {
-    msiDataObjOpen("objPath=*file++++replNum=0++++openFlags=O_RDONLY",*S_FD);
-    msiDataObjRead(*S_FD,"1024",*R_BUF);
-    #msiDataObjRead(*S_FD,null,*R_BUF);
-    msiBytesBufToStr(*R_BUF, *contents);
-    msiDataObjClose(*S_FD,*closeStatus);
-}
+#readFile(*file, *contents) {
+#    msiDataObjOpen("objPath=*file++++replNum=0++++openFlags=O_RDONLY",*S_FD);
+#    msiDataObjRead(*S_FD,"1024",*R_BUF);
+#    #msiDataObjRead(*S_FD,null,*R_BUF);
+#    msiBytesBufToStr(*R_BUF, *contents);
+#    msiDataObjClose(*S_FD,*closeStatus);
+#}
 
 #
 # Rename a command file.
@@ -220,14 +220,14 @@ readFile(*file, *contents) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-updateCommandName(*cmdPath, *status) {
-    msiGetFormattedSystemTime(*ftime,"human","%d%02d%02dT%02d%02d%02d");
-    if(*status == 0) {
-        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.success","0",*renameStatus);
-    } else {
-        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.failed","0",*renameStatus);
-    }
-}
+#updateCommandName(*cmdPath, *status) {
+#    msiGetFormattedSystemTime(*ftime,"human","%d%02d%02dT%02d%02d%02d");
+#    if(*status == 0) {
+#        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.success","0",*renameStatus);
+#    } else {
+#        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.failed","0",*renameStatus);
+#    }
+#}
 
 #
 # Logging policies
@@ -405,9 +405,14 @@ EUDATiCHECKSUMretrieve(*path, *checksum) {
 #
 EUDATiCHECKSUMget(*path, *checksum) {
     if (!EUDATiCHECKSUMretrieve(*path, *checksum)) {
-        #NOTE: the 2. arg of msiDataObjChksum: "null" means only the default resc will be checksumed.
-        #Consider "ChksumAll="
-        msiDataObjChksum(*path, "null", *checksum);
+        *checksum = "";
+        #If it is a collection, do not calculate the checksum
+        msiGetObjType(*path,*type);
+        if (*type == '-d')  {
+            #NOTE: the 2. arg of msiDataObjChksum: "null" means only the default resc will be checksumed.
+            #Consider "ChksumAll="
+            msiDataObjChksum(*path, "null", *checksum);
+        }
         #call again EUDATiCHECKSUMretrieve in order to set checksum date
         EUDATiCHECKSUMretrieve(*path, *checksum);
     }
@@ -605,17 +610,17 @@ getCollectionName(*path_of_collection,*Collection_Name){
 #
 # Author: Willem Elbers, MPI-TLA
 #
-triggerReplication(*commandFile,*pid,*source,*destination) {
-    logInfo("startReplication(*commandFile,*pid,*source,*destination)");
-    EUDATGetRorPid(*pid, *ror);
-    if (*ror == "None"){
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-        *ror = "*epicApi"++"*pid";  
-        logDebug("No ROR available, so new ROR defined: *ror");
-    }
+#triggerReplication(*commandFile,*pid,*source,*destination) {
+#    logInfo("startReplication(*commandFile,*pid,*source,*destination)");
+#    EUDATGetRorPid(*pid, *ror);
+#    if (*ror == "None"){
+#        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+#        *ror = "*epicApi"++"*pid";  
+#        logDebug("No ROR available, so new ROR defined: *ror");
+#    }
 #    writeFile("*commandFile","*pid;*source;*destination;*ror");
-    doReplication(*pid,*source,*destination,*ror,*status);
-}
+#    doReplication(*pid,*source,*destination,*ror,*status);
+#}
 
 #
 # Start a PID creation by writing a .pid.create command file
@@ -628,22 +633,22 @@ triggerReplication(*commandFile,*pid,*source,*destination) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-triggerCreatePID(*commandFile,*pid,*destination,*ror) {
-    logInfo("triggerCreatePID(*commandFile,*pid,*destination,*ror)");
+#triggerCreatePID(*commandFile,*pid,*destination,*ror) {
+#    logInfo("triggerCreatePID(*commandFile,*pid,*destination,*ror)");
 #    writeFile("*commandFile", "create;*pid;*destination;*ror");
-    EUDATGetZoneNameFromPath(*destination, *zoneName);
-    EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
-    logInfo("Remote zone name: *zoneName, connection contact: *zoneConn");
-    remote("*zoneConn", logInfo("Starting remote execution"))
-    {
-         writeLine("serverLog","INFO: inside remote execution");        
-    }
+#    EUDATGetZoneNameFromPath(*destination, *zoneName);
+#    EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
+#    logInfo("Remote zone name: *zoneName, connection contact: *zoneConn");
+#    remote("*zoneConn", logInfo("Starting remote execution"))
+#    {
+#         writeLine("serverLog","INFO: inside remote execution");        
+#    }
 #    EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
 #    getSharedCollection(*destination,*collectionPath);
     #create .pid.update file based on absolute file path
 #    EUDATReplaceSlash(*destination, *filepathslash);
 #    triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
-}
+#}
 
 #
 # Start a PID update. 
@@ -656,10 +661,10 @@ triggerCreatePID(*commandFile,*pid,*destination,*ror) {
 #   *pid            [IN]    PID of the digital object
 #   *new_pid        [IN]    place of the replicated digital object.
 #
-triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
-    logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
-    writeFile("*commandFile", "update;*pid;*new_pid");
-}
+#triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
+#    logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
+#    writeFile("*commandFile", "update;*pid;*new_pid");
+#}
 
 ################################################################################
 #                                                                              #
@@ -678,38 +683,38 @@ triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-processReplicationCommandFile(*cmdPath) {
-    logInfo("processReplication(*cmdPath)");
-
-    readFile(*cmdPath, *out_STRING);    
-
-    #TODO: properly manage status here
-    *status = 0;    
-    *out_ARRAY = split(*out_STRING, "\n");
-    foreach(*out_STRING1 in *out_ARRAY) {
-        *list = split(*out_STRING1, ";");
-        # assign values from array to parameters
-        *ror = "None";
-        *counter=0;
-        foreach (*item_LIST in *list) {
-            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
-            else if ( *counter == 1 ) { *source      = *item_LIST ; }
-            else if ( *counter == 2 ) { *destination = *item_LIST ; }
-            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-            *counter = *counter + 1;    
-        }
-        *list_size = *counter ;
-
-        if ((*list_size==4) || (*list_size==3)){
-            doReplication(*pid,*source,*destination,*ror,*status);
-        }
-        else {
-            logError("ignoring incorrect command: [*out_STRING]");
-            *status = -1;
-        }
-    }
-    updateCommandName(*cmdPath,*status);
-}
+#processReplicationCommandFile(*cmdPath) {
+#    logInfo("processReplication(*cmdPath)");
+#
+#    readFile(*cmdPath, *out_STRING);    
+#
+#    #TODO: properly manage status here
+#    *status = 0;    
+#    *out_ARRAY = split(*out_STRING, "\n");
+#    foreach(*out_STRING1 in *out_ARRAY) {
+#        *list = split(*out_STRING1, ";");
+#        # assign values from array to parameters
+#        *ror = "None";
+#        *counter=0;
+#        foreach (*item_LIST in *list) {
+#            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
+#            else if ( *counter == 1 ) { *source      = *item_LIST ; }
+#            else if ( *counter == 2 ) { *destination = *item_LIST ; }
+#            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+#            *counter = *counter + 1;    
+#        }
+#        *list_size = *counter ;
+#
+#        if ((*list_size==4) || (*list_size==3)){
+#            doReplication(*pid,*source,*destination,*ror,*status);
+#        }
+#       else {
+#            logError("ignoring incorrect command: [*out_STRING]");
+#            *status = -1;
+#        }
+#    }
+#    updateCommandName(*cmdPath,*status);
+#}
 
 #
 # Read a .replicate file
@@ -726,23 +731,23 @@ processReplicationCommandFile(*cmdPath) {
 # Author: Willem Elbers, MPI-TLA
 # Edited: Elena Erastova, RZG
 #
-readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
-    readFile(*cmdPath, *out_STRING);
-    *out_ARRAY = split(*out_STRING, "\n");
-    foreach(*out_STRING1 in *out_ARRAY) {
-        *list = split(*out_STRING1, ";");
-        # assign values from array to parameters
-        *ror = "None";
-        *counter=0;
-        foreach (*item_LIST in *list) {
-            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
-            else if ( *counter == 1 ) { *source      = *item_LIST ; }
-            else if ( *counter == 2 ) { *destination = *item_LIST ; }
-            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-            *counter = *counter + 1;
-        }
-    }
-}
+#readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
+#    readFile(*cmdPath, *out_STRING);
+#    *out_ARRAY = split(*out_STRING, "\n");
+#    foreach(*out_STRING1 in *out_ARRAY) {
+#        *list = split(*out_STRING1, ";");
+#        # assign values from array to parameters
+#        *ror = "None";
+#        *counter=0;
+#        foreach (*item_LIST in *list) {
+#            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
+#            else if ( *counter == 1 ) { *source      = *item_LIST ; }
+#            else if ( *counter == 2 ) { *destination = *item_LIST ; }
+#            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+#            *counter = *counter + 1;
+#        }
+#    }
+#}
 
 #
 # Process a .pid file and perform the appropriate action
@@ -754,48 +759,48 @@ readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
 # Author: Willem Elbers, MPI-TLA
 # Edited: Elena Erastova, RZG
 #
-processPIDCommandFile(*cmdPath) {
-    logInfo("processPID(*cmdPath)");
-    readFile(*cmdPath, *out_STRING);
-    *list = split(*out_STRING, ";");
+#processPIDCommandFile(*cmdPath) {
+#    logInfo("processPID(*cmdPath)");
+#    readFile(*cmdPath, *out_STRING);
+#    *list = split(*out_STRING, ";");
 
     # assign values from array to parameters
-    *ror = "None";
-    *parent = "None";
-    *counter=0;
-    foreach (*item_LIST in *list) {
-        if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
-        else if ( *counter == 1 ) { *parent      = *item_LIST ; }
-        else if ( *counter == 2 ) { *destination = *item_LIST ; }
-        else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-        *counter = *counter + 1;    
-    }
-    *list_size = *counter ;
+#    *ror = "None";
+#    *parent = "None";
+#    *counter=0;
+#    foreach (*item_LIST in *list) {
+#        if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
+#        else if ( *counter == 1 ) { *parent      = *item_LIST ; }
+#        else if ( *counter == 2 ) { *destination = *item_LIST ; }
+#        else if ( *counter == 3 ) { *ror         = *item_LIST ; }
+#        *counter = *counter + 1;    
+#    }
+#    *list_size = *counter ;
 
     # process command/action
-    if ((*list_size==4) || (*list_size==3)){
-        if(*pidAction == "create") {
-            #manage pid in this repository
-            EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
-            getSharedCollection(*destination,*collectionPath);
-            #create .pid.update file based on absolute file path
-            #msiReplaceSlash(*destination,*filepathslash);
-	    EUDATReplaceSlash(*destination, *filepathslash);
-            triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
-        } 
-        else if(*pidAction=="update") {
-            *status = 0;
-            EUDATUpdatePIDWithNewChild(*parent, *destination);
-            updateCommandName(*cmdPath,*status);
-        }
-        else {
-            logError("ignoring incorrect command: [*out_STRING]");
-        }
-    }
-    else {
-        logError("ignoring incorrect list");
-    }
-}
+#    if ((*list_size==4) || (*list_size==3)){
+#        if(*pidAction == "create") {
+#            #manage pid in this repository
+#            EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
+#            getSharedCollection(*destination,*collectionPath);
+#            #create .pid.update file based on absolute file path
+#            #msiReplaceSlash(*destination,*filepathslash);
+#	    EUDATReplaceSlash(*destination, *filepathslash);
+#            triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
+#        } 
+#        else if(*pidAction=="update") {
+#            *status = 0;
+#            EUDATUpdatePIDWithNewChild(*parent, *destination);
+#            updateCommandName(*cmdPath,*status);
+#        }
+#        else {
+#            logError("ignoring incorrect command: [*out_STRING]");
+#        }
+#    }
+#    else {
+#        logError("ignoring incorrect list");
+#    }
+#}
 
 #
 # Start a replication
@@ -809,52 +814,52 @@ processPIDCommandFile(*cmdPath) {
 #
 # Author: Willem Elbers, MPI-TLA
 #
-doReplication(*pid, *source, *destination, *ror, *status) {
-    logInfo("doReplication(*pid, *source, *destination, *ror)");
+#doReplication(*pid, *source, *destination, *ror, *status) {
+#   logInfo("doReplication(*pid, *source, *destination, *ror)");
 
     #make sure the parent collections exist
-    msiSplitPath(*destination, *parent, *child);
-    msiCollCreate(*parent, "1", *collCreateStatus);
+#    msiSplitPath(*destination, *parent, *child);
+#    msiCollCreate(*parent, "1", *collCreateStatus);
 
     #rsync object (make sure to supply "null" if dest resource should be the default one) 
-    msiDataObjRsync(*source, "IRODS_TO_IRODS", "null", *destination, *rsyncStatus);
+#    msiDataObjRsync(*source, "IRODS_TO_IRODS", "null", *destination, *rsyncStatus);
 
-    if(*pid != "null") {
+#    if(*pid != "null") {
         #trigger pid management in destination
-        getSharedCollection(*destination,*collectionPath);
+#        getSharedCollection(*destination,*collectionPath);
         # create .pid.create file and monitor for .pid.update based on absolute file path
         #msiReplaceSlash(*destination,*filepathslash);
-        EUDATReplaceSlash(*destination, *filepathslash);
-        triggerCreatePID("*collectionPath*filepathslash.pid.create", *pid, *destination, *ror);
-        updateMonitor("*collectionPath*filepathslash.pid.update");
-    }
-    else {
-        logDebug("No pid management");
-    }
-
-}
-
+#        EUDATReplaceSlash(*destination, *filepathslash);
+#        triggerCreatePID("*collectionPath*filepathslash.pid.create", *pid, *destination, *ror);
+#        updateMonitor("*collectionPath*filepathslash.pid.update");
+#    }
+#    else {
+#        logDebug("No pid management");
+#    }
 #
-# Monitor the specified pid command file
+#}
+#
+##
+## Monitor the specified pid command file
 #
 # Parameters:
 #   *file   [IN]    start a monitor on the specified iRODS file
 #
 # Author: Willem Elbers, MPI-TLA
 #
-updateMonitor(*file) {
-    logInfo("updateMonitor(*file)");
-    delay("<PLUSET>1m</PLUSET><EF>10m REPEAT UNTIL SUCCESS OR 12 TIMES</EF>") {
-        if(errorcode(msiObjStat(*file,*out)) >= 0) {
-            logInfo("*file exists");
-            processPIDCommandFile(*file);
-        } else {
-            logInfo("*file does not exist yet");
+#updateMonitor(*file) {
+#    logInfo("updateMonitor(*file)");
+#    delay("<PLUSET>1m</PLUSET><EF>10m REPEAT UNTIL SUCCESS OR 12 TIMES</EF>") {
+#        if(errorcode(msiObjStat(*file,*out)) >= 0) {
+#            logInfo("*file exists");
+#            processPIDCommandFile(*file);
+#        } else {
+#            logInfo("*file does not exist yet");
             # save *source of failed_transfered data object into fail_log 
-            EUDATProcessErrorUpdatePID(*file);
-        }
-    }
-}
+#            EUDATProcessErrorUpdatePID(*file);
+#        }
+#    }
+#}
 
 ################################################################################
 #                                                                              #

@@ -278,12 +278,24 @@ EUDATiPIDcreate(*path, *PID) {
 EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
     logInfo("EUDATiFieldVALUEretrieve -> looking for *FNAME of *path");
     *status0 = bool("false");
-    msiSplitPath(*path, *coll, *name);
-    *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
-    foreach(*c in *d) {
-        msiGetValByKey(*c, "META_DATA_ATTR_VALUE", *FVALUE);
-        logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
-        *status0 = bool("true");
+    msiGetObjType(*path,*type);
+    if (*type == '-c')  {
+        msiCollRsync(*source,*destination,"null","IRODS_TO_IRODS",*rsyncStatus);
+        *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
+        foreach(*c in *d) {
+            msiGetValByKey(*c, "META_COLL_ATTR_VALUE", *FVALUE);
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            *status0 = bool("true");
+        }
+    }
+    else {
+        msiSplitPath(*path, *coll, *name);
+        *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
+        foreach(*c in *d) {
+            msiGetValByKey(*c, "META_DATA_ATTR_VALUE", *FVALUE);
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            *status0 = bool("true");
+        }
     }
     *status0;
 }
@@ -305,7 +317,11 @@ EUDATePIDcreate(*path, *extraType, *PID) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
     EUDATiCHECKSUMget(*path, *checksum);
-    *execCmd="*credStoreType *credStorePath create *serverID"++"*path --checksum *checksum";
+    *extChksum="";
+    if (*checksum != "") {
+        *extChksum=" --checksum *checksum";
+    }
+    *execCmd="*credStoreType *credStorePath create *serverID"++"*path"++"*extChksum";
     if (*extraType != "empty") {
          logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
          *execCmd="*execCmd"++" --extratype \"*extraType\"";
