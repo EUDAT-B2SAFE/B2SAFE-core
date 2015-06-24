@@ -360,3 +360,32 @@ EUDATRegDataRepl(*source, *destination) {
         }
     }
 }
+
+#-----------------------------------------------------------------------------
+# Create PIDs for all objects in the collection recursively
+# ROR is assumed to be "None"
+#
+# Parameters:
+# *coll_path    [IN] path of the collection
+#
+# Author: Elena Erastova, RZG
+#-----------------------------------------------------------------------------
+
+EUDATPidsForColl(*coll_path) {
+
+    logInfo("[EUDATPidsForColl] Creating PIDs for collection *coll_path");
+
+    # Verify that source input path is a collection
+    msiGetObjType(*coll_path, *type);
+    if (*type != '-c') {
+        logError("Input path *coll_path is not a collection");
+        fail;
+    }
+    
+    # Create PIDs for all data objects in collection recursively
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*coll_path%') {
+        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+        EUDATCreatePID("None", *objPath, "None", bool("true"), *newPID);
+    }
+}
+
