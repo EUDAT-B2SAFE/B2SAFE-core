@@ -22,7 +22,7 @@
 # EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
-# EUDATePIDcreate(*path, *extraType, *PID)
+# EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum)
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
@@ -78,7 +78,18 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
         }
 
         # create PID
-        EUDATePIDcreate(*path, *extraType, *newPID);
+        
+        # Verify the type of the input path (collection / data object)
+        msiGetObjType(*path, *type);
+        
+        # If it is a collection - do not compute checksum
+        if (*type == '-c') {
+            EUDATePIDcreate(*path, *extraType, *newPID, bool("false"));
+        }
+        # If it is a data object - compute checksum and add it to PID
+        else if (*type == '-d') {
+            EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
+        }
 
         if (*iCATCache == bool("true")) {
             # Add PID into iCAT
@@ -237,7 +248,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
             # add extraType parameters
             *extraType = "empty";
 
-            EUDATePIDcreate(*path, *extraType, *newPID);
+            EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
             if (*iCATCache == bool("true")) {
                 # Add PID into iCAT
                 EUDATiPIDcreate(*path, *newPID);
@@ -312,15 +323,24 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 # Author: Giacomo Mariani, CINECA
 # Edited by:  Robert Verkerk, SURFsara
 #
-EUDATePIDcreate(*path, *extraType, *PID) {
+EUDATePIDcreate(*path, *extraType, *PID, *ifcheksum) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
-    logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-    EUDATiCHECKSUMget(*path, *checksum);
-    *extChksum="";
-    if (*checksum != "") {
-        *extChksum=" --checksum *checksum";
+    
+    if (*ifcheksum == bool("true") ) {
+        logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
+        EUDATiCHECKSUMget(*path, *checksum);
+        *extChksum="";
+        if (*checksum != "") {
+            *extChksum=" --checksum *checksum";
+        }
+        *execCmd="*credStoreType *credStorePath create *serverID"++"*path"++"*extChksum";
     }
-    *execCmd="*credStoreType *credStorePath create *serverID"++"*path"++"*extChksum";
+    
+    else {
+        logInfo("EUDATePIDcreate -> Add PID withOUT CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
+        *execCmd="*credStoreType *credStorePath create *serverID"++"*path"
+    }
+    
     if (*extraType != "empty") {
          logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
          *execCmd="*execCmd"++" --extratype \"*extraType\"";
@@ -518,4 +538,3 @@ EUDATiRORupdate(*source, *pid) {
         logInfo("EUDATiRORupdate -> saved ROR *ror for PID *pid ");
     }
 }
-

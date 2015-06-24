@@ -362,28 +362,34 @@ EUDATRegDataRepl(*source, *destination) {
 }
 
 #-----------------------------------------------------------------------------
-# Create PIDs for all objects in the collection recursively
+# Create PIDs for all collections and objects in the collection recursively
 # ROR is assumed to be "None"
 #
 # Parameters:
-# *coll_path    [IN] path of the collection
+# *collPath    [IN] path of the collection
 #
 # Author: Elena Erastova, RZG
 #-----------------------------------------------------------------------------
 
-EUDATPidsForColl(*coll_path) {
+EUDATPidsForColl(*collPath) {
 
-    logInfo("[EUDATPidsForColl] Creating PIDs for collection *coll_path");
+    logInfo("[EUDATPidsForColl] Creating PIDs for collection *collPath");
 
     # Verify that source input path is a collection
-    msiGetObjType(*coll_path, *type);
+    msiGetObjType(*collPath, *type);
     if (*type != '-c') {
-        logError("Input path *coll_path is not a collection");
+        logError("Input path *collPath is not a collection");
         fail;
     }
     
+    # Create PIDs for all subcollections in collection recursively
+    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
+        *subCollPath = *RowC.COLL_NAME;
+        EUDATCreatePID("None", *subCollPath, "None", bool("true"), *newPID);
+    }
+    
     # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*coll_path%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         EUDATCreatePID("None", *objPath, "None", bool("true"), *newPID);
     }
