@@ -15,7 +15,7 @@
 # EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file)
 # EUDATReplication(*source, *destination, *registered)
 # EUDATTransferUsingFailLog(*buffer_length)
-# EUDATCheckReplicas(*source, *destination, *regDataRepl)
+# EUDATCheckReplicas(*source, *destination, *registered)
 #---- collection management ---
 #TODO:update EUDATIntegrityCheck(*srcColl,*destColl)
 #EUDATRegDataRepl(*source, *destination)
@@ -193,12 +193,12 @@ EUDATTransferUsingFailLog(*buffer_length) {
 # Parameters:
 #   *source         [IN]     source of the file
 #   *destination    [IN]     destination of the file
-#   *regDataRepl    [IN]     bool, "true": EUDATRegDataRepl, using remote replication
-#                                  "false": triggerReplication, using control files
+#   *registered     [IN]     bool, "true": replication using remote replication
+#                                  "false": replication using control files
 #
 # Author: Elena Erastova, RZG
 #
-EUDATCheckReplicas(*source, *destination, *regDataRepl) {
+EUDATCheckReplicas(*source, *destination, *registered) {
     logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
     if (EUDATCatchErrorChecksum(*source, *destination) == bool("false") || 
         EUDATCatchErrorSize(*source, *destination) == bool("false")) 
@@ -206,15 +206,7 @@ EUDATCheckReplicas(*source, *destination, *regDataRepl) {
         EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
         EUDATiRORupdate(*source, *pid);
         logInfo("replication from *source to *destination");
-	    if (*regDataRepl == bool("true") ) {
-	        EUDATRegDataRepl(*source, *destination);
-        }
-        else {
-            getSharedCollection(*source,*collectionPath);
-            #msiReplaceSlash(*destination,*filepathslash);
-	        EUDATReplaceSlash(*destination, *filepathslash);
-            triggerReplication("*collectionPath*filepathslash.replicate",*pid,*source,*destination);
-        }
+        EUDATReplication(*source, *destination, *registered);
     }
 }
 
