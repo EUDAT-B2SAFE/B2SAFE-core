@@ -97,7 +97,7 @@ EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
 #
 EUDATReplication(*source, *destination, *registered) {
 
-    logInfo("[EUDATTransferSingleFile] transfering *source to *destination"); 
+    logInfo("[EUDATReplication] transfering *source to *destination"); 
     *status_transfer_success = bool("true");
 
     # Catch Error CAT_NO_ACCESS_PERMISSION before replication
@@ -395,3 +395,55 @@ EUDATPidsForColl(*collPath) {
     }
 }
 
+#-----------------------------------------------------------------------------
+# Compare cheksums of data objects in the source and destination 
+#  collection recursively
+#
+# Parameters:
+# *sCollPath    [IN] path of the source collection
+# *dCollPath    [IN] path of the destination collection
+# *result      [OUT] bool: true: checksums of the DOs in the collections match
+#                          false: checksums of the DOS in the collections
+#                                 do not match
+#
+# Author: Elena Erastova, RZG
+#-----------------------------------------------------------------------------
+
+EUDATChksColl(*sCollPath, *dCollPath, *result) {
+
+    logInfo("[EUDATChksColl] Compare cheksums of files in *sCollPath and *dCollPath");
+
+    # Verify that source input path is a collection
+    msiGetObjType(*sCollPath, *type);
+    if (*type != '-c') {
+        logError("Input path *collPath is not a collection");
+        fail;
+    }
+    # Verify that destination input path is a collection
+    msiGetObjType(*dCollPath, *type);
+    if (*type != '-c') {
+        logError("Input path *dCollPath is not a collection");
+        fail;
+    }
+
+    # Get the length of the source collection string
+    msiStrlen(*sCollPath,*pathLength);
+
+    # For each DO in the sorce collection recursively compare checksum amd size
+    # with the DO in the destination collection.
+    # If they do not match, write an error in the b2safe log
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*sCollPath%') {
+        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+        msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+        *destination = "*dCollPath/*subCollection";
+        if (EUDATCatchErrorChecksum(*objPath, *destination) == bool("false") || 
+           EUDATCatchErrorSize(*objPath, *destination) == bool("false")) {
+            logError("*objPath and *destination checksum mismatch");
+            status_transfer_success = bool("false");
+            EUDATUpdateLogging(*status_transfer_success,*objPath,*destination,
+                               "replication failure - checksum mismatch");
+            *result = bool("false");
+        }
+        else {*result = bool("true");}
+    }
+}
