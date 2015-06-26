@@ -9,7 +9,7 @@
 # EUDATCatchErrorChecksum(*source,*destination)
 # EUDATCatchErrorSize(*source,*destination)
 # EUDATProcessErrorUpdatePID(*updfile)
-# EUDATCatchErrorDataOwner(*path,*status)
+# EUDATCatchErrorDataOwner(*path,*msg)
 
 #
 # Check if 2 replicas have the same checksum
@@ -25,6 +25,7 @@ EUDATCatchErrorChecksum(*source,*destination){
             "Source = *source, destination = *destination");
 
     *b = bool("true");
+
     *checksum0 = "";
     msiSplitPath(*source,*parentS,*childS);
     msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
@@ -167,24 +168,61 @@ EUDATProcessErrorUpdatePID(*updfile) {
 }
 
 #
-# Check if a user is or is not owner of the data object
+# Check if a user is or is not owner of the data object/collection
 # (Reference: https://www.irods.org/index.php/iRODS_Error_Codes or /iRODS/lib/core/include/rodsErrorTable.h)
 #
 # Parameters:
 #	*path			[IN] path source of data object
-#	*status			[OUT] status of data object ('true' = DATA OWNER or false = NO ACCESS PERMISSION)
+#	*msg			[OUT] response message
 #
-# Author: Long Phan, JSC
+# Author: Long Phan, JSC;
+# Author: Claudio Cacciari, Cineca;
 #
-EUDATCatchErrorDataOwner(*path,*status){
-    *status = bool("true");
-		
-    # CAT_NO_ACCESS_PERMISSION	    
-    msiCheckAccess(*path,"own",*Result);								    									    
-    if (*Result == 0) {
-        logInfo("++++++++++++++++++ WARNING: Error CAT_NO_ACCESS_PERMISSION ");
-    	*status = bool("false");
-    } else {
-    	logInfo("Identity of user is confirmed! ");
-    }    	
+EUDATCatchErrorDataOwner(*path,*msg) {
+    *msg = "ownership check passed";
+
+    msiGetObjType(*path ,*type);
+    if (*type == '-c') {
+        # check the ownership of the root collection
+        logDebug("checking the ownership of the collection *path");
+        msiCheckAccess(*path,"own",*result);
+        if (*result != 1) {
+            *msg = "ownership check failed on path: *path";
+            failmsg(-1, *msg);
+        }
+        # check the ownership of the first level data objects
+        logDebug("checking the ownership of the first level objects under path *path");
+        foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*path') {
+            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+            msiCheckAccess(*objPath,"own",*result);
+            if (*result != 1) {
+                *msg = "ownership check failed on path: *objPath";
+                failmsg(-1, *msg);
+            }
+        }
+        # check the ownership of the sub-collections and their related data objects
+        logDebug("checking the ownership of the collections under the path *path");
+        foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path/%') {
+            msiCheckAccess(*Row.COLL_NAME,"own",*result);
+            if (*result != 1) {
+                *msg = "ownership check failed on path: *Row.COLL_NAME";
+                failmsg(-1, *msg);
+            }
+            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+            msiCheckAccess(*objPath,"own",*result);
+            logDebug("the object *objPath has result: *result");
+            if (*result != 1) {
+                *msg = "ownership check failed on path: *objPath";
+                failmsg(-1, *msg);
+            }
+        }
+    }
+    else if (*type == '-d') {
+        logDebug("checking the ownership of the object *path");
+        msiCheckAccess(*path,"own",*result);
+        if (*result != 1) {
+            *msg = "ownership check failed on path: *path";
+            failmsg(-1, *msg);
+        }
+    }
 }

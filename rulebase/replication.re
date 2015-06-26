@@ -12,13 +12,14 @@
 #
 # EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file, 
 #               *target_transfered_file, *cause)
-# EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file)
+# EUDATCheckIntegrity(*source,*destination)
 # EUDATReplication(*source, *destination, *registered)
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATCheckReplicas(*source, *destination, *registered)
 #---- collection management ---
 #TODO:update EUDATIntegrityCheck(*srcColl,*destColl)
 #EUDATRegDataRepl(*source, *destination)
+#EUDATCheckIntegrityDO(*source,*destination)
 
 #
 # Update the logging files specific for EUDAT B2SAFE
@@ -32,14 +33,12 @@
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
-EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file, 
-              *target_transfered_file, *cause) {
+EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 
     # Update Logging Statistical File
     *level = "INFO";
-    *message = "*path_of_transfered_file::*target_transfered_file::" ++
-               "*status_transfer_success::*cause";
-    if (*status_transfer_success == bool("false")) {
+    *message = "*source::*destination::" ++ "*status_transfer_success::*cause";
+    if (!*status_transfer_success) {
         EUDATQueue("push", *message, 0);
         *level = "ERROR";
     } 
@@ -50,38 +49,32 @@ EUDATUpdateLogging(*status_transfer_success, *path_of_transfered_file,
 # Checks differences about checksum and size between two files
 # 
 # Parameters:
-#    *path_of_transfered_file    [IN] path of source file in iRODS
-#    *target_of_transfered_file    [IN] path of target file in iRODS
+#    *source         [IN] path of source file in iRODS
+#    *destination    [IN] path of target file in iRODS
 #
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
-EUDATCheckError(*path_of_transfered_file,*target_of_transfered_file) {
+EUDATCheckIntegrity(*source,*destination) {
 
-    *b = bool("true");    
     *status_transfer_success = bool("true");
-    *cause = "";
-    *err = errorcode(msiObjStat(*target_of_transfered_file, *objStat));
-    if (*err < 0) {
-        *cause = "missing replicated object";
-        *status_transfer_success = bool("false");
-    } else if (EUDATCatchErrorChecksum(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
-        *cause = "different checksum";
-        *status_transfer_success = bool("false");
-    } else if (EUDATCatchErrorSize(*path_of_transfered_file,*target_of_transfered_file) == bool("false")) {
-        *cause = "different size";
-    *status_transfer_success = bool("false");
-    } 
-    if (*status_transfer_success == bool("false")) {
-        logInfo("replication from *path_of_transfered_file to *target_of_transfered_file failed: *cause");
-        *b = bool("false");
+
+    msiGetObjType(*source,*source_type);
+    if (*source_type == '-c') {
+        logDebug("source path *source is a collection");
+        *status_transfer_success = EUDATChksColl(*source, *destination);
+    } else if (*source_type == '-d') {
+        logDebug("source path *source is a data object");
+        *status_transfer_success = EUDATCheckIntegrityDO(*source,*destination);
+    }
+  
+    if (!*status_transfer_success) {
+        logError("[EUDATCheckIntegrity] replication from *source to *destination failed");
     } else {
-        logInfo("replication from *path_of_transfered_file to *target_of_transfered_file succeeded");
+        logInfo("[EUDATCheckIntegrity] replication from *source to *destination succeeded");
     }
 
-    EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,
-                       *target_of_transfered_file, *cause);
-    *b;
+    *status_transfer_success;
 }
 
 #
@@ -101,9 +94,16 @@ EUDATReplication(*source, *destination, *registered) {
     *status_transfer_success = bool("true");
 
     # Catch Error CAT_NO_ACCESS_PERMISSION before replication
-    EUDATCatchErrorDataOwner(*source,*status_identity);
-            
-    if (*status_identity) {
+    if (errormsg(EUDATCatchErrorDataOwner(*source,*msg), *errmsg) < 0) {
+
+        logDebug("*errmsg");
+        # Update fail_log                
+        *status_transfer_success = bool("false");
+        EUDATUpdateLogging(*status_transfer_success,*source,*destination,"no access permission");
+
+    } else {
+
+        logInfo("[EUDATReplication] *msg");
 
         if (*registered) {
             logDebug("replicating registered data");
@@ -124,16 +124,10 @@ EUDATReplication(*source, *destination, *registered) {
                 msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
             }
             if (*rsyncStatus != 0) {
-                logDebug("Perform the last checksum and checksize of transfered objects");
-                EUDATCheckError(*source,*destination)
+                logDebug("perform a further verification about checksum and size");
+                EUDATCheckIntegrity(*source,*destination);
             }
         }
-
-    } else {
-        logDebug("Action is canceled. Error is caught in function EUDATCatchErrorDataOwner"); 
-        # Update fail_log                
-        *status_transfer_success = bool("false");
-        EUDATUpdateLogging(*status_transfer_success,*source,*destination,"no access permission");
     }   
          
 }
@@ -395,22 +389,27 @@ EUDATPidsForColl(*collPath) {
     }
 }
 
+
 #-----------------------------------------------------------------------------
-# Compare cheksums of data objects in the source and destination 
+# Compare cheksums of data objects in the source and destination
 #  collection recursively
 #
 # Parameters:
 # *sCollPath    [IN] path of the source collection
 # *dCollPath    [IN] path of the destination collection
-# *result      [OUT] bool: true: checksums of the DOs in the collections match
-#                          false: checksums of the DOS in the collections
-#                                 do not match
+# 
+# return a boolean value: true: checksums of the DOs in the collections match
+#                         false: checksums of the DOS in the collections
+#                                do not match
 #
 # Author: Elena Erastova, RZG
+# Author: Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
+#
 
-EUDATChksColl(*sCollPath, *dCollPath, *result) {
+EUDATChksColl(*sCollPath, *dCollPath) {
 
+    *result = bool("true");
     logInfo("[EUDATChksColl] Compare cheksums of files in *sCollPath and *dCollPath");
 
     # Verify that source input path is a collection
@@ -425,10 +424,8 @@ EUDATChksColl(*sCollPath, *dCollPath, *result) {
         logError("Input path *dCollPath is not a collection");
         fail;
     }
-
     # Get the length of the source collection string
     msiStrlen(*sCollPath,*pathLength);
-
     # For each DO in the sorce collection recursively compare checksum amd size
     # with the DO in the destination collection.
     # If they do not match, write an error in the b2safe log
@@ -436,14 +433,42 @@ EUDATChksColl(*sCollPath, *dCollPath, *result) {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
         *destination = "*dCollPath/*subCollection";
-        if (EUDATCatchErrorChecksum(*objPath, *destination) == bool("false") || 
-           EUDATCatchErrorSize(*objPath, *destination) == bool("false")) {
-            logError("*objPath and *destination checksum mismatch");
-            status_transfer_success = bool("false");
-            EUDATUpdateLogging(*status_transfer_success,*objPath,*destination,
-                               "replication failure - checksum mismatch");
-            *result = bool("false");
-        }
-        else {*result = bool("true");}
+        *result = EUDATCheckIntegrityDO(*objPath,*destination);
     }
+
+    *result;
 }
+
+#
+# Checks differences about checksum and size between two Data Objects
+# and log the result to the B2SAFE logging system
+# 
+# Parameters:
+#    *source         [IN] path of source file in iRODS
+#    *destination    [IN] path of target file in iRODS
+#
+# Author: Claudio Cacciari, Cineca
+#
+EUDATCheckIntegrityDO(*source,*destination) {
+        
+    *status = bool("true");
+    *cause = "";
+
+    *err = errorcode(msiObjStat(*destination, *objStat));
+    if (*err < 0) {
+        *cause = "missing replicated object";
+        *status = bool("false");
+    } else if (!EUDATCatchErrorSize(*source,*destination)) {
+        *cause = "different size";
+        *status = bool("false");
+    } else if (!EUDATCatchErrorChecksum(*source,*destination)) {
+        *cause = "different checksum";
+        *status = bool("false");
+    }
+    EUDATUpdateLogging(*status, *source, *destination, *cause);
+
+    *status;
+}
+
+
+
