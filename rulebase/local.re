@@ -50,6 +50,17 @@ getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf";
 }
 
+# Provides version of the B2SAFE
+# 
+# Arguments:
+# *version  [OUT] the B2SAFE version.
+# 
+# Author: Claudio Cacciari (Cineca)
+# 
+getB2SAFEVersion(*version) {
+    *version="3.0";
+}
+
 #
 # This function is used to set up some parameters for the site in case you are
 # going to use the EUDAT repository packages procedure to ingest data.

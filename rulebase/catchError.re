@@ -1,6 +1,6 @@
 ################################################################################
 #                                                                              #
-# EUDAT error management policies                                              #
+# EUDAT error management rule set                                              #
 #                                                                              #
 ################################################################################
 
@@ -8,7 +8,6 @@
 # 
 # EUDATCatchErrorChecksum(*source,*destination)
 # EUDATCatchErrorSize(*source,*destination)
-# EUDATProcessErrorUpdatePID(*updfile)
 # EUDATCatchErrorDataOwner(*path,*msg)
 
 #
@@ -90,83 +89,6 @@ EUDATCatchErrorSize(*source,*destination) {
     
 }
 
-
-#
-# Process error update PID at Parent_PID. 
-# Error update PID will be processed during replication_workflow, called by updateMonitor.
-# Save path of transferred data object into fail_log
-# ----> add line "processErrorUpdatePID(*file) inside function updateMonitor in eudat.re below logInfo("*file does not exist yet"); to save path of wrong_updated_DataObject 
-#
-# Author: Long Phan, JSC; Elena Erastova, RZG
-#
-EUDATProcessErrorUpdatePID(*updfile) {
-		
-    *status_transfer_success = bool("false");
-    
-    # Compose a name of a .replicate.time.sucess file in the local zone
-    *list3 = split(*updfile, "/");
-    *updfile1 = elem(*list3,2);
-    *list = split(*updfile1, ".");
-    *counter = 0;
-    foreach (*item_LIST in *list) {
-        *counter = *counter + 1;
-    }
-    *size = *counter;
-    *counter = 0;
-    *repfile = elem(*list,0);
-    foreach (*item_LIST in *list) {
-        if ((*counter != 0) && (*counter != (*size - 1)) && (*counter != (*size - 2))) {
-            *repfile = "*repfile.*item_LIST";
-        }
-        *counter = *counter + 1;
-    }
-    *repfile=*repfile++".replicate";
-    *list1 = split(*updfile, "_");
-    *l2 = elem(*list1,0);
-    *list2 = split(*l2, "/");
-    *remoteZoneName = "/"++elem(*list2,0)++"/replicate";
-
-    # Check if the remote zone is available
-    if (errorcode(msiObjStat(*remoteZoneName,*out)) != 0) {
-            logDebug("[EUDATProcessErrorUpdatePID] remote zone *remoteZoneName is not available");
-    }
-    else {
-        # Look for a .replicate.time.sucess file in the local zone
-        *coll = "/"++$rodsZoneProxy++"/replicate";
-        msiExecStrCondQuery("SELECT DATA_NAME WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%'" ,*BS);
-        foreach ( *BS ) {
-            msiGetValByKey(*BS,"DATA_NAME", *dataName);
-        }
-        *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile%success';
-        foreach(*c in *d) {
-            msiGetValByKey(*c,"DATA_NAME",*num);
-        }
-
-        if(*num == "0") {
-            *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME like '*repfile';
-            foreach(*c in *d) {
-                msiGetValByKey(*c,"DATA_NAME",*num);
-            }
-            if(*num == "0") {
-                logDebug("[EUDATProcessErrorUpdatePID] replication went wrong, no .replicate file exists");
-            }
-            else if(*num == "1") {
-                *cause = "replication went wrong but file *dataName exists";
-                readReplicationCommandFile(*coll++"/"++*dataName, *pid,*path_of_transfered_file, 
-                                           *target_transfered_file, *ror);
-                EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
-            }
-        }
-        else if(*num == "1") {
-            *cause = "replication went ok: file *dataName exists but *updfile does not exist";
-            *openFile = *coll++"/"++*dataName;
-            readReplicationCommandFile(*openFile,*pid,*path_of_transfered_file,*target_transfered_file,*ror);
-            *status_transfer_success = bool("true");
-            EUDATUpdateLogging(*status_transfer_success,*path_of_transfered_file,*target_transfered_file,*cause);
-        }
-    }
-}
-
 #
 # Check if a user is or is not owner of the data object/collection
 # (Reference: https://www.irods.org/index.php/iRODS_Error_Codes or /iRODS/lib/core/include/rodsErrorTable.h)
@@ -177,7 +99,7 @@ EUDATProcessErrorUpdatePID(*updfile) {
 #
 # Author: Long Phan, JSC;
 # Author: Claudio Cacciari, Cineca;
-#
+#----------------------------------------------------
 EUDATCatchErrorDataOwner(*path,*msg) {
     *msg = "ownership check passed";
 
@@ -190,23 +112,15 @@ EUDATCatchErrorDataOwner(*path,*msg) {
             *msg = "ownership check failed on path: *path";
             failmsg(-1, *msg);
         }
-        # check the ownership of the first level data objects
-        logDebug("checking the ownership of the first level objects under path *path");
-        foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*path') {
-            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-            msiCheckAccess(*objPath,"own",*result);
-            if (*result != 1) {
-                *msg = "ownership check failed on path: *objPath";
-                failmsg(-1, *msg);
-            }
-        }
         # check the ownership of the sub-collections and their related data objects
         logDebug("checking the ownership of the collections under the path *path");
-        foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*path/%') {
-            msiCheckAccess(*Row.COLL_NAME,"own",*result);
-            if (*result != 1) {
-                *msg = "ownership check failed on path: *Row.COLL_NAME";
-                failmsg(-1, *msg);
+	foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*path' || like '*path/%') {
+            if (*Row.COLL_NAME != *path) {
+                msiCheckAccess(*Row.COLL_NAME,"own",*result);
+                if (*result != 1) {
+                    *msg = "ownership check failed on path: *Row.COLL_NAME";
+                    failmsg(-1, *msg);
+                }
             }
             *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
             msiCheckAccess(*objPath,"own",*result);

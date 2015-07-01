@@ -1,6 +1,6 @@
 ################################################################################
 #                                                                              #
-# EUDAT Safe-Replication and PID management policies                           #
+# EUDAT Safe-Replication and PID management rule set                           #
 #                                                                              #
 ################################################################################
 
@@ -12,11 +12,6 @@
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
 
-#TODO:delete getSharedCollection(*zonePath, *collectionPath)
-
-#TODO:delete?  writeFile(*file, *contents)
-#TODO:delete?  readFile(*file, *contents)
-#TODO:delete updateCommandName(*cmdPath, *status)
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
@@ -35,16 +30,6 @@
 # EUDATModifyAVU(*Path, *Key, *Value)
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # getCollectionName(*path_of_collection,*Collection_Name)
-#---- command file triggers ---
-#TODO:delete triggerReplication(*commandFile,*pid,*source,*destination)
-#TODO:delete triggerCreatePID(*commandFile,*pid,*destination,*ror)
-#TODO:delete triggerUpdateParentPID(*commandFile,*pid,*new_pid)
-#---- process command file ---
-#TODO:delete processReplicationCommandFile(*cmdPath)
-#TODO:delete readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror)
-#TODO:delete processPIDCommandFile(*cmdPath)
-#TODO:delete doReplication(*pid, *source, *destination, *ror, *status)
-#TODO:delete updateMonitor(*file)
 #---- data staging ---
 # EUDATiDSSfileWrite(*DSSfile) # DEPRECATED
 #---- repository packages ---
@@ -158,78 +143,6 @@ EUDATQueue(*action, *message, *number) {
 }
 
 #
-# Return the absolute path to the iRODS collection where all command files are stored.
-#   typically "<zone>/replicate". Make sure all users and remote users have write permissions here.
-#
-# Parameters:
-#   *zonePath           [IN]    a iRODS path name including the zone
-#   *collectionPath     [OUT]   the iRODS absolute path to the collection used to store command files
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#getSharedCollection(*zonePath, *collectionPath) {
-    #msiGetZoneNameFromPath(*zonePath, *zoneName);
-#    EUDATGetZoneNameFromPath(*zonePath, *zoneName)
-#    *collectionPath = "/*zoneName/replicate/";
-#}
-
-#
-# Write a command file
-#
-# Parameters:
-#   *file       [IN]    iRODS location of the file to write
-#   *contents   [IN]    the command contents
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#writeFile(*file, *contents) {
-#    *err = errorcode(msiObjStat(*file, *objStat));
-#    if (*err >= 0) {
-#        msiDataObjUnlink("objPath=*file++++replNum=0++++forceFlag=", *status);
-#    }
-#    msiDataObjCreate("*file", "forceFlag=", *filePointer);
-#    logDebug("[writeFile] Created object: *file");
-#    msiDataObjWrite(*filePointer, "*contents", *bytesWritten);
-#    msiDataObjClose(*filePointer, *outStatus);
-#}
-
-#
-# Read a command file
-#
-# Parameters:
-#   *file       [IN]    iRODS location of the file to read
-#   *contents   [OUT]   the command contents
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#readFile(*file, *contents) {
-#    msiDataObjOpen("objPath=*file++++replNum=0++++openFlags=O_RDONLY",*S_FD);
-#    msiDataObjRead(*S_FD,"1024",*R_BUF);
-#    #msiDataObjRead(*S_FD,null,*R_BUF);
-#    msiBytesBufToStr(*R_BUF, *contents);
-#    msiDataObjClose(*S_FD,*closeStatus);
-#}
-
-#
-# Rename a command file.
-# Appends the current timestamp and a ".success" or ."failed" identifier 
-#
-# Parameters:
-#   *cmdPath    [IN]    the command file to rename
-#   *status     [OUT]   status, 0 = ok, <0 = error
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#updateCommandName(*cmdPath, *status) {
-#    msiGetFormattedSystemTime(*ftime,"human","%d%02d%02dT%02d%02d%02d");
-#    if(*status == 0) {
-#        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.success","0",*renameStatus);
-#    } else {
-#        msiDataObjRename(*cmdPath,"*cmdPath.*ftime.failed","0",*renameStatus);
-#    }
-#}
-
-#
 # Logging policies
 #
 
@@ -247,10 +160,6 @@ logDebug(*msg) {
 logError(*msg) {
     logWithLevel("error", *msg);
 }
-
-#logWithLevel(*level, *msg) {
-#    msiWriteToLog(*level,"*msg");
-#}
 
 logWithLevel(*level, *msg) {
     on (*level == "info") { writeLine("serverLog","INFO: *msg");}
@@ -293,8 +202,7 @@ EUDATGetZoneNameFromPath(*path, *out) {
 #   *conn          [OUT]   the connection details related to the input iRODS Zone (hostname:port)
 #                       
 # Author: Claudio Cacciari, Cineca
-#
-#
+#----------------------------------------------------------
 EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 
     *conn = ""
@@ -595,274 +503,6 @@ getCollectionName(*path_of_collection,*Collection_Name){
 
 ################################################################################
 #                                                                              #
-# Command file triggers                                                        #
-#                                                                              #
-################################################################################
-
-#
-# Start a replication by writing a .replicate command file
-#
-# Parameters:
-#   *commandFile    [IN]    the absolute filename to store the command in
-#   *pid            [IN]    pid of the digital object
-#   *source         [IN]    source path of the object to replicate
-#   *destination    [IN]    destination path of the object to replicate
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#triggerReplication(*commandFile,*pid,*source,*destination) {
-#    logInfo("startReplication(*commandFile,*pid,*source,*destination)");
-#    EUDATGetRorPid(*pid, *ror);
-#    if (*ror == "None"){
-#        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-#        *ror = "*epicApi"++"*pid";  
-#        logDebug("No ROR available, so new ROR defined: *ror");
-#    }
-#    writeFile("*commandFile","*pid;*source;*destination;*ror");
-#    doReplication(*pid,*source,*destination,*ror,*status);
-#}
-
-#
-# Start a PID creation by writing a .pid.create command file
-#
-# Parameters:
-#   *commandFile    [IN]    the absolute filename to store the command in
-#   *pid            [IN]    PID of the digital object
-#   *destination    [IN]    destination path of the object to replicate
-#   *ror            [IN]    ROR of the original digital object
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#triggerCreatePID(*commandFile,*pid,*destination,*ror) {
-#    logInfo("triggerCreatePID(*commandFile,*pid,*destination,*ror)");
-#    writeFile("*commandFile", "create;*pid;*destination;*ror");
-#    EUDATGetZoneNameFromPath(*destination, *zoneName);
-#    EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
-#    logInfo("Remote zone name: *zoneName, connection contact: *zoneConn");
-#    remote("*zoneConn", logInfo("Starting remote execution"))
-#    {
-#         writeLine("serverLog","INFO: inside remote execution");        
-#    }
-#    EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
-#    getSharedCollection(*destination,*collectionPath);
-    #create .pid.update file based on absolute file path
-#    EUDATReplaceSlash(*destination, *filepathslash);
-#    triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
-#}
-
-#
-# Start a PID update. 
-# The PID is that of the parent of the current replicated object.
-#
-# Author: Willem Elbers, MPI-TLA
-#
-# Parameters:
-#   *commandFile    [IN]    the absolute filename to store the command in
-#   *pid            [IN]    PID of the digital object
-#   *new_pid        [IN]    place of the replicated digital object.
-#
-#triggerUpdateParentPID(*commandFile,*pid,*new_pid) {
-#    logInfo("triggerUpdateParentPID(*commandFile,*pid,*new_pid)");
-#    writeFile("*commandFile", "update;*pid;*new_pid");
-#}
-
-################################################################################
-#                                                                              #
-# Process command files                                                        #
-#                                                                              #
-################################################################################
-
-#
-# Process a .replicate file and perform the replication
-# format = "command1,command2,command2,..."
-#
-# command format = "source_pid;source_path;destination_path"
-#
-# Parameters:
-#   *cmdPath    [IN]    the path to the .replicate file
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#processReplicationCommandFile(*cmdPath) {
-#    logInfo("processReplication(*cmdPath)");
-#
-#    readFile(*cmdPath, *out_STRING);    
-#
-#    #TODO: properly manage status here
-#    *status = 0;    
-#    *out_ARRAY = split(*out_STRING, "\n");
-#    foreach(*out_STRING1 in *out_ARRAY) {
-#        *list = split(*out_STRING1, ";");
-#        # assign values from array to parameters
-#        *ror = "None";
-#        *counter=0;
-#        foreach (*item_LIST in *list) {
-#            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
-#            else if ( *counter == 1 ) { *source      = *item_LIST ; }
-#            else if ( *counter == 2 ) { *destination = *item_LIST ; }
-#            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-#            *counter = *counter + 1;    
-#        }
-#        *list_size = *counter ;
-#
-#        if ((*list_size==4) || (*list_size==3)){
-#            doReplication(*pid,*source,*destination,*ror,*status);
-#        }
-#       else {
-#            logError("ignoring incorrect command: [*out_STRING]");
-#            *status = -1;
-#        }
-#    }
-#    updateCommandName(*cmdPath,*status);
-#}
-
-#
-# Read a .replicate file
-#
-# command format = "source_pid;source_path;destination_path"
-#
-# Parameters:
-#   *cmdPath     [IN]   the path to the .replicate file
-#   *pid         [OUT]  source pid
-#   *source      [OUT]  source path
-#   *destination [OUT]  destination path
-#   *ror         [OUT]  ror
-#
-# Author: Willem Elbers, MPI-TLA
-# Edited: Elena Erastova, RZG
-#
-#readReplicationCommandFile(*cmdPath,*pid,*source,*destination,*ror) {
-#    readFile(*cmdPath, *out_STRING);
-#    *out_ARRAY = split(*out_STRING, "\n");
-#    foreach(*out_STRING1 in *out_ARRAY) {
-#        *list = split(*out_STRING1, ";");
-#        # assign values from array to parameters
-#        *ror = "None";
-#        *counter=0;
-#        foreach (*item_LIST in *list) {
-#            if      ( *counter == 0 ) { *pid         = *item_LIST ; }
-#            else if ( *counter == 1 ) { *source      = *item_LIST ; }
-#            else if ( *counter == 2 ) { *destination = *item_LIST ; }
-#            else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-#            *counter = *counter + 1;
-#        }
-#    }
-#}
-
-#
-# Process a .pid file and perform the appropriate action
-#   supported actions: create, update
-#
-# Parameters:
-#   *cmdPath    [IN]    the iRODS path to the pid command file
-#
-# Author: Willem Elbers, MPI-TLA
-# Edited: Elena Erastova, RZG
-#
-#processPIDCommandFile(*cmdPath) {
-#    logInfo("processPID(*cmdPath)");
-#    readFile(*cmdPath, *out_STRING);
-#    *list = split(*out_STRING, ";");
-
-    # assign values from array to parameters
-#    *ror = "None";
-#    *parent = "None";
-#    *counter=0;
-#    foreach (*item_LIST in *list) {
-#        if      ( *counter == 0 ) { *pidAction   = *item_LIST ; }
-#        else if ( *counter == 1 ) { *parent      = *item_LIST ; }
-#        else if ( *counter == 2 ) { *destination = *item_LIST ; }
-#        else if ( *counter == 3 ) { *ror         = *item_LIST ; }
-#        *counter = *counter + 1;    
-#    }
-#    *list_size = *counter ;
-
-    # process command/action
-#    if ((*list_size==4) || (*list_size==3)){
-#        if(*pidAction == "create") {
-#            #manage pid in this repository
-#            EUDATCreatePID(*parent, *destination, *ror, bool("true"), *new_pid);
-#            getSharedCollection(*destination,*collectionPath);
-#            #create .pid.update file based on absolute file path
-#            #msiReplaceSlash(*destination,*filepathslash);
-#	    EUDATReplaceSlash(*destination, *filepathslash);
-#            triggerUpdateParentPID("*collectionPath*filepathslash.pid.update", *parent, *new_pid);
-#        } 
-#        else if(*pidAction=="update") {
-#            *status = 0;
-#            EUDATUpdatePIDWithNewChild(*parent, *destination);
-#            updateCommandName(*cmdPath,*status);
-#        }
-#        else {
-#            logError("ignoring incorrect command: [*out_STRING]");
-#        }
-#    }
-#    else {
-#        logError("ignoring incorrect list");
-#    }
-#}
-
-#
-# Start a replication
-#
-# Parameters:
-#   *pid            [IN]    pid of the digital object
-#   *source         [IN]    source path of the object to replicate
-#   *destination    [IN]    destination path of the object to replicate
-#   *ror            [IN]    ROR of the digital object
-#   *status         [OUT]   status, 0 = ok, <0 = error
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#doReplication(*pid, *source, *destination, *ror, *status) {
-#   logInfo("doReplication(*pid, *source, *destination, *ror)");
-
-    #make sure the parent collections exist
-#    msiSplitPath(*destination, *parent, *child);
-#    msiCollCreate(*parent, "1", *collCreateStatus);
-
-    #rsync object (make sure to supply "null" if dest resource should be the default one) 
-#    msiDataObjRsync(*source, "IRODS_TO_IRODS", "null", *destination, *rsyncStatus);
-
-#    if(*pid != "null") {
-        #trigger pid management in destination
-#        getSharedCollection(*destination,*collectionPath);
-        # create .pid.create file and monitor for .pid.update based on absolute file path
-        #msiReplaceSlash(*destination,*filepathslash);
-#        EUDATReplaceSlash(*destination, *filepathslash);
-#        triggerCreatePID("*collectionPath*filepathslash.pid.create", *pid, *destination, *ror);
-#        updateMonitor("*collectionPath*filepathslash.pid.update");
-#    }
-#    else {
-#        logDebug("No pid management");
-#    }
-#
-#}
-#
-##
-## Monitor the specified pid command file
-#
-# Parameters:
-#   *file   [IN]    start a monitor on the specified iRODS file
-#
-# Author: Willem Elbers, MPI-TLA
-#
-#updateMonitor(*file) {
-#    logInfo("updateMonitor(*file)");
-#    delay("<PLUSET>1m</PLUSET><EF>10m REPEAT UNTIL SUCCESS OR 12 TIMES</EF>") {
-#        if(errorcode(msiObjStat(*file,*out)) >= 0) {
-#            logInfo("*file exists");
-#            processPIDCommandFile(*file);
-#        } else {
-#            logInfo("*file does not exist yet");
-            # save *source of failed_transfered data object into fail_log 
-#            EUDATProcessErrorUpdatePID(*file);
-#        }
-#    }
-#}
-
-################################################################################
-#                                                                              #
 # Data Staging                                                                 #
 #                                                                              #
 ################################################################################
@@ -876,6 +516,8 @@ getCollectionName(*path_of_collection,*Collection_Name){
 #   *path          [IN]    The path of the file to write in.
 #
 # Author: Giacomo Mariani, CINECA
+#
+# DEPRECATED
 #
 EUDATiDSSfileWrite(*DSSfile) {
     logDebug("Test PID -> acPostProcForCopy checks for *DSSfile");
