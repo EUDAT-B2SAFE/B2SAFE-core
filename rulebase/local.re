@@ -58,7 +58,10 @@ getLogParameters(*logConfPath) {
 # Author: Claudio Cacciari (Cineca)
 # 
 getB2SAFEVersion(*version) {
-    *version="3.0";
+    *major_version = "3";
+    *minor_version = "0";
+    *sub_version = "0";
+    *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 
 #
