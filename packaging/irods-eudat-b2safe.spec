@@ -1,6 +1,6 @@
 Name:		irods-eudat-b2safe
-Version:	3.0
-Release:	0
+Version:	%{_version}
+Release:	%{_release}
 #Release:	1%{?dist}
 Summary:	b2safe core application for iRODS v4
 
@@ -147,6 +147,8 @@ cd %{_irodsPackage}/packaging
 EOF
 
 %changelog
+* Mon Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
+- assign version of package at build time with input parameters 
 * Fri Feb 13 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - Add files to b2safe package
 * Wed Jan 28 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0

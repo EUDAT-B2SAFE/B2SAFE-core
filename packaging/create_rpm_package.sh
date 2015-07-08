@@ -30,7 +30,16 @@ else
 	echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
 fi
 
+# find directory where we are executing:
+ABSOLUTE_PATH=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
+
+#extract major_version, minor_version and subversion from local.re in tree
+MAJOR_VERS=`grep "^\s*\*major_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
+MINOR_VERS=`grep "^\s*\*minor_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
+SUB_VERS=`grep "^\s*\*sub_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
+VERSION="${MAJOR_VERS}.${MINOR_VERS}"
+
 # build rpm
-rpmbuild -ba irods-eudat-b2safe.spec
+rpmbuild -ba --define "_version $VERSION" --define "_release $SUB_VERS" irods-eudat-b2safe.spec
 
 # done..

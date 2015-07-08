@@ -11,9 +11,11 @@ RPM_BUILD_ROOT="${HOME}/debbuild/"
 RPM_SOURCE_DIR=$B2SAFEHOME
 PRODUCT="irods-eudat-b2safe"
 IRODS_PACKAGE_DIR=`grep -i _irodsPackage ${PRODUCT}.spec | head -n 1 | awk '{print $3}'`
-# retrieve parameters from spec file. So we only have to update the spec file.
-VERSION=`grep -i "^Version:" ${PRODUCT}.spec  | awk '{print $2}'`
-RELEASE=`grep -i "^Release:" ${PRODUCT}.spec  | awk '{print $2}'`
+# retrieve parameters from local.re in tree
+MAJOR_VERS=`grep "^\s*\*major_version" $B2SAFEHOME/rulebase/local.re | awk -F\" '{print $2}'`
+MINOR_VERS=`grep "^\s*\*minor_version" $B2SAFEHOME/rulebase/local.re | awk -F\" '{print $2}'`
+VERSION="${MAJOR_VERS}.${MINOR_VERS}"
+RELEASE=`grep "^\s*\*sub_version" $B2SAFEHOME/rulebase/local.re | awk -F\" '{print $2}'`
 PACKAGE="${PRODUCT}_${VERSION}-${RELEASE}"
 
 if [ "$USERNAME" = "root" ]
