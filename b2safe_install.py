@@ -541,7 +541,7 @@ except subprocess.CalledProcessError:
     else:
         subprocess.call(["mkdir", LOG_DIR])
 else:
-    print RED + BOLD + 'Directory ' + LOG_DIR + ' exists. \n'
+    print RED + BOLD + 'Directory ' + LOG_DIR + ' exists. \n' + BACK
 
 filename = CONF_DIR + "/log.manager.conf"
 try:
