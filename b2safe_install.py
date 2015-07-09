@@ -419,7 +419,7 @@ print "6.2 update the 'getEpicApiParameters' rule in "\
 "- Set the proper values in the credentials file "\
 "(see <b2safe-core-source>/conf/credentials_example for an example) "
 
-filename = SOURCE_DIR + "/rulebase/local.re"
+filename = IRODS_CONF_DIR + "/euloc.re"
 try:
     os.rename(filename, filename+"~")
 except OSError:
