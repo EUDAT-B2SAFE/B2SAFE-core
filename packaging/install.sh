@@ -42,6 +42,7 @@ SHARED_SPACE=
 # end set default parameters for installation
 #
 DATE_TODAY=`date +%Y%m%d`
+JSON_CONFIG="false"
 # end default parameters for setup
 
 
@@ -67,6 +68,11 @@ create_links() {
 
     COUNT=0
     EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server.config
+    if [ "$JSON_CONFIG" == "true" ]
+    then
+       EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server_config.json
+       EUDAT_SERVER_CONFIG_JSON_STRING=`awk 1 ORS=' ' ${EUDAT_SERVER_CONFIG} | sed 's/ //g'`
+    fi
 
     #delete old symbolic links
     for file in $IRODS_CONF_DIR/eudat*.re
@@ -81,7 +87,12 @@ create_links() {
     for file in $B2SAFE_PACKAGE_DIR/rulebase/*.re
     do
         LINK=eudat${COUNT}
-        grep "^reRuleSet.*$LINK.*"  $EUDAT_SERVER_CONFIG > /dev/null
+        if [ "$JSON_CONFIG" == "true" ]
+        then
+	    echo $EUDAT_SERVER_CONFIG_JSON_STRING | grep -e "re_rulebase_set.*$LINK.*" > /dev/null
+        else
+            cat $EUDAT_SERVER_CONFIG | grep -e "^reRuleSet.*$LINK.*" > /dev/null
+        fi
         if [ $? -ne 0 ]
         then
             EUDAT_RULEFILES="$EUDAT_RULEFILES,$LINK"
@@ -131,6 +142,52 @@ update_server_config() {
     echo ""
     echo "Please check the file: ${EUDAT_SERVER_CONFIG} by hand                "
     echo "    grep ^reRuleSet ${EUDAT_SERVER_CONFIG}                           "
+    echo ""
+    echo "It should only have the following eudat{n}.re files mentioned:       "
+    echo "    `cd $IRODS_CONF_DIR ; ls -C eudat*.re`       "
+    echo ""
+    echo "*********************************************************************"
+
+
+    return $STATUS
+}
+
+update_server_config_json() {
+
+    EUDAT_SERVER_CONFIG=$IRODS_CONF_DIR/server_config.json
+
+    if [ -n "$EUDAT_RULEFILES" ]
+    then
+       if [ ! -e ${EUDAT_SERVER_CONFIG}.org.${DATE_TODAY} ]
+       then
+           cp ${EUDAT_SERVER_CONFIG} ${EUDAT_SERVER_CONFIG}.org.${DATE_TODAY} 
+       fi
+       # put json file in a single string so it easier to process.
+       EUDAT_SERVER_CONFIG_JSON_STRING=`awk 1 ORS=' ' ${EUDAT_SERVER_CONFIG} | sed 's/ //g'`
+       JSON_RULESET=`echo $EUDAT_SERVER_CONFIG_JSON_STRING | sed 's/.*re_rulebase_set":/re_rulebase_set":/' | sed 's/}].*$/}]/'` 
+       # append rules..
+       JSON_RULESET_WORK=`echo $JSON_RULESET | sed 's/]//'`
+       EUDAT_RULEFILES=`echo $EUDAT_RULEFILES | sed 's/,/ /g'`
+       for file in $EUDAT_RULEFILES
+       do
+            JSON_RULESET_WORK+=",{\"filename\":\"$file\"}"
+       done
+       JSON_RULESET_WORK+="]"
+       # substitute the new string for the old string
+       perl -pi -e "undef $/; s/re_rulebase_set[^\]]*\]/$JSON_RULESET_WORK/" $EUDAT_SERVER_CONFIG
+       if [ $? -eq 0 ]
+       then
+            echo "The file $EUDAT_SERVER_CONFIG has been updated!"
+       else
+            echo "ERROR: updating $EUDAT_SERVER_CONFIG failed!"
+            STATUS=1
+       fi
+    fi
+
+    echo "*********************************************************************"
+    echo ""
+    echo "Please check the file: ${EUDAT_SERVER_CONFIG} by hand                "
+    echo "    grep -A5 re_rulebase_set ${EUDAT_SERVER_CONFIG}                  "
     echo ""
     echo "It should only have the following eudat{n}.re files mentioned:       "
     echo "    `cd $IRODS_CONF_DIR ; ls -C eudat*.re`       "
@@ -344,6 +401,59 @@ update_get_auth_parameters() {
     return $STATUS
 }
 
+update_authz_map_json() {
+    AUTH_MAP_PATH=$B2SAFE_PACKAGE_DIR/conf/authz.map.json
+    TMP_FILE=/tmp/authz.map.json
+    if [ ! -e ${AUTH_MAP_PATH}.org.${DATE_TODAY} ]
+    then
+        cp $AUTH_MAP_PATH ${AUTH_MAP_PATH}.org.${DATE_TODAY} 
+    fi
+
+    # constrict a list of users to fill in the userlist
+    let count=0
+    for user in $USERS 
+    do
+        if [ "$count" -lt "1" ]
+        then
+            userlist=$user
+        else
+            userlist+="\",\"$user"
+        fi
+    let count=$count+1
+    done
+
+    cat > $TMP_FILE << EOF
+{
+"assertion 1":
+	{ "subject":
+		[ "$userlist" ],
+	  "action":
+		[ "read" ],
+	  "target":
+		[ "${IRODS_DIR}/server/bin/cmd/*","${B2SAFE_PACKAGE_DIR}/conf/*" ]
+	}
+}
+
+EOF
+    if [ $? -eq 0 ]
+    then
+        mv $TMP_FILE $AUTH_MAP_PATH
+        if [ ! $? -eq 0 ]
+        then
+            echo "ERROR: moving $AUTH_MAP_PATH failed!"
+            STATUS=1
+        fi
+    else
+        echo "ERROR: creating $TMP_FILE failed!"
+        STATUS=1
+    fi
+
+    # set access mode to file
+    chmod 600 $AUTH_MAP_PATH
+
+    return $STATUS
+}
+
 update_get_log_parameters() {
 
     LOG_MANAGER_CONF=$B2SAFE_PACKAGE_DIR/conf/log.manager.conf
@@ -404,11 +514,23 @@ update_log_manager_conf() {
 # main program
 ########################
 
+
 #
 # read parameter file
 #
 echo "read_parameters"
 read_parameters
+
+#
+# check for json or normal config files
+# irods 4.1 and higher use json config files
+#
+echo "check iRODS config files"
+if [ -e "${IRODS_DIR}/../VERSION.json" ]
+then
+    JSON_CONFIG="true"
+    echo "We have iRODS 4.1 or higher. The config files are in json format"
+fi
 
 #
 # create symbolic links to the eudat rulebase
@@ -420,7 +542,7 @@ then
 fi
 
 #
-# edit /etc/irods/server.config
+# edit /etc/irods/server.config or /etc/irods/server_config.json
 # append eudat specific rules to to reRuleSet.
 # we use links in the type of eudatxy.re.
 # (make sure to include the comma and no spaces)
@@ -428,7 +550,12 @@ fi
 if [ $? -eq 0 ]
 then
     echo "update_server_config"
-    update_server_config
+    if [ "$JSON_CONFIG" == "false" ]
+    then
+        update_server_config
+    else
+        update_server_config_json
+    fi
 fi
 
 #

@@ -206,7 +206,14 @@ else:
           + BACK).lower()
     chk = inpt(inp)
 
-stat(SOURCE_DIR)
+try:
+    subprocess.check_call(["stat", SOURCE_DIR])
+except subprocess.CalledProcessError:
+    print RED + BOLD + 'Directory ' + SOURCE_DIR + ' does not exist.' \
+          'Please, check the SOURCE_DIR in 2safe.config. ' \
+          'It should point to the place where you have downloaded ' \
+          'the git repository' + BACK
+    exit()
 
 try:
     subprocess.call(["cp", "-r"] + glob.glob(os.path.join(SOURCE_DIR \
@@ -238,7 +245,7 @@ symlink(SOURCE_DIR + "/rulebase/catchError.re", \
 symlink(SOURCE_DIR + "/rulebase/local.re", \
         IRODS_CONF_DIR + "/euloc.re", \
         IRODS_CONF_DIR + "/euloc.re")
-
+        
 print '3. edit <irods>/server/config/server.config and append '\
 ',eudat,eurepl,eupids,eucerr,euloc'\
 ',to reRuleSet (make sure to include the comma and no spaces)'
@@ -267,7 +274,20 @@ for line in source:
             line1 = line.replace("replication","eurepl")
             line1 = line1.replace("pid-service","eupids")
             line1 = line1.replace("catchError","eucerr")
+            line1 = line1.replace(",eudat-authZ-filters","")
+            line1 = line1.replace("eudat-authZ-filters,","")
+            line1 = line1.replace(",authZ","")
+            line1 = line1.replace("authZ,","")
             line1 = line1.replace("local","euloc")
+            line1 = line1.replace(",integritycheck","")
+            line1 = line1.replace("integritycheck,","")
+            destination.write(line1)
+        elif (line.find('euaf') > -1) or \
+(line.find('euint') > -1):
+            line1 = line.replace(",euaf","")
+            line1 = line1.replace("euaf,","")
+            line1 = line1.replace(",euint","")
+            line1 = line1.replace("euint,","")
             destination.write(line1)
         else:
             destination.write(line)
@@ -521,7 +541,7 @@ except subprocess.CalledProcessError:
     else:
         subprocess.call(["mkdir", LOG_DIR])
 else:
-    print RED + BOLD + 'Directory ' + LOG_DIR + ' exists. \n'
+    print RED + BOLD + 'Directory ' + LOG_DIR + ' exists. \n' + BACK
 
 filename = CONF_DIR + "/log.manager.conf"
 try:
