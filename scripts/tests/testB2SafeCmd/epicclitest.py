@@ -6,7 +6,7 @@ import argparse
 sys.path.append("../../cmd") 
 import epicclient
 
-class EpicClientCliTestCase(unittest.TestCase):
+class EpicClientCLITestCase(unittest.TestCase):
 
     credpath = "/foo/credentials"
     

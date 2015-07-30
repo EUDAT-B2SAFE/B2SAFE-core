@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-from testB2SafeCmd.testEpicClientCredentials import EpicClientCredentialsTestCase
-from testB2SafeCmd.testEpicClient import EpicClientTestCase
-from testB2SafeCmd.testEpicClientCli import EpicClientCliTestCase
+from testB2SafeCmd.epiccredtest import EpicClientCredentialsTestCase
+from testB2SafeCmd.epicclitest import EpicClientCLITestCase
 from testB2SafeCmd.testLogManager import LogManagerTestCase
 from testB2SafeCmd.testAuthzManager import AuthzManagerTestCase
 import argparse
@@ -24,9 +23,12 @@ if __name__ == '__main__':
     if param.script == "epic":
         # Test cases for B2Safe-Epicclient#
         print "Test Epicclient Script"
-        epic_cred_suite = unittest.TestLoader().loadTestsFromTestCase(EpicClientCredentialsTestCase)
-        epic_cli_suite = unittest.TestLoader().loadTestsFromTestCase(EpicClientCliTestCase)
-        epic_suite = unittest.TestSuite([epic_cred_suite, epic_cli_suite])
+        epic_cred_suite = unittest.TestLoader().loadTestsFromTestCase(
+            EpicClientCredentialsTestCase)
+        epic_cli_suite = unittest.TestLoader().loadTestsFromTestCase(
+            EpicClientCLITestCase)
+        epic_suite = unittest.TestSuite(
+            [epic_cred_suite, epic_cli_suite])
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(epic_suite)
 
     elif param.script == "log":
