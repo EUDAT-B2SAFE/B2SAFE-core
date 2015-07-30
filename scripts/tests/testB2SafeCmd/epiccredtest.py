@@ -22,7 +22,7 @@ class EpicClientCredentialsTestCase(unittest.TestCase):
         credentials.parse()
         self.assertIsInstance(credentials, epicclient.Credentials,
                               'Credentials constructor returns unexpected object instance')
-        self.assertEqual(credentials.baseuri, 'https://epic.server.eu/api/v2/handles/',
+        self.assertEqual(credentials.baseuri, 'https://epic.service.eu/api/v2/handles/',
                          'Credentials object returns unexpected base URI')
         self.assertEqual(credentials.prefix, '90210',
                          'Credentials object returns unexpected prefix')
