@@ -388,11 +388,10 @@ class EpicClientAPITestCase(unittest.TestCase):
         -- content=''
         """
         mock_http = self.MockHttp.return_value
-        mock_response = self.build_response(
-            200)
+        mock_response = self.build_response(200)
         mock_content = self.build_content('retrieve_handle')
         mock_http.request.return_value = mock_response, mock_content
-        key = "URL"
+        key = 'URL'
         value = 'http://www.testB2SafeCmd.com/2'
         suffix = 'TEST_CR1'
         result = self.client.modifyHandle(
@@ -415,6 +414,123 @@ class EpicClientAPITestCase(unittest.TestCase):
         mock_http.request.assert_has_calls(calls)
         self.assertTrue(result,
                         'modify value of existing handle key should return True')
+        
+        
+    def test_modify_handle_new_key_value(self):
+        """Test that modify existing handle with new key-value pair
+        returns True.
+        
+        Example result from non-mocked HTTP request (1/2):
+        -- response={'status': '200', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 'transfer-encoding': 'chunked', 
+                     'last-modified': 'Sat, 01 Aug 2015 23:14:53 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Sat, 01 Aug 2015 23:14:54 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle)
+        
+        Example result from non-mocked HTTP request (2/2):
+        -- response={'status': '204', 
+                     'content-length': '0', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1',
+                     'last-modified': 'Sat, 01 Aug 2015 23:14:54 GMT', 
+                     'etag': '"+Led8XZM52GWYA8GMy/Neg"', 
+                     'date': 'Sat, 01 Aug 2015 23:14:54 GMT'}
+        -- content=''
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response_200 = self.build_response(200)
+        mock_content_200 = self.build_content('retrieve_handle')
+        mock_response_204 = self.build_response(204)
+        mock_content_204 = ''
+        mock_http.request.side_effect = [
+            # 1st HTTP response: modifyHandle, i.e. GET -> 200
+            (mock_response_200, mock_content_200),
+            # 2nd HTTP response: modifyHandle, i.e. PUT -> 204
+            (mock_response_204, mock_content_204)]
+        key = "EMAIL"
+        value = 'user@testB2SafeCmd.com'
+        suffix = 'TEST_CR1'
+        result = self.client.modifyHandle(
+            self.cred.prefix, key, value, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        # 1st HTTP request: modifyHandle, i.e. GET -> 200
+        uri1 = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs1 = self.build_headers('READ')
+        call1 = mock.call(uri1, method='GET', headers=hdrs1)
+        # 2nd HTTP request: modifyHandle, i.e. PUT -> 204
+        uri2 = self.build_uri(self.cred.prefix, key, value, suffix)
+        hdrs2 = self.build_headers('UPDATE')
+        handle_json = self.build_content('retrieve_handle')
+        body2 = self.build_modify_body(handle_json, key, value)
+        call2 = mock.call(uri2, method='PUT', headers=hdrs2, body=body2)
+        calls = [call1, call2]
+        self.assertEqual(
+            mock_http.request.call_count, len(calls),
+            'modify handle with new key-value pair should make 2 HTTP requests')
+        mock_http.request.assert_has_calls(calls)
+        self.assertTrue(
+          result,
+          'modify handle with new key-value pair should return True')
+        
+        
+    def test_modify_handle_with_empty_value(self):
+        """Test that modify existing handle key with empty value
+        returns True.
+        
+        Example result from non-mocked HTTP request (1/2):
+        -- response={'status': '200', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 'transfer-encoding': 'chunked', 
+                     'last-modified': 'Sat, 01 Aug 2015 23:14:53 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Sat, 01 Aug 2015 23:14:54 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle_with_extra_key)
+        
+        Example result from non-mocked HTTP request (2/2):
+        -- response={'status': '204', 
+                     'content-length': '0', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1',
+                     'last-modified': 'Sat, 01 Aug 2015 23:14:54 GMT', 
+                     'etag': '"+Led8XZM52GWYA8GMy/Neg"', 
+                     'date': 'Sat, 01 Aug 2015 23:14:54 GMT'}
+        -- content=''
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response_200 = self.build_response(200)
+        mock_content_200 = self.build_content('retrieve_handle_with_extra_key')
+        mock_response_204 = self.build_response(204)
+        mock_content_204 = ''
+        mock_http.request.side_effect = [
+            # 1st HTTP response: modifyHandle, i.e. GET -> 200
+            (mock_response_200, mock_content_200),
+            # 2nd HTTP response: modifyHandle, i.e. PUT -> 204
+            (mock_response_204, mock_content_204)]
+        key = "EMAIL"
+        value = ''
+        suffix = 'TEST_CR1'
+        result = self.client.modifyHandle(
+            self.cred.prefix, key, value, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        # 1st HTTP request: modifyHandle, i.e. GET -> 200
+        uri1 = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs1 = self.build_headers('READ')
+        call1 = mock.call(uri1, method='GET', headers=hdrs1)
+        # 2nd HTTP request: modifyHandle, i.e. PUT -> 204
+        uri2 = self.build_uri(self.cred.prefix, key, value, suffix)
+        hdrs2 = self.build_headers('UPDATE')
+        body2 = self.build_modify_body(mock_content_200, key, value)
+        call2 = mock.call(uri2, method='PUT', headers=hdrs2, body=body2)
+        calls = [call1, call2]
+        self.assertEqual(
+            mock_http.request.call_count, len(calls),
+            'modify handle key with empty value should make 2 HTTP requests')
+        mock_http.request.assert_has_calls(calls)
+        self.assertTrue(
+          result,
+          'modify handle key with empty value should return True')
         
         
     def test_modify_non_existing_handle(self):
@@ -495,6 +611,57 @@ class EpicClientAPITestCase(unittest.TestCase):
           uri, method='DELETE', headers=hdrs)
         self.assertFalse(result,
                          'delete non existing handle should return False')
+          
+        
+    def test_delete_key_from_handle(self):
+        """Test that delete key from handle returns True.
+        
+        Example result from non-mocked HTTP request (1/2):
+        -- response={'status': '200', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 'transfer-encoding': 'chunked', 
+                     'last-modified': 'Sat, 01 Aug 2015 23:14:53 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Sat, 01 Aug 2015 23:14:54 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle_with_extra_key)
+        
+        Example result from non-mocked HTTP request (2/2):
+        -- response={'date': 'Mon, 03 Aug 2015 00:38:53 GMT', 
+                     'status': '204', 
+                     'content-length': '0'}
+        -- content=''
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response_200 = self.build_response(200)
+        mock_content_200 = self.build_content('retrieve_handle_with_extra_key')
+        mock_response_204 = self.build_response(204)
+        mock_content_204 = ''
+        mock_http.request.side_effect = [
+            # 1st HTTP response: retrieveHandle, i.e. GET -> 200
+            (mock_response_200, mock_content_200),
+            # 2nd HTTP response: deleteHandle, i.e. PUT -> 204
+            (mock_response_204, mock_content_204)]
+        key = "EMAIL"
+        suffix = 'TEST_CR1'
+        result = self.client.deleteHandle(
+            self.cred.prefix, key, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        # 1st HTTP request: retrieveHandle, i.e. GET -> 200
+        uri1 = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs1 = self.build_headers('READ')
+        call1 = mock.call(uri1, method='GET', headers=hdrs1)
+        # 2nd HTTP request: deleteHandle, i.e. PUT -> 204
+        uri2 = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs2 = self.build_headers('UPDATE')
+        body2 = self.build_delete_body(mock_content_200, key)
+        call2 = mock.call(uri2, method='PUT', headers=hdrs2, body=body2)
+        calls = [call1, call2]
+        self.assertEqual(
+            mock_http.request.call_count, len(calls),
+            'delete key from handle should make 2 HTTP requests')
+        mock_http.request.assert_has_calls(calls)
+        self.assertTrue(result, 'delete key from handle should return True')
         
     
     def test_delete_key_from_non_existing_handle(self):
@@ -518,9 +685,40 @@ class EpicClientAPITestCase(unittest.TestCase):
         uri = self.build_uri(self.cred.prefix, '', '', suffix)
         hdrs = self.build_headers('READ')
         mock_http.request.assert_called_once_with(
+            uri, method='GET', headers=hdrs)
+        self.assertFalse(
+            result,
+            'delete key from non existing handle should return False')
+        
+    
+    def test_delete_non_existing_key_from_handle(self):
+        """Test that delete non existing key from handle returns False.
+        
+        Example result from non-mocked HTTP request:
+        -- response={'status': '200',
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 'transfer-encoding': 'chunked', 
+                     'last-modified': 'Mon, 03 Aug 2015 08:02:03 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Mon, 03 Aug 2015 08:02:03 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle)
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response = self.build_response(200)
+        mock_content = self.build_content('retrieve_handle')
+        mock_http.request.return_value = mock_response, mock_content
+        key = 'FOO_KEY'
+        suffix = 'TEST_CR1'
+        result = self.client.deleteHandle(self.cred.prefix, key, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        uri = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs = self.build_headers('READ')
+        mock_http.request.assert_called_once_with(
           uri, method='GET', headers=hdrs)
-        self.assertFalse(result,
-                         'delete key from non existing handle should return False')
+        self.assertFalse(
+          result,
+          'delete non existing key from handle should return False')
         
         
     def test_update_handle_with_location(self):
@@ -596,6 +794,37 @@ class EpicClientAPITestCase(unittest.TestCase):
         mock_http.request.assert_has_calls(calls)
         self.assertTrue(result,
                          'update handle with new location should return True')
+    
+    
+    def test_update_handle_with_same_location(self):
+        """Test that update handle with same location value returns False.
+        
+        Example result from non-mocked HTTP request:
+        -- response={'status': '200', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 
+                     'transfer-encoding': 'chunked', 
+                     'last-modified': 'Sun, 02 Aug 2015 09:04:21 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Sun, 02 Aug 2015 09:04:22 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle_with_extra_location)
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response = self.build_response(200)
+        mock_content = self.build_content('retrieve_handle_with_extra_location')
+        mock_http.request.return_value = mock_response, mock_content
+        value = '846/157c344a-0179-11e2-9511-00215ec779a8'
+        suffix = 'TEST_CR1'
+        result = self.client.updateHandleWithLocation(
+            self.cred.prefix, value, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        uri = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs = self.build_headers('READ')
+        mock_http.request.assert_called_once_with(uri, method='GET', headers=hdrs)
+        self.assertFalse(
+            result,
+            'update handle with same location value should return False')
     
             
     def test_update_non_existing_handle_with_location(self):
@@ -713,6 +942,37 @@ class EpicClientAPITestCase(unittest.TestCase):
         mock_http.request.assert_has_calls(calls)
         self.assertTrue(result,
                         'remove location from handle should return True')
+        
+        
+    def test_remove_non_existing_location_from_handle(self):
+        """Test that remove non existing location from handle returns False.
+        
+        Example result from non-mocked HTTP request:
+        -- response={'status': '200', 
+                     'content-location': 'https://epic.service.eu/api/v2/handles/90210/TEST_CR1', 
+                     'transfer-encoding': 'chunked', 
+                     'last-modified': 'Sun, 02 Aug 2015 09:04:21 GMT', 
+                     'etag': '"gkCVbVUVJvf/EILjgSZ0HQ"', 
+                     'date': 'Sun, 02 Aug 2015 09:04:22 GMT', 
+                     'content-type': 'application/json'}
+        -- content=(see resources/epic_srv_content-retrieve_handle)
+        """
+        mock_http = self.MockHttp.return_value
+        mock_response = self.build_response(200)
+        mock_content = self.build_content('retrieve_handle')
+        mock_http.request.return_value = mock_response, mock_content
+        value = '846/157c344a-0179-11e2-9511-00215ec779a8'
+        suffix = 'TEST_CR1'
+        result = self.client.removeLocationFromHandle(
+            self.cred.prefix, value, suffix)
+        self.MockHttp.assert_called_once
+        mock_http.request.assert_called_once
+        uri = self.build_uri(self.cred.prefix, '', '', suffix)
+        hdrs = self.build_headers('READ')
+        mock_http.request.assert_called_once_with(uri, method='GET', headers=hdrs)
+        self.assertFalse(
+            result,
+            'remove non existing location from handle should return False')
     
         
     def test_remove_location_from_non_existing_handle(self):
@@ -843,6 +1103,20 @@ class EpicClientAPITestCase(unittest.TestCase):
           if keyfound is False: 
               handle_item = {'type': key, 'parsed_data': value} 
               handle_json_obj[len(handle_json_obj):] = [handle_item]
+      
+      return simplejson.dumps(handle_json_obj)
+    
+    
+    def build_delete_body(self, handle_json, key):
+      """Build mock delete request body for given JSON-formatted
+      handle.
+      """
+      handle_json_obj = simplejson.loads(handle_json)
+      
+      for item in handle_json_obj:
+          if 'type' in item and item['type'] == key:
+              del handle_json_obj[handle_json_obj.index(item)]
+              break
       
       return simplejson.dumps(handle_json_obj)
     
