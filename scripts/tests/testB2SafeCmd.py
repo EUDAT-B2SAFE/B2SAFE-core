@@ -3,6 +3,7 @@
 from testB2SafeCmd.epicapitest import EpicClientAPITestCase
 from testB2SafeCmd.epiccredtest import EpicClientCredentialsTestCase
 from testB2SafeCmd.epicclitest import EpicClientCLITestCase
+from testB2SafeCmd.epicintgtest import EpicClientIntegrationTests
 from testB2SafeCmd.testLogManager import LogManagerTestCase
 from testB2SafeCmd.testAuthzManager import AuthzManagerTestCase
 import argparse
@@ -30,8 +31,10 @@ if __name__ == '__main__':
             EpicClientCredentialsTestCase)
         epic_cli_suite = unittest.TestLoader().loadTestsFromTestCase(
             EpicClientCLITestCase)
+        epic_it_suite = unittest.TestLoader().loadTestsFromTestCase(
+            EpicClientIntegrationTests)
         epic_suite = unittest.TestSuite(
-            [epic_api_suite, epic_cred_suite, epic_cli_suite])
+            [epic_api_suite, epic_cred_suite, epic_cli_suite, epic_it_suite])
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(epic_suite)
 
     elif param.script == "log":
