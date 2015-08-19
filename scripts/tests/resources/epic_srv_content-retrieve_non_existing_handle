@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<head>
+<title>404 Not Found</title>
+<base href="./"/>
+<link rel="contents" href="./"/>
+<link rel="stylesheet" href="../../inc/bootstrap/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="../../inc/bootstrap/css/bootstrap-responsive.min.css"/>
+<!--<link rel="stylesheet/less" type="text/css" href="../../inc/epic.less"/>-->
+<script src="../../inc/jquery.js" type="text/javascript"></script>
+<script src="../../inc/bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript">
+  $(document).ready( function() {
+    $("dl.rackful-object").addClass("dl-horizontal");
+    $("table.rackful-objects").addClass("table table-striped table-condensed table-bordered");
+  } );
+  $(".collapse").collapse();
+</script>
+</head><body><ul class="breadcrumb"><li><a href="../../" rel="home">home</a><span class="divider">/</span></li><li><a href="../" rel="contents">handles</a><span class="divider">/</span></li><li><a href="" rel="contents">90210</a><span class="divider">/</span></li></ul>
+<div class="container-fluid">
+<h1>HTTP/1.1 404 Not Found</h1>
+<div id="rackful_description">&#x2F;handles&#x2F;90210&#x2F;TEST_CR1</div>
+<div id="rackful_content"></div><div class="row-fluid"><div align="right" class="span12"><em style="font-size: smaller;">
+<abbr class="initialism">EPIC</abbr> PID-Service version <a href="https:&#x2F;&#x2F;github.com&#x2F;CatchPlus&#x2F;EPIC-API-v2&#x2F;issues?milestone=10&amp;state=closed">2.3</a><br/>
+Developed by the <a href="http://pidconsortium.eu/"><abbr class="initialism">EPIC</abbr> Consortium</a>:
+  <a href="http://www.csc.fi/">CSC</a>,
+  <a href="http://www.dkrz.de/">DKRZ</a>,
+  <a href="http://www.gwdg.de/">GWDG</a>, and
+  <a href="http://www.surfsara.nl/">SURFsara</a><br/>
+Sponsored by:
+  <a href="http://www.catchplus.nl/">CATCH+</a>,
+  <a href="http://de.dariah.eu/">DARIAH-DE</a> and
+  <a href="http://www.eudat.eu/">EUDAT</a><br/>
+Powered by <a href="http://github.com/pieterb/Rackful">Rackful</a>
+</em></div></div></div></body></html>
+
