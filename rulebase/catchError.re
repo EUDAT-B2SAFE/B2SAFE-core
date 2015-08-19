@@ -9,6 +9,8 @@
 # EUDATCatchErrorChecksum(*source,*destination)
 # EUDATCatchErrorSize(*source,*destination)
 # EUDATCatchErrorDataOwner(*path,*msg)
+# EUDATCheckOwnershipObj(*path)
+# EUDATCheckOwnershipColl(*path)
 
 #
 # Check if 2 replicas have the same checksum
@@ -19,27 +21,16 @@
 # 
 # Author: Long Phan, JSC
 #
-EUDATCatchErrorChecksum(*source,*destination){
+EUDATCatchErrorChecksum(*source,*destination) {
     logInfo("[EUDATCatchErrorChecksum] Check if 2 replicas have the same checksum. " ++
             "Source = *source, destination = *destination");
 
     *b = bool("true");
 
     *checksum0 = "";
-    msiSplitPath(*source,*parentS,*childS);
-    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ,*BS);
-    foreach ( *BS ) {
-        msiGetValByKey(*BS,"DATA_CHECKSUM", *checksum0);
-        logDebug("checksum0 = *checksum0");
-    }
-
+    EUDATiCHECKSUMget(*source, *checksum0);
     *checksum1 = "";
-    msiSplitPath(*destination,*parentD,*childD);
-    msiExecStrCondQuery("SELECT DATA_CHECKSUM WHERE COLL_NAME = '*parentD' AND DATA_NAME = '*childD'" ,*BD);
-    foreach ( *BD ) {
-        msiGetValByKey(*BD,"DATA_CHECKSUM", *checksum1);
-        logDebug("checksum1 = *checksum1");
-    }
+    EUDATiCHECKSUMget(*destination, *checksum1);
 
     if(*checksum0 != *checksum1) {
         EUDATSearchPID(*source, *pid);
