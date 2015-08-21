@@ -14,6 +14,9 @@
 # EUDATReplication(*source, *destination, *registered, *recursive)
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATRegDataRepl(*source, *destination)
+# EUDATPIDRegistration(*source, *destination, *registration_response)
+# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
+# EUDATSearchAndCreatePID(*path, *pid)
 # EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
 # EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response)
 
@@ -69,9 +72,9 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*response) {
     }
   
     if (!*status_transfer_success) {
-        logError("[EUDATCheckIntegrity] replication from *source to *destination failed: *response");
+        logError("[EUDATCheckIntegrity] *source and *destination are not coherent: *response");
     } else {
-        logInfo("[EUDATCheckIntegrity] replication from *source to *destination succeeded");
+        logInfo("[EUDATCheckIntegrity] *source and *destination are coherent");
     }
 
     *status_transfer_success;
@@ -186,34 +189,6 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
     } 
       
 }
-
-#
-# Check whether two files are available and identical
-# If they are not identical, do the following:
-#    1. find the pid of the object and modify checksum in the pid or create a new pid
-#    2. create pid in the iCAT if it does not exist
-#    3. add/update ROR in iCAT
-#    4. trigger replication from source to destination
-#
-# Parameters:
-#   *source         [IN]     source of the file
-#   *destination    [IN]     destination of the file
-#   *registered     [IN]     bool, "true": replication using remote replication
-#                                  "false": replication using control files
-#
-# Author: Elena Erastova, RZG
-#
-#EUDATCheckReplicas(*source, *destination, *registered) {
-#    logInfo("Check if 2 replicas have the same checksum. Source = *source, destination = *destination");
-#    if (EUDATCatchErrorChecksum(*source, *destination) == bool("false") || 
-#        EUDATCatchErrorSize(*source, *destination) == bool("false")) 
-#    {
-#        EUDATeiPIDeiChecksumMgmt(*source, *pid, bool("true"), bool("true"), 0);
-#        EUDATiRORupdate(*source, *pid);
-#        logInfo("replication from *source to *destination");
-#        EUDATReplication(*source, *destination, *registered);
-#    }
-#}
 
 
 #-----------------------------------------------------------------------------

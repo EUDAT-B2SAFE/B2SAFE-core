@@ -22,10 +22,11 @@ class Metadata():
     """Class implementing the metadata management."""
 
     
-    def __init__( self, conf ):
+    def __init__( self, conf, user ):
         """Initialize object with configuration parameters."""
         
         self.conf = conf
+        self.user = user
         self.irodsu = IRODSUtils()
     
     
@@ -33,19 +34,19 @@ class Metadata():
         
 	logger.info("Going to store metadata about " + path)
         query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
-        (rc, out1) = self.irodsu.execute_icommand(["iquest", query])
+        (rc, out1) = self.irodsu.execute_icommand(["iquest", query],self.user)
         if out1 is not None:
             collPath = path
             objPath = None
-            mcoll = MetadataItem(path, dryrun, collPath, objPath)
+            mcoll = MetadataItem(collPath, objPath, self.user, dryrun)
             mcoll.store(keyValuePairs)
         else:
             (parent, child) = path.rsplit('/',1)
             query = "SELECT DATA_NAME WHERE COLL_NAME = '" + parent + "' and "\
                   + "DATA_NAME = '" + child + "'"
-            (rc, out2) = self.irodsu.execute_icommand(["iquest", query])
+            (rc, out2) = self.irodsu.execute_icommand(["iquest", query],self.user)
             if out2 is not None:
-                mobj = MetadataItem(parent, child, dryrun)
+                mobj = MetadataItem(parent, child, self.user, dryrun)
                 mobj.store(keyValuePairs)
             else:
                 logger.error('Wrong path: ' + path)
@@ -54,18 +55,21 @@ class Metadata():
 class MetadataItem():
     """Class implementing the single metadata record"""
     
-    def __init__( self, collPath, objPath, dryrun):
+    def __init__( self, collPath, objPath, user, dryrun):
         """Initialize object with iRODS path parameters."""
         
         self.dryrun = dryrun
 	self.irodsu = IRODSUtils()
         self.objPath = objPath
+        self.user = user
 
         # verify that .metadata exists, if not create it
         self.metaPath = collPath + '/.metadata'
-        (rc, out1) = self.irodsu.execute_icommand(["ils", self.metaPath])
+        (rc, out1) = self.irodsu.execute_icommand(["ils", self.metaPath],
+                                                  self.user)
         if out1 is None:
-            (rc, out2) = self.irodsu.execute_icommand(["imkdir", self.metaPath])
+            (rc, out2) = self.irodsu.execute_icommand(["imkdir", self.metaPath],
+                                                      self.user)
             if out2 is None:
                 logger.error("impossible to create the path " + self.metaPath)
                 sys.exit()
@@ -84,11 +88,12 @@ class MetadataItem():
         else:
             metaObj = self.metaPath + '/' + self.objPath + '_metadata.json'
 
-        (rc, out) = self.irodsu.execute_icommand(["ils", metaObj])
+        (rc, out) = self.irodsu.execute_icommand(["ils", metaObj], self.user)
         if out is not None:
             # get the json of root_collection
             logger.debug("get the json of root_collection")
-            (rc, out2) = self.irodsu.execute_icommand(["iget", metaObj, "-"])
+            (rc, out2) = self.irodsu.execute_icommand(["iget", metaObj, "-"],
+                                                      self.user)
             if out2:
                 rootCollectionMetaData = json.loads(out2)
             else:
@@ -124,7 +129,7 @@ class MetadataItem():
                          % (tempJsonFile.name, irodsObj))
             (rc, out) = self.irodsu.execute_icommand(["iput", "-f",
                                                       tempJsonFile.name,
-                                                      irodsObj])
+                                                      irodsObj],self.user)
             if out is None:
                 logger.error("impossible to upload the object: " + irodsObj)
 
@@ -144,10 +149,11 @@ class IRODSUtils():
         logger.debug("iRODS utility class initialization")
         
         
-    def execute_icommand(self, command):
+    def execute_icommand(self, command, user):
         """Execute a shell command and manage error conditions"""
-    
-        (rc, output) = self._shell_command(command)
+   
+        envKey = 'clientUserName' 
+        (rc, output) = self._shell_command(command, envKey, user)
         if rc != 0:
             logger.error('Error running %s, rc = %d' % (' '.join(command),
                                                              rc))
@@ -162,7 +168,7 @@ class IRODSUtils():
         return (rc, output[1])
 
 
-    def _shell_command(self, command_list):
+    def _shell_command(self, command_list, envKey, envValue):
         """
         Performs a shell command using the subprocess object
         input list of strings that represent the argv of the process to create
@@ -173,11 +179,15 @@ class IRODSUtils():
             return None
  
         try:
-            process = subprocess.Popen(command_list, stdout=subprocess.PIPE,
+            d = dict(os.environ)
+            d[envKey] = envValue
+            process = subprocess.Popen(command_list, env=d, 
+                                       stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
             (out, err) = process.communicate()
             return (process.returncode, [err, out])
-        except:
+        except Exception, e:
+            logger.debug('Failure with error: ' + str(e))
             return (-1, [None, None])
         
     
@@ -193,7 +203,6 @@ class Configuration():
     def __init__(self, file, logger):
    
         self.file = file
-#        self.logger = logger
         self.log_level = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
                           'ERROR': logging.ERROR, 'WARNING': logging.WARNING, \
                           'CRITICAL': logging.CRITICAL}
@@ -241,7 +250,7 @@ def store(args):
 
     configuration = Configuration(args.confpath, logger)
     configuration.parseConf();
-    meta = Metadata(configuration)
+    meta = Metadata(configuration, args.user)
     
     kv = {}
     if args.pid: kv['pid'] =  args.pid
@@ -264,6 +273,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dryrun", action="store_true",\
                         help="execute a command without performing any real" 
                            + "change")
+    parser.add_argument("user", help="the owner of the metadata")
 
     subparsers = parser.add_subparsers(title='Actions', \
                                        description='metadata '
