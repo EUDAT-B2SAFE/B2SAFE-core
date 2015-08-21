@@ -28,9 +28,9 @@ EUDATCatchErrorChecksum(*source,*destination) {
     *b = bool("true");
 
     *checksum0 = "";
-    EUDATiCHECKSUMget(*source, *checksum0);
+    EUDATiCHECKSUMget(*source, *checksum0, *modtime);
     *checksum1 = "";
-    EUDATiCHECKSUMget(*destination, *checksum1);
+    EUDATiCHECKSUMget(*destination, *checksum1, *modtime);
 
     if(*checksum0 != *checksum1) {
         EUDATSearchPID(*source, *pid);

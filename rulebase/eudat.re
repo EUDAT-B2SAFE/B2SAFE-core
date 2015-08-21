@@ -20,8 +20,8 @@
 # EUDATGetZoneNameFromPath(*path, *out)
 # EUDATGetZoneHostFromZoneName(*zoneName, *conn)
 # EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime)
-# EUDATiCHECKSUMretrieve(*path, *checksum)
-# EUDATiCHECKSUMget(*path, *checksum)
+# EUDATiCHECKSUMretrieve(*path, *checksum, *modtime)
+# EUDATiCHECKSUMget(*path, *checksum, *modtime)
 # EUDATgetObjectTimeDiff(*filePath, *mode, *age)
 # EUDATgetObjectAge(*filePath, *age) 
 # EUDATfileInPath(*path,*subColl)
@@ -30,8 +30,6 @@
 # EUDATModifyAVU(*Path, *Key, *Value)
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # getCollectionName(*path_of_collection,*Collection_Name)
-#---- data staging ---
-# EUDATiDSSfileWrite(*DSSfile) # DEPRECATED
 #---- repository packages ---
 # EUDATrp_checkMeta(*source,*AName,*AValue)
 # EUDATrp_ingestObject( *source )
@@ -269,13 +267,15 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 # Arguments:
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
+#   *modtime            [OUT]   modification time of the checksum
 #   *status             [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #
-EUDATiCHECKSUMretrieve(*path, *checksum) {
+EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
     *status = bool("false");
     *checksum = "";
+    *modtime = "";
     logInfo("EUDATiCHECKSUMretrieve -> Looking at *path");
     msiSplitPath(*path, *coll, *name);
     *d = SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll';
@@ -297,36 +297,32 @@ EUDATiCHECKSUMretrieve(*path, *checksum) {
             *status = bool("true");
         }
     }
-    *status;#
+    *status;
 }
 
-#
+
 # The function obtain iCHECKSUM for a given object creating it if necessary.
-#
-# Environment variable used:
 #
 # Arguments:
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
+#   *modtime            [OUT]   modification time of the checksum
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
-#
-EUDATiCHECKSUMget(*path, *checksum) {
-    if (!EUDATiCHECKSUMretrieve(*path, *checksum)) {
-        *checksum = "";
+
+EUDATiCHECKSUMget(*path, *checksum, *modtime) {
+    if (!EUDATiCHECKSUMretrieve(*path, *checksum, *modtime)) {
         #If it is a collection, do not calculate the checksum
         msiGetObjType(*path,*type);
         if (*type == '-d')  {
-            #NOTE: the 2. arg of msiDataObjChksum: "null" means only the default resc will be checksumed.
-            #Consider "ChksumAll="
-            msiDataObjChksum(*path, "null", *checksum);
+            msiDataObjChksum(*path, "ChksumAll", *checksum);
         }
         #call again EUDATiCHECKSUMretrieve in order to set checksum date
-        EUDATiCHECKSUMretrieve(*path, *checksum);
+        EUDATiCHECKSUMretrieve(*path, *checksum, *modtime);
     }
 }
 
-#
+
 # Calculate the difference between the creation time or the current time
 # and the modification time of an object. In seconds.
 #
@@ -422,12 +418,13 @@ EUDATCreateAVU(*Key,*Value,*Path) {
 # Parameters:
 # *Path  [IN] target object
 # *Key   [IN] name of the MD
-# *Value [OUT] value of the MD
+# *Value [OUT] value of the MD, None if not set.
 #
 # Author: Pascal Dugénie, CINES
 #-----------------------------------------------------------------------------
 EUDATgetLastAVU(*Path, *Key, *Value)
 {
+    *Value = 'None'
     msiSplitPath(*Path,*parent,*child);
     msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" , *B );
     foreach ( *B ) {
@@ -501,62 +498,41 @@ getCollectionName(*path_of_collection,*Collection_Name){
     *Collection_Name = "*n";
 }
 
-################################################################################
-#                                                                              #
-# Data Staging                                                                 #
-#                                                                              #
-################################################################################
+# Store the metadata PID, CHECKSUM, ROR, CHECKSUM Timestamp in a json file
+# inside the special collection .metadata. It stores one file per DO plus
+# one file for the collection.
+# Checksum and related timestamp are calculated if not provided.
+# 
+# Parameters:
+#       *path     [IN]   Path of the object/collection
+#       *pid      [IN]   Persistent Identifier of the object/collection 
+#       *ror      [IN]   Repository of Records, the repository of the master copy
+#       *checksum [IN]   The checksum of the object
+#       *modtime  [IN]   The modification time of the checksum
+#
+# Author: Claudio Cacciari, CINECA
 
-#
-# Writes the file used to store the list of PIDs and URLs
-# This is a list of key-value pairs used by data staging service via gridFTP.
-# The tuples are PID-object path.
-#
-# Arguments:
-#   *path          [IN]    The path of the file to write in.
-#
-# Author: Giacomo Mariani, CINECA
-#
-# DEPRECATED
-#
-EUDATiDSSfileWrite(*DSSfile) {
-    logDebug("Test PID -> acPostProcForCopy checks for *DSSfile");
-    msiSplitPath(*DSSfile, *coll, *name);
-    *b = bool("false");
-    *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*coll' AND DATA_NAME = '*name';
-    foreach(*c in *d) {
-        msiGetValByKey(*c,"DATA_NAME",*num);
-        if(*num == '1') {
-            *b = bool("true");
-        }  
+EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
+
+    *extraMetaData = "";
+    if (*checksum == "" || *checksum == 'None') {
+        EUDATiCHECKSUMget(*path, *checksum, *modtime);
     }
-    if (!*b)
-    {
-        logDebug("Test PID -> acPostProcForCopy creates *DSSfile");
-        msiDataObjCreate(*DSSfile,*OFlagsB,*DSSf);
-        msiDataObjClose(*DSSf,*Status);
+    if (*checksum != "") {
+        *extraMetaData = "-c *checksum -t *modtime";
     }
-    EUDATgetObjectAge(*DSSfile, *age);
-    *minTime = int("86400");        # In seconds
-    if ( *age >= *minTime ) then
-    {
-        logInfo("Test PID -> acPostProcForCopy *DSSfile is old. Removing it.");
-        msiDataObjUnlink(*DSSfile,*Status);
-        msiDataObjCreate(*DSSfile,*OFlagsB,*DSSf);
-        msiDataObjClose(*DSSf,*Status);
+    if (*ror == "" || *ror == 'None') {
+        EUDATGetRorPid(*pid, *ror);
     }
-    msiDataObjOpen(*DSSfile++"++++openFlags=O_RDWR",*DSSf);
-    logDebug("Test PID -> acPostProcForCopy Open OK.");
-    msiDataObjLseek(*DSSf,"null","SEEK_END",*Status);
-    logDebug("Test PID -> acPostProcForCopy Seek OK.");
-    EUDATiPIDretrieve($objPath, *PID)
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug)
-    *Buf="*serverID"++"$objPath,*PID\n";
-    msiDataObjWrite(*DSSf,*Buf,*Len);
-    logDebug("Test PID -> acPostProcForCopy Write OK.");
-    msiDataObjClose(*DSSf,*Status);
-    logDebug("Test PID -> acPostProcForCopy Close OK.");
+    if (*ror != "") {
+        *extraMetaData = *extraMetaData ++ " -r *ror";
+    }
+    getMetaParameters(*metaConfPath);
+    msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store *path"
+            ++ " -i *pid *extraMetaData", "null", "null", "null", *out);
+    msiGetStdoutInExecCmdOut(*out, *resp);
 }
+
 
 ################################################################################
 #                                                                              #
@@ -599,7 +575,7 @@ EUDATrp_ingestObject( *source )
 {
     rp_getRpIngestParameters(*protectArchive, *archiveOwner);
     logInfo("ingestObject-> Check for (*source)");
-    EUDATiCHECKSUMget(*source, *checksum);
+    EUDATiCHECKSUMget(*source, *checksum, *modtime);
     EUDATModifyAVU(*source, "INFO_Checksum" , *checksum );
 # Modified begin 
     EUDATgetLastAVU(*source, "OTHER_original_checksum", *orig_checksum);
