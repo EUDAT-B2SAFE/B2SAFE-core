@@ -272,7 +272,26 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATiPIDcreate(*path, *PID) {
-    EUDATCreateAVU("PID", *PID, *path);
+    msiSplitPath(*path, *coll, *name);
+    *FVALUE = "None";
+    *status0 = bool("false");
+    *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = 'PID'; 
+    foreach(*c in *d) {
+        msiGetValByKey(*c, "META_DATA_ATTR_VALUE", *FVALUE);
+    }
+    if(*FVALUE == "None") { 
+        EUDATCreateAVU("PID", *PID, *path);
+        *status0 = bool("true");
+    }
+    else if(*FVALUE != *PID) {
+        logError("EUDATiFieldVALUEretrieve (path *path PID *PID) -> Existing iCAT attribute PID value *FVALUE does not match the input value *PID.");
+        *status0 = bool("false");
+    }
+    else {
+        logInfo("EUDATiFieldVALUEretrieve (path *path PID *PID) -> Attribute PID with value *FVALUE already exists. Nothing to do.");
+        *status0 = bool("true");
+    }
+    *status0;
 }
 
 #
