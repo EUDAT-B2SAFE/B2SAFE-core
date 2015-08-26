@@ -420,7 +420,7 @@ EUDATSearchAndDefineRoR(*path, *pid, *ROR) {
     EUDATiFieldVALUEretrieve(*path, "EUDAT/ROR", *ROR);
     # if there is no entry for the ROR in ICAT, get it from EPIC
     if (*ROR == "None") {
-        EUDATGetRorPid(*pid, *ROR);
+        EUDATGeteRorPid(*pid, *ROR);
         # if there is a ROR in EPIC create it in ICAT
         if (*ROR != "None") {
             EUDATCreateAVU("EUDAT/ROR", *ROR, *path);
