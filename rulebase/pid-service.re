@@ -17,7 +17,7 @@
 # EUDATSearchPID(*path, *existing_pid)
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
-# EUDATGetRorPid(*pid, *ror)
+# EUDATGeteRorPid(*pid, *ror)
 # EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
@@ -191,7 +191,7 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
 #   *pid    [IN]     PID that you want to get the ROR for
 #   *ror    [OUT]    ROR for *pid
 #
-EUDATGetRorPid(*pid, *ror) {
+EUDATGeteRorPid(*pid, *ror) {
     logInfo("get RoR from (*pid)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR", 
@@ -202,7 +202,7 @@ EUDATGetRorPid(*pid, *ror) {
                    "null", "null", "null", *out);
         msiGetStdoutInExecCmdOut(*out, *ror);
         if(*ror=="None") {
-            logInfo("getRorPID -> NO ROR for *pid ");
+            logInfo("geteRorPID -> NO ROR for *pid ");
         }
     }
 }
@@ -272,13 +272,9 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATiPIDcreate(*path, *PID) {
-    msiSplitPath(*path, *coll, *name);
     *FVALUE = "None";
     *status0 = bool("false");
-    *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = 'PID'; 
-    foreach(*c in *d) {
-        msiGetValByKey(*c, "META_DATA_ATTR_VALUE", *FVALUE);
-    }
+    EUDATiFieldVALUEretrieve(*path, "PID", *FVALUE);
     if(*FVALUE == "None") { 
         EUDATCreateAVU("PID", *PID, *path);
         *status0 = bool("true");
@@ -520,7 +516,7 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
 }
 
 #
-# Add the ROR field of the PID of the object to iCAT
+# Add or modify the ROR field of the PID of the object to iCAT
 #
 # Arguments:
 #   *source            [IN] Object path
@@ -529,32 +525,42 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
 # Author: Elena Erastova, RZG
 #
 EUDATiRORupdate(*source, *pid) {
-    if (!EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *ror)) {
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-        logInfo("EUDATiRORupdate -> modify ROR in iCAT related to to the path *source");
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", 
-                   "null", "null", "null", *out);
-        msiGetStdoutInExecCmdOut(*out, *ror);
-        msiGetObjType(*source, *objType);
-        if(*ror=="None") {
-            msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR",
-                       "null", "null", "null", *out);
-            msiGetStdoutInExecCmdOut(*out, *ror);
-            if(*ror=="None") {
-                logInfo("EUDATiRORupdate -> NO ROR for *pid ");
-            }
-            else {
-                *KVString="EUDAT/ROR=*ror";
-                msiString2KeyValPair(*KVString,*KVPair);
-                msiAssociateKeyValuePairsToObj(*KVPair,*source,*objType);
-            }
-        }
-        else {
-            *KVString="EUDAT/ROR=*ror";
+    
+    *iRor = 'None';
+    EUDATGeteRorPid(*pid, *eRor);
+    if(*eRor != 'None') {
+        EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *iRor);
+        if(*iRor != *eRor) {
+            logInfo("EUDATiRORupdate -> Adding/modifying iCAT EUDAT/ROR value 
+                     *iRor according to EUDAT/ROR value *eRor for object 
+                     *source with PID *pid");
+            msiGetObjType(*source, *objType);
+            *KVString="EUDAT/ROR=*eRor";
             msiString2KeyValPair(*KVString,*KVPair);
-            msiAssociateKeyValuePairsToObj(*KVPair,*source,*objType);
+            msiSetKeyValuePairsToObj(*KVPair,*source,*objType);
         }
-        logInfo("EUDATiRORupdate -> saved ROR *ror for PID *pid ");
+    }
+}
+
+#-----------------------------------------------------------------------------
+# Add or modify the ROR field of the PID in EPIC system
+#
+# Arguments:
+#   *source            [IN] Object path
+#   *pid               [IN] Object pid
+#
+# Author: Elena Erastova, RZG
+#
+#-----------------------------------------------------------------------------
+EUDATeRORupdate(*pid,*newRor) {
+
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    EUDATGeteRorPid(*pid, *oldRor);
+       
+    if(*oldRor != *newRor) {
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *pid EUDAT/ROR *newRor", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *response);
+        logInfo("EUDATeCHECKSUMupdate -> modify handle response = *response");
     }
 }
 
