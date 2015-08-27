@@ -105,7 +105,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 
 }
 
-#
+#-----------------------------------------------------------------------------
 # Searching for a PID using URL replacing "#", "%" and "&" with "*"
 # (uses replaceHash in epicclient.py)
 # Parameters:
@@ -114,7 +114,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 #   *status             [REI]   false if no value is found, true elsewhere 
 #
 # Author: Elena Erastova, RZG
-#
+#-----------------------------------------------------------------------------
 EUDATSearchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
@@ -262,7 +262,7 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
     }
 }
 
-#
+#-----------------------------------------------------------------------------
 # The function write iPID given ePID.
 #
 # Parameters:
@@ -270,7 +270,8 @@ EUDATeiPIDeiChecksumMgmt(*path, *PID, *ePIDcheck, *iCATCache, *minTime) {
 #   *path            [IN] path of the object
 #
 # Author: Giacomo Mariani, CINECA
-#
+# Modified: Elena Erastova, RZG, 27.08.2015
+#-----------------------------------------------------------------------------
 EUDATiPIDcreate(*path, *PID) {
     *FVALUE = "None";
     *status0 = bool("false");
@@ -496,16 +497,17 @@ EUDATePIDremove(*path, *force) {
     }
 } 
 
-#
+#-----------------------------------------------------------------------------
 # Walk through the collection. For each object in the collection 
-# it creates a PID and stores its value and the object checksum in the iCAT if it does not exist.
+# it creates a PID and stores its value and the object checksum in the iCAT 
+# if it does not exist.
 # Otherwhise the function modify the PID.
 #
 # Arguments:
 #   *sourceColl      [IN]    Source colection path
 #
 # Author: Elena Erastova, RZG
-#
+#-----------------------------------------------------------------------------
 EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
     foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*sourceColl/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
@@ -515,15 +517,15 @@ EUDATeiPIDeiChecksumMgmtColl(*sourceColl) {
     }
 }
 
-#
+#-----------------------------------------------------------------------------
 # Add or modify the ROR field of the PID of the object to iCAT
 #
 # Arguments:
 #   *source            [IN] Object path
 #   *pid               [IN] Object pid
 #
-# Author: Elena Erastova, RZG
-#
+# Author: Elena Erastova, RZG, 27.08.2015
+#-----------------------------------------------------------------------------
 EUDATiRORupdate(*source, *pid) {
     
     *iRor = 'None';
@@ -549,8 +551,7 @@ EUDATiRORupdate(*source, *pid) {
 #   *source            [IN] Object path
 #   *pid               [IN] Object pid
 #
-# Author: Elena Erastova, RZG
-#
+# Author: Elena Erastova, RZG, 27.08.2015
 #-----------------------------------------------------------------------------
 EUDATeRORupdate(*pid,*newRor) {
 
