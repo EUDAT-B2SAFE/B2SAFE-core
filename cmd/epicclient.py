@@ -27,8 +27,8 @@ defusedxml
 pip install defusedxml
 
 ubuntu: apt-get install python-httplib2 python-simplejson
-
-apt-get install pylint
+redhat: yum install python-argparse python-defusedxml
+redhat: yum install python-httplib2 python-lxml python-simplejson
 
 """
 
@@ -273,18 +273,18 @@ class EpicClient(object):
         loc10320 = tostring(root)
 
         handle_array = [{'type': 'URL', 'parsed_data': location}]
-        handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320}) 
+        handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320})
         if ((checksum) and (checksum is not None)):
-            handle_array.append({'type': 'CHECKSUM', 'parsed_data': checksum}) 
+            handle_array.append({'type': 'CHECKSUM', 'parsed_data': checksum})
         if ((extratype) and (extratype is not None)):
             for key_value in extratype:
-                key   = key_value.split('=')[0]
+                key = key_value.split('=')[0]
                 value = key_value.split('=')[1]
                 if (next((item for item in handle_array if item['type'] == key),
-                    None) is None):
-                    handle_array.append({'type': key, 'parsed_data': value}) 
+                         None) is None):
+                    handle_array.append({'type': key, 'parsed_data': value})
 
-        new_handle_json = simplejson.dumps(handle_array) 
+        new_handle_json = simplejson.dumps(handle_array)
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
@@ -518,6 +518,44 @@ class EpicClient(object):
                                value + " cannot be removed")
                 return False
 
+    def updateLocationInHandle(self, prefix, oldvalue, newvalue, suffix=''):
+        """Update one of the 10320/LOC handle type values
+        in the handle record.
+
+        Parameters:
+        prefix: URI to the resource, or the prefix if suffix is not ''.
+        oldvalue: Value to be updated/replaced in the "10320/LOC".
+        newvalue: Value to be updated/put in the "10320/LOC".
+        suffix: The suffix of the handle. Default: ''.
+        Returns True if removed, False otherwise.
+
+        """
+
+        uri = self._geturi(prefix, '', '', suffix)
+
+        loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
+        if loc10320 is None:
+            self._debugmsg('updateLocationInHandle',
+                           "Cannot update location: " + oldvalue +
+                           " from handle: " + uri +
+                           ", the field 10320/LOC does not exists")
+            return False
+        else:
+            lt = LocationType(loc10320, self.debug)
+            if not lt.checkInclusion(oldvalue):
+                self._debugmsg('updateLocationInHandle', "the location " +
+                               oldvalue + " is not included!")
+                return False
+            else:
+                response, content = lt.updateLocation(oldvalue, newvalue)
+                if response:
+                    if self.modifyHandle(prefix, "10320/LOC", content, suffix):
+                        return True
+
+                self._debugmsg('removeLocationFromHandle', "the location " +
+                               value + " cannot be updated")
+                return False
+
 
 ################################################################################
 # EPIC Client Location Type Class #
@@ -627,6 +665,34 @@ class LocationType(object):
             self._debugmsg('addLocation', "an XML AttributeError occurred, "
                                           "adding the new location: " + loc)
             return False, None
+
+
+    def updateLocation(self, oldloc, newloc):
+        """Update a entry from the 10320/LOC handle type field.
+
+        Parameters:
+        oldloc: The value to replace in the 10320/LOC field.
+        newloc: The new value for the 10320/LOC field.
+        Returns True and the 10320/LOC handle type field itself
+        if the value is updated, False and None otherwise.
+
+        """
+
+        main = self.domfield.childNodes[0]
+        locations = self.domfield.getElementsByTagName("location")
+        for url in locations:
+            if url.getAttribute('href') == oldloc:
+                newurl = self.domfield.createElement("location")
+                _, content = self.isEmpty()
+                newurl.setAttribute('id', url.getAttribute('id'))
+                newurl.setAttribute('href', newloc)
+                main.replaceChild(newurl, url)
+                self._debugmsg('updateLocation', "updated location: " + oldloc
+                                + "with: " + newloc)
+                return True, main.toxml()
+
+        self._debugmsg('updateLocation', "cannot update location: " + loc)
+        return False, None
 
 
 ###############################################################################
@@ -785,7 +851,11 @@ def modify(args):
     client = EpicClient(credentials)
     prefix = args.handle.partition("/")[0]
     suffix = args.handle.partition("/")[2]
-    result = client.modifyHandle(prefix, args.key, args.value, suffix)
+    if args.key == "10320/LOC" and args.oldvalue:
+        result = client.updateLocationInHandle(prefix, args.oldvalue,
+                                               args.value, suffix)
+    else:
+        result = client.modifyHandle(prefix, args.key, args.value, suffix)
 
     sys.stdout.write(str(result))
 
@@ -853,6 +923,10 @@ if __name__ == "__main__":
     parser_modify.add_argument("handle", help="the handle value")
     parser_modify.add_argument("key", help="the key of the field to change "
                                            "in the pid record")
+    parser_modify.add_argument("oldvalue", nargs='?', help="OPTIONAL: the old \
+                                value to replace in the pid record identified \
+                                with the supplied key. Only needed with \
+                                10320/LOC key")
     parser_modify.add_argument("value", help="the new value to store "
                                              "in the pid record identified "
                                              "with the supplied key")
