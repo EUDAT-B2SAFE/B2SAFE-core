@@ -407,13 +407,14 @@ EUDATfileInPath(*path,*subColl) {
 #	*Path	[IN]	Path of log_file
 # 
 # Author: Long Phan, JSC
+# Modified: Elena Erastova, RZG, 27.08.2015
 # 
 EUDATCreateAVU(*Key,*Value,*Path) {
     logDebug("[EUDATCreateAVU] Adding AVU = *Key with *Value to metadata of *Path");
     msiAddKeyVal(*Keyval,*Key, *Value);
     writeKeyValPairs('serverLog', *Keyval, " is : ");
     msiGetObjType(*Path,*objType);
-    msiAssociateKeyValuePairsToObj(*Keyval, *Path, *objType);
+    msiSetKeyValuePairsToObj(*Keyval, *Path, *objType);
 }
 
 #-----------------------------------------------------------------------------
@@ -445,6 +446,7 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 #
 # Author: Pascal Dugénie, CINES
 # Modified : S Coutin 23/01/2015
+# Now it has the same functionality as EUDATCreateAVU : Erastova, 27.08.2015
 #-----------------------------------------------------------------------------
 EUDATModifyAVU(*Path, *Key, *Value)
 {
