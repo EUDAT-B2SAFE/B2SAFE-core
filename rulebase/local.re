@@ -62,6 +62,17 @@ getMetaParameters(*metaConfPath) {
     *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf";
 }
 
+#Provides parameters for the message management mechanism
+#
+# Arguments:
+# *msgLogPath  [OUT] the file path to the message log file.
+#
+# Author: Claudio Cacciari (Cineca)
+#
+getMessageParameters(*msgLogPath) {
+    *msgLogPath="/var/log/irods/messageManager.log";
+}
+
 # Provides version of the B2SAFE
 # 
 # Arguments:

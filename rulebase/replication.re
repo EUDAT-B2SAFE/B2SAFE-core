@@ -129,6 +129,13 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
             }
         }
     }   
+
+    if (*status) { *response = "*source::*destination::registered=*registered::recursive=*recursive" }
+    EUDATGetZoneNameFromPath(*source, *zone);
+    *queue = *zone ++ "_" ++ $userNameClient;
+    *message = "status:*status;response:*response"
+    EUDATMessage(*queue, *message);
+
     *status;
 }
 
@@ -217,10 +224,17 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
     # search and create pid related to the source of the replication
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
-        *response = "PID is empty, no replication will be executed for *source";
-        logDebug(*response);
         *status = bool("false");
-        EUDATUpdateLogging(*status,*source,*destination,"empty PID");
+        # check to skip metadata special path
+        if (!EUDATisMetadata(*source)) {
+            *response = "PID is empty, no replication will be executed for *source";
+            EUDATUpdateLogging(*status,*source,*destination,"empty PID");
+        }
+        else {
+            *response = "the path '*source' is a special metadata path: it cannot be registered";
+            EUDATUpdateLogging(*status,*source,*destination,"reserved metadata path");
+        }
+        logDebug(*response);
     }
     else {
         logDebug("PID exist for *source");
@@ -247,27 +261,31 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
                     msiStrlen(*source,*pathLength);
                     # loop over the sub-collections of the collection
                     foreach (*Row in SELECT COLL_NAME WHERE COLL_NAME like '*source/%') {
-                        msiSubstr(*Row.COLL_NAME, str(int(*pathLength)+1), "null", *subCollection);
-                        *target = "*destination/*subCollection";
-                        EUDATPIDRegistration(*Row.COLL_NAME, *target, *singleRes);
-                        if (*singleRes != "None") { 
-                            *contents = *Row.COLL_NAME ++ '::*target::false::*singleRes';
-                            *responses = *responses ++ *contents ++ ",";
+                        if (!EUDATisMetadata(*Row.COLL_NAME)) {
+                            msiSubstr(*Row.COLL_NAME, str(int(*pathLength)+1), "null", *subCollection);
+                            *target = "*destination/*subCollection";
+                            EUDATPIDRegistration(*Row.COLL_NAME, *target, *singleRes);
+                            if (*singleRes != "None") { 
+                                *contents = *Row.COLL_NAME ++ '::*target::false::*singleRes';
+                                *responses = *responses ++ *contents ++ ",";
+                            }
+                            *status = (*singleRes == "None") && *status;
                         }
-                        *status = (*singleRes == "None") && *status;
                     }
                     logDebug("loop over the objects of the collection");
                     # loop over the objects of the collection
                     foreach (*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*source' || like '*source/%') {
-                        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-                        msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
-                        *target = "*destination/*subCollection";
-                        EUDATPIDRegistration(*objPath, *target, *singleRes);
-                        if (*singleRes != "None") {                       
-                            *contents = "*objPath::*target::false::*singleRes";
-                            *responses = *responses ++ *contents ++ ",";
+                        if (!EUDATisMetadata(*Row.COLL_NAME)) {
+                            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+                            msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+                            *target = "*destination/*subCollection";
+                            EUDATPIDRegistration(*objPath, *target, *singleRes);
+                            if (*singleRes != "None") {                       
+                                *contents = "*objPath::*target::false::*singleRes";
+                                *responses = *responses ++ *contents ++ ",";
+                            }
+                            *status = (*singleRes == "None") && *status;
                         }
-                        *status = (*singleRes == "None") && *status;
                     }
                     *response = trimr(*responses, ",");
                 }
@@ -319,8 +337,8 @@ EUDATPIDRegistration(*source, *destination, *registration_response) {
 
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
-        *registration_response = "PID of path *path is empty";
-        logDebug(*response);
+        *registration_response = "PID of path *source is empty";
+        logDebug(*registration_response);
         # Update Logging (Statistic File and Failed Files)
         EUDATUpdateLogging(bool("false"),*source,*destination,"empty source's PID");
     }
@@ -340,7 +358,7 @@ EUDATPIDRegistration(*source, *destination, *registration_response) {
         }
         else {
             *registration_response = "PID of path *destination is *childPID";
-            logDebug(*response);
+            logDebug(*registration_response);
             EUDATUpdateLogging(bool("false"),*source,*destination,"empty destination's PID");
         }
     }
@@ -364,15 +382,15 @@ EUDATSearchAndCreatePID(*path, *pid) {
     logDebug("Retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
-        EUDATSearchPID(*path, *pid);
-        logDebug("Retrieved the EPIC PID value *pid for path *path");
-        if ((*pid == "empty") || (*pid == "None")) {
+#        EUDATSearchPID(*path, *pid);
+#        logDebug("Retrieved the EPIC PID value *pid for path *path");
+#        if ((*pid == "empty") || (*pid == "None")) {
             EUDATCreatePID("None",*path,"None",bool("true"),*pid);
-        }
+#        }
         # if there is a PID in EPIC create it in ICAT
-        else {
+#        else {
             EUDATiPIDcreate(*path, *pid);
-        }
+#        }
     }
 }
 

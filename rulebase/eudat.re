@@ -9,9 +9,10 @@
 #---- authorization ---
 # EUDATAuthZ(*user, *action, *target, *response)
 #---- utility ---
+# EUDATisMetadata(*path)
+# EUDATMessage(*queue, *message)
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
-
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
@@ -27,9 +28,10 @@
 # EUDATfileInPath(*path,*subColl)
 # EUDATCreateAVU(*Key,*Value,*Path)
 # EUDATgetLastAVU(*Path, *Key, *Value)
-# EUDATModifyAVU(*Path, *Key, *Value)
+# EUDATModifyAVU(*Path, *Key, *Value) DEPRECATED
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # getCollectionName(*path_of_collection,*Collection_Name)
+# EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime)
 #---- repository packages ---
 # EUDATrp_checkMeta(*source,*AName,*AValue)
 # EUDATrp_ingestObject( *source )
@@ -83,7 +85,46 @@ EUDATAuthZ(*user, *action, *target, *response) {
 #                                                                              #
 ################################################################################
 
+# It verifies if the current path is a special path reserved for metadata.
 #
+# Return
+#  True or False
+#
+# Parameters:
+#   *path     [IN]    the  path of the object/collection
+#
+# Author: Claudio Cacciari, Cineca
+#
+EUDATisMetadata(*path) {
+    *isMeta = bool("false");
+    if (*path like regex ".*\\.metadata.*") {
+        logDebug("the path *path is a metadata special path");
+        *isMeta = bool("true");
+    }
+    *isMeta;
+}
+
+
+# It manages the writing and reading of log messages to/from external log services.
+# The current implementation writes the logs to specific log file.
+#
+# Return
+#  no response is expected
+#
+# Parameters:
+#   *queue     [IN]    the queue which will host the message
+#   *message   [IN]    the message to be sent
+#
+# Author: Claudio Cacciari, Cineca
+#
+EUDATMessage(*queue, *message) {
+    getMessageParameters(*msgLogPath)
+    logInfo("sending message '*message' to the queue '*queue'");
+    msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
+               "null", "null", "null", *out);
+}
+
+
 # It manages the writing and reading of log messages to/from external log services.
 # The current implementation writes the logs to specific log file.
 #
@@ -103,7 +144,7 @@ EUDATLog(*message, *level) {
                "null", "null", "null", *out);
 }
 
-#
+
 # It implements a FIFO queue for messages to/from external log services.
 #
 # Return
@@ -150,9 +191,6 @@ logInfo(*msg) {
 
 logDebug(*msg) {
     logWithLevel("debug", *msg);
-# replace "debug" with "info" to print even without
-# changing the log level of iRODS
-#   logWithLevel("info", *msg);
 }
 
 logError(*msg) {
@@ -444,6 +482,8 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 # Author: Pascal Dugénie, CINES
 # Modified : S Coutin 23/01/2015
 # Now it has the same functionality as EUDATCreateAVU : Erastova, 27.08.2015
+#
+# DEPRECATED
 #-----------------------------------------------------------------------------
 EUDATModifyAVU(*Path, *Key, *Value)
 {
@@ -530,7 +570,7 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
         *extraMetaData = *extraMetaData ++ " -r *ror";
     }
     getMetaParameters(*metaConfPath);
-    msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store *path"
+    msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
             ++ " -i *pid *extraMetaData", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *resp);
 }

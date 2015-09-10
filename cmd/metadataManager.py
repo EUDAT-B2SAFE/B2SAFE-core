@@ -31,27 +31,30 @@ class Metadata():
     
     
     def store(self, path, keyValuePairs, dryrun):
-        
-	logger.info("Going to store metadata about " + path)
-        query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
-        (rc, out1) = self.irodsu.execute_icommand(["iquest", query],self.user)
-        if out1 is not None:
-            collPath = path
-            objPath = None
-            mcoll = MetadataItem(collPath, objPath, self.user, dryrun)
-            mcoll.store(keyValuePairs)
-        else:
-            (parent, child) = path.rsplit('/',1)
-            query = "SELECT DATA_NAME WHERE COLL_NAME = '" + parent + "' and "\
-                  + "DATA_NAME = '" + child + "'"
-            (rc, out2) = self.irodsu.execute_icommand(["iquest", query],self.user)
-            if out2 is not None:
-                mobj = MetadataItem(parent, child, self.user, dryrun)
-                mobj.store(keyValuePairs)
+       
+        if not path.endswith('.metadata'):
+            logger.info("Going to store metadata about " + path)
+            query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
+            (rc, out1) = self.irodsu.execute_icommand(["iquest", query],self.user)
+            if out1 is not None:
+                collPath = path
+                objPath = None
+                mcoll = MetadataItem(collPath, objPath, self.user, dryrun)
+                mcoll.store(keyValuePairs)
             else:
-                logger.error('Wrong path: ' + path)
-        
-        
+                (parent, child) = path.rsplit('/',1)
+                query = "SELECT DATA_NAME WHERE COLL_NAME = '" + parent + "' and "\
+                      + "DATA_NAME = '" + child + "'"
+                (rc, out2) = self.irodsu.execute_icommand(["iquest", query],self.user)
+                if out2 is not None:
+                    mobj = MetadataItem(parent, child, self.user, dryrun)
+                    mobj.store(keyValuePairs)
+                else:
+                    logger.error('Wrong path: ' + path)
+        else:  
+            logger.debug('skipping directory metadata: %s', path)
+       
+ 
 class MetadataItem():
     """Class implementing the single metadata record"""
     
