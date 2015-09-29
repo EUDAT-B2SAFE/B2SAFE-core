@@ -10,11 +10,11 @@
 # List of the functions:
 #
 # EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause)
-# EUDATCheckIntegrity(*source,*destination,*logEnabled,*response)
+# EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response)
 # EUDATReplication(*source, *destination, *registered, *recursive)
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATRegDataRepl(*source, *destination)
-# EUDATPIDRegistration(*source, *destination, *registration_response)
+# EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndDefineRoR(*path, *pid, *ROR)
 # EUDATSearchAndCreatePID(*path, *pid)
 # EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
@@ -52,13 +52,14 @@ EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 #    *destination    [IN] detination path in iRODS
 #    *logEnabled     [IN] boolean value: "true" to enable the logging system, 
 #                                        "false" to silence it.
+#    *notification   [IN] value [0|1]: if 1 enable the notification via messaging system
 #    *response       [OUT] the reason of the failure
 #
 #
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #
-EUDATCheckIntegrity(*source,*destination,*logEnabled,*response) {
+EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
 
     *status_transfer_success = bool("true");
 
@@ -75,6 +76,13 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*response) {
         logError("[EUDATCheckIntegrity] *source and *destination are not coherent: *response");
     } else {
         logInfo("[EUDATCheckIntegrity] *source and *destination are coherent");
+    }
+
+    if (*notification == 1) {
+        EUDATGetZoneNameFromPath(*source, *zone);
+        *queue = *zone ++ "_" ++ $userNameClient;
+        *message = "status:*status_transfer_success;response:*source::*destination::*response";
+        EUDATMessage(*queue, *message);
     }
 
     *status_transfer_success;
@@ -104,8 +112,8 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
 
         logDebug("*errmsg");
         *status = bool("false");
-        *response = "no access permission for path *source";
-        EUDATUpdateLogging(*status,*source,*destination,"no access permission");
+        *response = "no access permission to the path *source for user $userNameClient";
+        EUDATUpdateLogging(*status,*source,*destination,*response);
 
     } else {
 
@@ -247,11 +255,13 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
-                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*response);
+                *notification = 0;
+                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
             
             if (*status) {
-                EUDATPIDRegistration(*source, *destination, *response);
+                *notification = 0;
+                EUDATPIDRegistration(*source, *destination, *notification, *response);
                 if (*response != "None") { *status = bool("false") }
                 # update the parent PID of each replica with the related child PID
                 if (*status && *recursive) {
@@ -264,7 +274,7 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
                         if (!EUDATisMetadata(*Row.COLL_NAME)) {
                             msiSubstr(*Row.COLL_NAME, str(int(*pathLength)+1), "null", *subCollection);
                             *target = "*destination/*subCollection";
-                            EUDATPIDRegistration(*Row.COLL_NAME, *target, *singleRes);
+                            EUDATPIDRegistration(*Row.COLL_NAME, *target, *notification, *singleRes);
                             if (*singleRes != "None") { 
                                 *contents = *Row.COLL_NAME ++ '::*target::false::*singleRes';
                                 *responses = *responses ++ *contents ++ ",";
@@ -279,7 +289,7 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
                             *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
                             msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
                             *target = "*destination/*subCollection";
-                            EUDATPIDRegistration(*objPath, *target, *singleRes);
+                            EUDATPIDRegistration(*objPath, *target, *notification, *singleRes);
                             if (*singleRes != "None") {                       
                                 *contents = "*objPath::*target::false::*singleRes";
                                 *responses = *responses ++ *contents ++ ",";
@@ -298,11 +308,13 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
             if (*rsyncStatus != 0) {
                  logDebug("perform a further verification about checksum and size");
                  *logEnabled = bool("true");
-                 *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*response);
+                 *notification = 0;
+                 *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
             if (*status) {
+                *notification = 0;
                 # update the parent PID of the replica with the related child PID
-                EUDATPIDRegistration(*source, *destination, *response);
+                EUDATPIDRegistration(*source, *destination, *notification, *response);
                 if (*response != "None") { *status = bool("false") }
             }
         }
@@ -318,11 +330,12 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
 # Parameters:
 # *source          [IN]  source iRODS path
 # *destination     [IN]  target iRODS path
+# *notification    [IN]  enable messaging for async call [0|1]
 # *response        [OUT] a message containing the reason of the failure
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
-EUDATPIDRegistration(*source, *destination, *registration_response) {
+EUDATPIDRegistration(*source, *destination, *notification, *registration_response) {
 
     logInfo("[EUDATPIDRegistration] registration of PIDs for replication from *source to *destination");
 
@@ -337,10 +350,10 @@ EUDATPIDRegistration(*source, *destination, *registration_response) {
 
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
-        *registration_response = "PID of path *source is empty";
+        *registration_response = "PID of source *source is None";
         logDebug(*registration_response);
         # Update Logging (Statistic File and Failed Files)
-        EUDATUpdateLogging(bool("false"),*source,*destination,"empty source's PID");
+        EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
     }
     else {
         EUDATSearchAndDefineRoR(*source, *parentPID, *parentROR);
@@ -357,10 +370,19 @@ EUDATPIDRegistration(*source, *destination, *registration_response) {
 #TODO log the failure of the child update: define function to search *childPID in *parentPID
         }
         else {
-            *registration_response = "PID of path *destination is *childPID";
+            *registration_response = "PID of destination *destination is None";
             logDebug(*registration_response);
-            EUDATUpdateLogging(bool("false"),*source,*destination,"empty destination's PID");
+            EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
         }
+    }
+   
+    if (*notification == 1) { 
+        if (*registration_response == "None") { *statusMsg = "true"; }
+        else { *statusMsg = "false"; }
+        EUDATGetZoneNameFromPath(*source, *zone);
+        *queue = *zone ++ "_" ++ $userNameClient;
+        *message = "status:*statusMsg;response:*source::*destination::*registration_response";
+        EUDATMessage(*queue, *message);
     }
 }
 

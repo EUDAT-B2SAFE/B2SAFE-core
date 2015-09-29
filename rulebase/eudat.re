@@ -564,7 +564,7 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
         *extraMetaData = "-c *checksum -t *modtime";
     }
     if (*ror == "" || *ror == 'None') {
-        EUDATGetRorPid(*pid, *ror);
+        EUDATGeteRorPid(*pid, *ror);
     }
     if (*ror != "") {
         *extraMetaData = *extraMetaData ++ " -r *ror";
