@@ -55,22 +55,28 @@ getLogParameters(*logConfPath) {
 #
 # Arguments:
 # *metaConfPath  [OUT] the file path to the metadata tool configuration.
+# *enabled       [OUT] boolean value to enable (if true) globally the 
+#                      json metadata writing
 #
 # Author: Claudio Cacciari (Cineca)
 
-getMetaParameters(*metaConfPath) {
+getMetaParameters(*metaConfPath, *enabled) {
     *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf";
+    *enabled=bool("false");
 }
 
 #Provides parameters for the message management mechanism
 #
 # Arguments:
 # *msgLogPath  [OUT] the file path to the message log file.
+# *enabled     [OUT] boolean value to enable (if true) globally the
+#                    the usage of the messaging system
 #
 # Author: Claudio Cacciari (Cineca)
 #
-getMessageParameters(*msgLogPath) {
+getMessageParameters(*msgLogPath, *enabled) {
     *msgLogPath="/var/log/irods/messageManager.log";
+    *enabled=bool("false");
 }
 
 # Provides version of the B2SAFE

@@ -1,3 +1,7 @@
+B2SAFE package 3.0.0 [2015/10/23]
+This version is compatible with iRODS v4.x .
+It is still backward compatible with iRODS 3.3.1 .
+
 B2SAFE package 3.0 [2014/12/18]
 This is the first version compatible with iRODS v4.0.x .
 It is still backward compatible with iRODS 3.3.1 .

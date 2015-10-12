@@ -118,10 +118,12 @@ EUDATisMetadata(*path) {
 # Author: Claudio Cacciari, Cineca
 #
 EUDATMessage(*queue, *message) {
-    getMessageParameters(*msgLogPath)
-    logInfo("sending message '*message' to the queue '*queue'");
-    msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
-               "null", "null", "null", *out);
+    getMessageParameters(*msgLogPath, *enabled);
+    if (*enabled) {
+        logInfo("sending message '*message' to the queue '*queue'");
+        msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
+                   "null", "null", "null", *out);
+    }
 }
 
 
@@ -556,23 +558,25 @@ getCollectionName(*path_of_collection,*Collection_Name){
 
 EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
 
-    *extraMetaData = "";
-    if (*checksum == "" || *checksum == 'None') {
-        EUDATiCHECKSUMget(*path, *checksum, *modtime);
+    getMetaParameters(*metaConfPath,*enabled);
+    if (*enabled) {
+        *extraMetaData = "";
+        if (*checksum == "" || *checksum == 'None') {
+            EUDATiCHECKSUMget(*path, *checksum, *modtime);
+        }
+        if (*checksum != "") {
+            *extraMetaData = "-c *checksum -t *modtime";
+        }
+        if (*ror == "" || *ror == 'None') {
+            EUDATGeteRorPid(*pid, *ror);
+        }
+        if (*ror != "") {
+            *extraMetaData = *extraMetaData ++ " -r *ror";
+        }
+        msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
+                ++ " -i *pid *extraMetaData", "null", "null", "null", *out);
+        msiGetStdoutInExecCmdOut(*out, *resp);
     }
-    if (*checksum != "") {
-        *extraMetaData = "-c *checksum -t *modtime";
-    }
-    if (*ror == "" || *ror == 'None') {
-        EUDATGeteRorPid(*pid, *ror);
-    }
-    if (*ror != "") {
-        *extraMetaData = *extraMetaData ++ " -r *ror";
-    }
-    getMetaParameters(*metaConfPath);
-    msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
-            ++ " -i *pid *extraMetaData", "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *resp);
 }
 
 

@@ -56,7 +56,7 @@ class EpicClient(object):
 
         self.cred = cred
         self.debug = cred.debug
-        self.http = httplib2.Http(disable_ssl_certificate_validation=True)
+        self.http = httplib2.Http(disable_ssl_certificate_validation=False)
         self.http.add_credentials(cred.username, cred.password)
         # do not throw exceptions for connection errors
         self.http.force_exception_to_status_code = True
