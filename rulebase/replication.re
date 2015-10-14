@@ -133,7 +133,8 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
-                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*response);
+                *notification = 0;
+                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
         }
     }   

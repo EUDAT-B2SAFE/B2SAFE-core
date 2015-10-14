@@ -355,7 +355,7 @@ EUDATiCHECKSUMget(*path, *checksum, *modtime) {
         #If it is a collection, do not calculate the checksum
         msiGetObjType(*path,*type);
         if (*type == '-d')  {
-            msiDataObjChksum(*path, "ChksumAll", *checksum);
+            msiDataObjChksum(*path, "forceChksum", *checksum);
         }
         #call again EUDATiCHECKSUMretrieve in order to set checksum date
         EUDATiCHECKSUMretrieve(*path, *checksum, *modtime);
