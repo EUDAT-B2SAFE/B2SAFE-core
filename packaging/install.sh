@@ -198,53 +198,6 @@ update_server_config_json() {
     return $STATUS
 }
 
-configure_irods_hooks() {
-
-    IRODS_COREFILE=$IRODS_CONF_DIR/core.re
-    TMP_FILE=/tmp/irodshooks.re
-    if [ ! -e ${IRODS_COREFILE}.org.${DATE_TODAY} ]
-    then
-        cp $IRODS_COREFILE ${IRODS_COREFILE}.org.${DATE_TODAY} 
-    fi
-
-    status=$(awk '/acPostProcForPut/{f=1}/(\*\.replicate)|(\*\.pid\.create)/{g=1;exit}END{print g&&f ?1:0}' $IRODS_COREFILE)
-    if [ $status -eq 0 ]
-    then
-
-        cat > $TMP_FILE << EOF
-
-acPostProcForPut {
-    ON(\$objPath like "\*.replicate") {
-        processReplicationCommandFile(\$objPath);
-    }
-}
-acPostProcForPut {
-    ON(\$objPath like "\*.pid.create") {
-        processPIDCommandFile(\$objPath);
-    }
-}
-
-EOF
-
-       if [ $? -eq 0 ]
-       then
-            cat $TMP_FILE $IRODS_COREFILE > $IRODS_COREFILE.new
-            if [ $? -eq 0 ]
-            then
-                mv $IRODS_COREFILE.new  $IRODS_COREFILE
-            else
-                echo "ERROR: creating $IRODS_COREFILE.new failed!"
-                STATUS=1
-            fi
-       else
-            echo "ERROR: creating $TMP_FILE failed!"
-            STATUS=1
-       fi
-    fi
-
-    return $STATUS
-}
-
 update_irods_core_resource() {
 
     IRODS_COREFILE=$IRODS_CONF_DIR/core.re
@@ -556,15 +509,6 @@ then
     else
         update_server_config_json
     fi
-fi
-
-#
-# configure iRODS hooks
-#
-if [ $? -eq 0 ]
-then
-    echo "configure_irods_hooks"
-    configure_irods_hooks
 fi
 
 #

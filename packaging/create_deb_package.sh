@@ -43,14 +43,20 @@ rm -rf   $RPM_BUILD_ROOT${PACKAGE}/*
 # create package directory's
 mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/cmd
 mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf
+mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/docs
 mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging
 mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/rulebase
+mkdir -p $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/testRules
 
 # copy files and images
+cp $RPM_SOURCE_DIR/*.txt          $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}
+cp $RPM_SOURCE_DIR/LICENSE        $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}
 cp $RPM_SOURCE_DIR/cmd/*          $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/cmd
 cp $RPM_SOURCE_DIR/conf/*         $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf
+cp $RPM_SOURCE_DIR/docs/*         $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/docs
 cp $RPM_SOURCE_DIR/packaging/install.sh $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging
 cp $RPM_SOURCE_DIR/rulebase/*     $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/rulebase
+cp $RPM_SOURCE_DIR/rules/*        $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/testRules
 mkdir -p                          $RPM_BUILD_ROOT${PACKAGE}/var/log/irods
 
 # set mode of specific files
@@ -78,6 +84,12 @@ Description: B2SAFE for iRODS package
  on their research data across multiple administrative domains in a trustworthy
  manner.
 
+EOF
+
+# create config file to point to the config files
+cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/conffiles << EOF
+${IRODS_PACKAGE_DIR}/conf/*.json
+${IRODS_PACKAGE_DIR}/conf/*.conf
 EOF
 
 # create postinstall scripts
