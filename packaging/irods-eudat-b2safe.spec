@@ -51,14 +51,23 @@ exit 0
 rm -rf %{buildroot}
 mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/cmd
 mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/conf
+mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/docs
 mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/packaging
 mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/rulebase
+mkdir -p $RPM_BUILD_ROOT%{_irodsPackage}/testRules
 
-cp $RPM_SOURCE_DIR/cmd/* $RPM_BUILD_ROOT%{_irodsPackage}/cmd
-cp $RPM_SOURCE_DIR/conf/* $RPM_BUILD_ROOT%{_irodsPackage}/conf
+cp $RPM_SOURCE_DIR/*.txt      $RPM_BUILD_ROOT%{_irodsPackage}
+cp $RPM_SOURCE_DIR/LICENSE    $RPM_BUILD_ROOT%{_irodsPackage}
+cp $RPM_SOURCE_DIR/cmd/*      $RPM_BUILD_ROOT%{_irodsPackage}/cmd
+cp $RPM_SOURCE_DIR/conf/*     $RPM_BUILD_ROOT%{_irodsPackage}/conf
+cp $RPM_SOURCE_DIR/docs/*     $RPM_BUILD_ROOT%{_irodsPackage}/docs
 cp $RPM_SOURCE_DIR/packaging/install.sh $RPM_BUILD_ROOT%{_irodsPackage}/packaging
 cp $RPM_SOURCE_DIR/rulebase/* $RPM_BUILD_ROOT%{_irodsPackage}/rulebase
+cp $RPM_SOURCE_DIR/rules/*    $RPM_BUILD_ROOT%{_irodsPackage}/testRules
 mkdir -p $RPM_BUILD_ROOT/var/log/irods
+
+touch $RPM_BUILD_ROOT%{_irodsPackage}/cmd/toBeExcludedFile.pyc
+touch $RPM_BUILD_ROOT%{_irodsPackage}/cmd/toBeExcludedFile.pyo
 
 # cleanup
 %clean
@@ -70,10 +79,16 @@ rm -rf %{buildroot}
 # default attributes
 %defattr(-,%{_irodsUID},%{_irodsUID},-)
 # files
+# exclude .pyc and .py files
+%exclude %{_irodsPackage}/cmd/*.pyc
+%exclude %{_irodsPackage}/cmd/*.pyo 
+#include files
 %{_irodsPackage}/cmd
 %{_irodsPackage}/conf
+%{_irodsPackage}/docs
 %{_irodsPackage}/packaging
 %{_irodsPackage}/rulebase
+%{_irodsPackage}/testRules
 # attributes on files and directory's
 %attr(-,%{_irodsUID},%{_irodsGID})   %{_irodsPackage}
 %attr(700,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/cmd/*.py
@@ -82,6 +97,10 @@ rm -rf %{buildroot}
 %attr(700,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/packaging/*.sh
 %attr(-,%{_irodsUID},%{_irodsGID}) /var/log/irods
 %doc
+# config files
+%config(noreplace) %{_irodsPackage}/conf/*.json
+%config(noreplace) %{_irodsPackage}/conf/*.conf
+
 
 %post
 # create configuration file if it does not exist yet
@@ -147,6 +166,8 @@ cd %{_irodsPackage}/packaging
 EOF
 
 %changelog
+* Thu Oct 15 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
+- add extra files and create docs directory, specify config files.
 * Mon Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - assign version of package at build time with input parameters 
 * Fri Feb 13 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
