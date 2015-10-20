@@ -372,27 +372,35 @@ EUDATiCHECKSUMget(*path, *checksum, *modtime) {
 #                         mode 1: modification time - creation time
 #                         mode 2: now - modification time
 #   *age           [OUT]  The age of the object in seconds
+#                         *age = -1 if the object does not exist
 #
 # Author: Giacomo Mariani, CINECA
 #
 EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
-    # Look when the file has been created in iRODS
-    msiSplitPath(*filePath, *fileDir, *fileName);   
-    *ec = SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir';
-    foreach(*ec) {
-        msiGetValByKey(*ec, "DATA_CREATE_TIME", *creationTime);
-        logDebug("EUDATgetObjectTimeDiff -> Created at  *creationTime");
-        msiGetValByKey(*ec, "DATA_MODIFY_TIME", *modifyTime);
-        logDebug("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
+    *age = -1;
+    # Check if the file exists 
+    if(errorcode(msiObjStat(*filePath,*out)) < 0) {
+        logInfo("EUDATgetObjectTimeDiff -> File *filePath does not exist");
     }
-    if (*mode == "1") {
-        *age=int(*modifyTime)-int(*creationTime);
+    else {
+        # Look when the file has been created in iRODS
+        msiSplitPath(*filePath, *fileDir, *fileName);   
+        *ec = SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir';
+        foreach(*ec) {
+            msiGetValByKey(*ec, "DATA_CREATE_TIME", *creationTime);
+            logDebug("EUDATgetObjectTimeDiff -> Created at  *creationTime");
+            msiGetValByKey(*ec, "DATA_MODIFY_TIME", *modifyTime);
+            logDebug("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
+        }
+        if (*mode == "1") {
+            *age=int(*modifyTime)-int(*creationTime);
+        }
+        else if (*mode == "2") {
+            msiGetSystemTime(*Now,"unix");
+            *age=int(*Now)-int(*modifyTime);
+        }
+        logDebug("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
     }
-    else if (*mode == "2") {
-        msiGetSystemTime(*Now,"unix");
-        *age=int(*Now)-int(*modifyTime);
-    }
-    logDebug("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
 }
 
 #
@@ -402,11 +410,20 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
 # Arguments:
 #   *filePath      [IN]   The full iRODS path of the object
 #   *age           [OUT]  The age of the object in seconds
+#                         *age = -1 if the object does not exist
 #
 # Author: Claudio Cacciari, CINECA
 #
 EUDATgetObjectAge(*filePath, *age) {
-    EUDATgetObjectTimeDiff(*filePath, "2", *age);
+    *age = -1;
+    # Check if the file exists
+    if(errorcode(msiObjStat(*filePath,*out)) >= 0) {
+        EUDATgetObjectTimeDiff(*filePath, "2", *age);
+    }
+    else {
+        logInfo("EUDATgetObjectAge -> File *filePath does not exist");
+    }
+    *age;
 }
 
 #
