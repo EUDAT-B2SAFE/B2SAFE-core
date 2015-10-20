@@ -57,8 +57,6 @@ for line in lines:
         ll = line.split()
     if line.find('LOG_DIR') > -1:
         ld = line.split()
-    if line.find('SHARED_SPACE') > -1:
-        hs = line.split()
 fr.close()    
 
 IRODS_DIR = ird[1]
@@ -75,7 +73,6 @@ USERNAME = un[1]
 PREFIX = pf[1]
 LOG_LEVEL = ll[1]
 LOG_DIR = ld[1]
-SHARED_SPACE = hs[1]
 
 def inpt(inp1):
     """ y/n exit """
@@ -296,47 +293,7 @@ for line in source:
 source.close()
 destination.close()
 
-print "4. configure iRODS hooks. \n"\
-"    edit the /etc/<irods>/core.re file "\
-"and add the following two acPostProcForPutHooks: \n"\
-"    acPostProcForPut { \n        ON($objPath like "\
-"'\*.replicate') { \n            "\
-"processReplicationCommandFile($objPath);}} \n    "\
-"acPostProcForPut { \n        "\
-"ON($objPath like '\*.pid.create') { \n"\
-"            processPIDCommandFile($objPath);}} "
-
-filename = IRODS_CONF_DIR + "/core.re"
-stat(filename)
-if not check("\*.pid.create", filename):
-    try:
-        os.rename(filename, filename+"~")
-    except OSError:
-        print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
-              'Please, check your iRODS installation and start over again.' \
-              + BACK
-        exit()
-    destination = open(filename, "w")
-    source = open(filename+"~", "r")
-    for line in source:
-        if line.find('# 4) acPostProcForPut') > -1:
-            destination.write(line)
-            destination.write('acPostProcForPut {' + '\n')
-            destination.write(\
-'    ON($objPath like "\*.replicate") {' + '\n')
-            destination.write(\
-'        processReplicationCommandFile($objPath);}}' + '\n')
-            destination.write('acPostProcForPut {' + '\n')
-            destination.write(\
-'    ON($objPath like "\*.pid.create") {' + '\n')
-            destination.write(\
-'        processPIDCommandFile($objPath);}}' + '\n')
-        else:
-            destination.write(line)
-    source.close()
-    destination.close()
-
-print '5. properly configure the default resource in '\
+print '4. properly configure the default resource in '\
 '/etc/<irods>/core.re \n'
 
 if not check('acSetRescSchemeForCreate {msiSetDefaultResc("'\
@@ -367,7 +324,7 @@ and DEFAULT_RESOURCE != 'demoResc':
     source.close()
     destination.close()
 
-print '6.1 install python scripts \n     cd <irods> \n     '\
+print '5.1 install python scripts \n     cd <irods> \n     '\
 'ln -s <absolute-b2safe-core-source-path>/cmd/* '\
 './server/bin/cmd/ \n     check permissions on the scripts '\
 'and make sure they are executable by the irods user \n'\
@@ -409,7 +366,7 @@ except subprocess.CalledProcessError:
           'and start over again.' + BACK
     exit()
 
-print "6.2 update the 'getEpicApiParameters' rule in "\
+print "5.2 update the 'getEpicApiParameters' rule in "\
 "'/etc/<irods>/euloc.re' \n     "\
 "- Configure the credential storage type: 'os': "\
 "stored on the local filesystem or 'irods': stored on de irods namespace. "\
@@ -451,7 +408,19 @@ for line in source:
         line1 = line.replace(\
 "/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf",\
 CONF_DIR+"/log.manager.conf")
-        destination.write(line1) 	
+        destination.write(line1)
+    elif line.find(\
+'"/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf"') > -1:
+        line1 = line.replace(\
+"/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf",\
+CONF_DIR+"/metadataManager.conf")
+        destination.write(line1)
+    elif line.find(\
+'"/var/log/irods/messageManager.log"') > -1:
+        line1 = line.replace(\
+"/var/log/irods/messageManager.log",\
+CONF_DIR+"/log/messageManager.log")
+        destination.write(line1)
     else:
         destination.write(line)
 source.close()
@@ -488,7 +457,7 @@ symlink(CONF_DIR + "/credentials", \
         IRODS_DIR + "/server/bin/cmd/credentials", \
         IRODS_DIR + "/server/bin/cmd/credentials")
 
-print '6.3 update the "getAuthZParameters" rule in '\
+print '5.3 update the "getAuthZParameters" rule in '\
 '"/etc/<irods>/euloc.re" \n - '\
 'Set the proper values in CONF_DIR/authz.map.json'
 
@@ -522,7 +491,7 @@ for line in source:
 source.close()
 destination.close()
 
-print '6.4 update the "getLogParameters" rule in '\
+print '5.4 update the "getLogParameters" rule in '\
 '"/etc/<irods>/euloc.re" \n '\
 '- Set the proper values in CONF_DIR/log.manager.conf'
 
@@ -541,7 +510,7 @@ except subprocess.CalledProcessError:
     else:
         subprocess.call(["mkdir", LOG_DIR])
 else:
-    print RED + BOLD + 'Directory ' + LOG_DIR + ' exists. \n' + BACK
+    print BLUE + BOLD + 'Directory ' + LOG_DIR + ' exists. \n' + BACK
 
 filename = CONF_DIR + "/log.manager.conf"
 try:
@@ -565,37 +534,45 @@ for line in source:
 source.close()
 destination.close()
 
-print '7. create a shared space in all zones as configured in the '\
-'eudat.re rulebase getSharedCollection function. \n - defaults to '\
-'"<zone>/replicate" \n - make sure all users involved in the '\
-'replication can write in this collection.'
+print '5.5 update the "getMetaParameters" rule in '\
+'"/etc/<irods>/euloc.re" \n '\
+'- Set the proper values in CONF_DIR/metadataManager.conf'
 
-path = os.environ["PATH"]
-if path.find('icommands') < 0:
-    path = path + ":" + IRODS_DIR + "/clients/icommands/bin"
-    os.putenv('PATH', path)
-#    os.system('bash')
-status, output = commands.getstatusoutput("ils " + SHARED_SPACE)
-
-if status != 0:
-    if output.find('command not found') > -1:
-        path = os.environ["PATH"]
-        if path.find('icommands') < 0:
-            path = path + ":" + IRODS_DIR + "/clients/icommands/bin"
-            os.putenv('PATH', path)
-            status, output = commands.getstatusoutput("ils " + SHARED_SPACE)
-if status != 0:
-    if output.find('does not exist or user lacks access permission') > -1:
-        print "shared space you entered does not exist. "\
-"Please, check b2safe.config and rerun the install script"
+try:
+    subprocess.check_call(["stat", LOG_DIR])
+except subprocess.CalledProcessError:
+    print BLUE + BOLD + 'Creating directory ' + LOG_DIR + '..' + BACK
+    try:
+        subprocess.check_call(["mkdir", LOG_DIR])
+    except subprocess.CalledProcessError:
+        print RED + BOLD + 'Error: directory ' + LOG_DIR + ' cannot be ' \
+          'created. \nPlease, check the path in the b2safe.config ' \
+          '(CONF_DIR) \nand access permissions and start over again.' \
+          + BACK
         exit()
-    else: 
-        print "output of command ils " + SHARED_SPACE + ": " + output 
-        exit()
+    else:
+        subprocess.call(["mkdir", LOG_DIR])
+else:
+    print BLUE + BOLD + 'Directory ' + LOG_DIR + ' exists. \n' + BACK
 
-for i in range(1, len(us)):
-    if us[i] == '*': continue
-    os.system("ichmod -r own " + us[i] + " " + SHARED_SPACE)
+filename = CONF_DIR + "/metadataManager.conf"
+try:
+    os.rename(filename, filename+"~")
+except OSError:
+    print RED + BOLD + 'Error: file ' + filename + ' does not exist. ' \
+          'Please, check your iRODS installation and start over again.' \
+          + BACK
+    exit()
+destination = open(filename, "w")
+source = open(filename+"~", "r")
+for line in source:
+    if line.find('log_file') > -1:
+        line1 = line.replace("/var/log/irods", LOG_DIR)
+        destination.write(line1)
+    else:
+        destination.write(line)
+source.close()
+destination.close()
 
 print GREEN + BOLD + 'B2SAFE module installation is' \
             + RED + BOLD + ' ALMOST ' + GREEN + BOLD + 'finished!' + BACK
@@ -613,10 +590,6 @@ print BLUE + BOLD + 'Please, complete the following steps ' \
       '  ubuntu: apt-get install python-httplib2 python-simplejson \n '\
       '  ubuntu: apt-get install pylint \n '\
       '- install queuelib library to run logging-mechanism \n '\
-      '- test the epic api interaction by running the '\
-      '"' + IRODS_DIR + '/server/bin/cmd/epicclient.py os '\
-      + IRODS_DIR + '/server/bin/cmd/credentials test"'\
-      ' script manually and with "iexecmd epicclient.py" \n '\
       + BACK
 
 exit()
