@@ -3,6 +3,7 @@
 *** Installation ***
 
 This setup describes the procedure to enable the B2SAFE module for iRODS 3.3.x
+For iRODS 4.x create the rpm ord deb package as described in the install.txt
 
 There are two automatic ways to deploy the module.
 One is based on the python script:
@@ -39,32 +40,17 @@ Automatically:
    in a single line and without the suffix".re", in this way ",filename1,filename2,filename3 ..."  
 	(make sure to include the comma and no spaces)
 
-4. configure iRODS hooks.
-	edit the <irods>/server/config/reConfigs/core.re (irods3) or /etc/irods/core.re (irods4) file 
-	and add the following two acPostProcForPutHooks:
-
-	acPostProcForPut {
-        	ON($objPath like "\*.replicate") {
-                	processReplicationCommandFile($objPath);
-        	}
-	}
-	acPostProcForPut {
-        	ON($objPath like "\*.pid.create") {
-                	processPIDCommandFile($objPath);
-       	 	}
-	}
-
-5. properly configure the default resource in <irods>/server/config/reConfigs/core.re (irods3) 
+4. properly configure the default resource in <irods>/server/config/reConfigs/core.re (irods3) 
    or /etc/irods/core.re (irods4)
 
-6.1 install the python scripts
+5.1 install the python scripts
    for irods3: <irods_dir> is usually /home/user/iRODS
    for irods4: <irods_dir> is usually /var/lib/irods/iRODS
    ln -s /whre_you_have_downloaded/B2SAFE-core/cmd/* <irods_dir>/server/bin/cmd/
         check permissions on the scripts and make sure they are executable by the irods user
             e.g.chmod u+x cmd/*
 
-6.2 update the "getEpicApiParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
+5.2 update the "getEpicApiParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
     or /etc/irods/euloc.re (irods4)
     - Configure the credential storage type: "os": stored on the local filesystem 
       or "irods": stored on de irods namespace.
@@ -74,20 +60,20 @@ Automatically:
     - Set the proper values in the credentials file 
       (see /whre_you_have_downloaded/B2SAFE-core/cmd/credentials_example for an example)
     
-6.3 update the "getAuthZParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
+5.3 update the "getAuthZParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
     or /etc/irods/euloc.re (irods4)
     - Set the proper values in <irods>/server/bin/cmd/authz.map.json
     
-6.4 update the "getLogParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
+5.4 update the "getLogParameters" rule in "./server/config/reConfigs/euloc.re" (irods3)
     or /etc/irods/euloc.re (irods4)
     - Set the proper values in <irods>/server/bin/cmd/log.manager.conf
 
-7. create a shared space in all zones (local and remote), for example: "<zone>/replicate".
+6. create a shared space in all zones (local and remote), for example: "<zone>/replicate".
     Grant all users involved in the replication write access to this collection.
 
-8.0.1 change "#!/usr/bin/env python" in the python scripts in modules/B2SAFE/cmd/ to your python installation
+7.0.1 change "#!/usr/bin/env python" in the python scripts in modules/B2SAFE/cmd/ to your python installation
 
-8.0.2 install httplib2, simplejson, lxml, defusedxml,  queuelib, and pylint:
+7.0.2 install httplib2, simplejson, lxml, defusedxml,  queuelib, and pylint:
 	httplib2
 	download from http://code.google.com/p/httplib2
 	python setup.py install
@@ -105,11 +91,11 @@ Automatically:
     download from https://pypi.python.org/pypi/queuelib
     python setup.py install
   
-8.1 test the epic api interaction by running 
+7.1 test the epic api interaction by running 
     "./cmd/epicclient.py <os_or_irods> <path_to_credentials> test" script manually 
     and with "iexecmd epicclient.py"
     
-8.2 test the module by changing and triggering rules in <irods>/modules/B2SAFE/rules
+7.2 test the module by changing and triggering rules in <irods>/modules/B2SAFE/rules
     For example, eudatRepl.r to replicate a data set. See the hints inside the rule.
 
 DATACENTER only:
