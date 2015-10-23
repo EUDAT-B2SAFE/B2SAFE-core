@@ -133,7 +133,7 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
-                *notification = 0;
+                *notification = 1;
                 *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
         }
@@ -256,12 +256,12 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
-                *notification = 0;
+                *notification = 1;
                 *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
             
             if (*status) {
-                *notification = 0;
+                *notification = 1;
                 EUDATPIDRegistration(*source, *destination, *notification, *response);
                 if (*response != "None") { *status = bool("false") }
                 # update the parent PID of each replica with the related child PID
@@ -309,11 +309,11 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
             if (*rsyncStatus != 0) {
                  logDebug("perform a further verification about checksum and size");
                  *logEnabled = bool("true");
-                 *notification = 0;
+                 *notification = 1;
                  *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
             }
             if (*status) {
-                *notification = 0;
+                *notification = 1;
                 # update the parent PID of the replica with the related child PID
                 EUDATPIDRegistration(*source, *destination, *notification, *response);
                 if (*response != "None") { *status = bool("false") }
