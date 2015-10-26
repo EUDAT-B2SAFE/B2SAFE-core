@@ -30,7 +30,6 @@
 # EUDATgetLastAVU(*Path, *Key, *Value)
 # EUDATModifyAVU(*Path, *Key, *Value) DEPRECATED
 # EUDATcountMetaKeys( *Path, *Key, *Value )
-# getCollectionName(*path_of_collection,*Collection_Name)
 # EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime)
 #---- repository packages ---
 # EUDATrp_checkMeta(*source,*AName,*AValue)
@@ -543,21 +542,6 @@ EUDATcountMetaKeys( *Path, *Key, *Value )
     }
 }
 
-#
-# get Name of Collection from Path
-#
-# Parameters:
-#	*path_of_collection		[IN] 	path of collection in iRODS
-#	*Collection_Name 		[OUT]	return Name of Collection 
-#
-# Author: Long Phan, JSC
-#
-getCollectionName(*path_of_collection,*Collection_Name){
-    *list = split("*path_of_collection","/");
-    *s = size(*list) - 1;
-    *n = elem(*list,*s);
-    *Collection_Name = "*n";
-}
 
 # Store the metadata PID, CHECKSUM, ROR, CHECKSUM Timestamp in a json file
 # inside the special collection .metadata. It stores one file per DO plus

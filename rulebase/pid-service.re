@@ -29,6 +29,7 @@
 # EUDATePIDremove(*path, *force)
 # EUDATeiChecksumMgmtColl(*sourceColl)
 # EUDATiRORupdate(*source, *pid)
+# EUDATeRORupdate(*pid,*newRor)
 # EUDATPidsForColl(*collPath)
 # 
 
@@ -408,16 +409,14 @@ EUDATeCHECKSUMupdate(*PID, *path) {
 #
 EUDATeURLupdate(*PID, *newURL) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-#TODO test the following code
-# EUDATeURLsearch(*PID, *oldURL);
+    EUDATeURLsearch(*PID, *oldURL);
     logInfo("EUDATeURLupdate -> modify URL in PID *PID");
     msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID URL \"*newURL\"",
                "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *response);
     logInfo("EUDATeURLupdate -> modify handle response = *response");
-#TODO test the following code
-# msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID 10320/LOC \"*oldURL\" \"*newURL\"",
-#            "null", "null", "null", *out);
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID 10320/LOC \"*oldURL\" \"*newURL\"",
+               "null", "null", "null", *out);
 }
 
 #

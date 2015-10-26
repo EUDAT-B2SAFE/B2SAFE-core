@@ -7,6 +7,6 @@ eudatTD{
     # and the modification time of an object. In seconds.
     EUDATgetObjectAge(*filePath, *age1);
 }
-INPUT *filePath='/vzRZGEUDAT/home/eudat/11/11.txt', *mode='1'
+INPUT *filePath='/cinecaDMPZone2/home/rods/2.txt', *mode='1'
 OUTPUT *age,*age1,ruleExecOut
 

@@ -405,15 +405,8 @@ EUDATSearchAndCreatePID(*path, *pid) {
     logDebug("Retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
-#        EUDATSearchPID(*path, *pid);
-#        logDebug("Retrieved the EPIC PID value *pid for path *path");
-#        if ((*pid == "empty") || (*pid == "None")) {
-            EUDATCreatePID("None",*path,"None",bool("true"),*pid);
-#        }
-        # if there is a PID in EPIC create it in ICAT
-#        else {
-            EUDATiPIDcreate(*path, *pid);
-#        }
+        EUDATCreatePID("None",*path,"None",bool("true"),*pid);
+        EUDATiPIDcreate(*path, *pid);
     }
 }
 
@@ -502,7 +495,6 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
         if (!*result) {
             *contents = "*objPath::*destination::*result::*singleRes";
             *check_response = *check_response ++ *contents ++ ",";
-#TODO publish the contents somewhere accessible by the users
         }
         *totalResult = *result && *totalResult;
     }
