@@ -11,7 +11,7 @@ The EUDAT (http://www.eudat.eu) B2SAFE Service offers functionality to replicate
 Deployment
 ---------------
 
-See intall.txt .
+See install.txt .
 
 ---------------
 Documentation
