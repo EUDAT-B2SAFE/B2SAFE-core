@@ -462,6 +462,33 @@ update_log_manager_conf() {
     return $STATUS
 }
 
+update_get_metadata_parameters() {
+
+    METADATA_MANAGER_CONF=$B2SAFE_PACKAGE_DIR/conf/metadataManager.conf
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v METADATA_MANAGER_CONF=$METADATA_MANAGER_CONF '{
+            if ( $1 ~ /^ +\*metaConfPath/ ) {
+                $1=$1"=\""METADATA_MANAGER_CONF"\";"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
+
+
 
 ########################
 # main program
@@ -568,6 +595,16 @@ then
     update_get_log_parameters
     update_log_manager_conf
 fi
+
+#
+# update the "getMetaParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
+#
+if [ $? -eq 0 ]
+then
+    echo "update_metadata_manager"
+    update_get_metadata_parameters
+fi
+
 
 #
 # create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.
