@@ -2,6 +2,9 @@
 
 The following describes the procedure to enable B2SAFE release-3.0.0
 
+NOTE: iRODS is running as a normal user process. NOT as root. The package needs 
+to be build by the user who runs iRODS. In the examples the user who runs 
+iRODS is "rods".
 
 It works as follows:
 - clone the b2safe project under the user which runs irods. NOT root
@@ -14,31 +17,39 @@ It works as follows:
 - create package for the user who runs the irods instance:
   $ ./create_rpm_package.sh
 - login as root and install package:
-  $ rpm -ivh /home/rods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-3.0-0.noarch.rpm
+  # rpm -ivh /home/rods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-3.0-0.noarch.rpm
   Preparing...                ########################################### [100%]
      1:irods-eudat-b2safe     ########################################### [100%]
 
 * DEB *
 
-- create package
-  $ ./create_deb_package.sh  # an example follows:
-  robertv@gitlab:~/git/B2SAFE-core/packaging$ ./create_deb_package.sh 
-  dpkg-deb: building package `irods-eudat-b2safe' in `/home/robertv/debbuild/irods-eudat-b2safe_3.0-0.deb’
+- create package for the user who runs the irods instance:
+  $ ./create_deb_package.sh
 - login as root or use sudo to install package:
-  [gitlab]:~
-  root# dpkg -i --ignore-depends irods-icat /home/robertv/debbuild/irods-eudat-b2safe_3.0-0.deb
+  # dpkg -i /home/rods/debbuild/irods-eudat-b2safe_3.0-0.deb
   Selecting previously unselected package irods-eudat-b2safe.
-  (Reading database ... 25906 files and directories currently installed.)
+  (Reading database ... .... files and directories currently installed.)
   Preparing to unpack .../irods-eudat-b2safe_3.0-0.deb ...
   Unpacking irods-eudat-b2safe (3.0-0) ...
   Setting up irods-eudat-b2safe (3.0-0) ...
 
-  The package b2safe has been installed in /opt/eudat/b2safe.
-  To install/configure it in iRODS do following as the user "irods" which runs iRODS 
 
-  su - irods
+  The package b2safe has been installed in /opt/eudat/b2safe.
+  To install/configure it in iRODS do following as the user "rods" which runs iRODS 
+
+
+- Perform the after installation tuning/updates as the user who runs the irods instance.
+  su - rods
   cd /opt/eudat/b2safe/packaging
-  # update install.conf with correct parameters with your favorite editor
+  # update install.conf with correct parameters with your favorite editor. The 
+  # following need to be updated:
+    - DEFAULT_RESOURCE
+    - SERVER_ID
+    - BASE_URI
+    - USERNAME
+    - PREFIX
+  # perform the postinstallation script
   ./install.sh
 
-- login as user who runs iRODS and update config and install as above.
+
+DONE
