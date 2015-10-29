@@ -85,10 +85,12 @@ Description: B2SAFE for iRODS package
 EOF
 
 # create config file to point to the config files
-cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/conffiles << EOF
-${IRODS_PACKAGE_DIR}/conf/*.json
-${IRODS_PACKAGE_DIR}/conf/*.conf
-EOF
+touch $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/conffiles
+for file in `find $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf/  \( -name *.conf -o -name *.json \) -printf "%f "`
+do
+	echo "${IRODS_PACKAGE_DIR}/conf/$file" >> $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/conffiles
+done
+
 
 # create postinstall scripts
 cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinst << EOF
