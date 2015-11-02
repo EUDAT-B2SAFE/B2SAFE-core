@@ -57,7 +57,7 @@ EUDATCatchErrorSize(*source,*destination) {
     *b = bool("true"); 	
     *size0 = "";
     msiSplitPath(*source,*parentS,*childS);
-    foreach ( *BS in SELECT DATA_SIZE WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS'" ) {
+    foreach ( *BS in SELECT DATA_SIZE WHERE COLL_NAME = '*parentS' AND DATA_NAME = '*childS' ) {
         *size0 = *BS.DATA_SIZE;
         logDebug("Size *source = *size0");
     }

@@ -279,7 +279,7 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 
     *metaName = 'eudat_dpm_checksum_date:*resc';
     
-    foreach (*row in count(META_DATA_ATTR_VALUE)", "COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName') {
+    foreach (*row in SELECT count(META_DATA_ATTR_VALUE) WHERE COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName') {
        *count = *row.META_DATA_ATTR_VALUE
         #*count = 0 means the attr was not set
         if (*count=="0"){
@@ -475,7 +475,7 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 {
     *Value = 'None'
     msiSplitPath(*Path,*parent,*child);
-    foreach ( *B in "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" ) {
+    foreach ( *B in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
         *Value = *B.META_DATA_ATTR_VALUE;
     }
 }
