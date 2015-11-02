@@ -243,16 +243,14 @@ EUDATGetZoneNameFromPath(*path, *out) {
 EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 
     *conn = ""
-    *res = SELECT ZONE_CONNECTION WHERE ZONE_NAME = '*zoneName';
-    foreach(*row in *res) {
-        msiGetValByKey(*row, "ZONE_CONNECTION", *conn);
+    foreach ( *row in SELECT ZONE_CONNECTION WHERE ZONE_NAME = '*zoneName') {
+        *conn = *row.ZONE_CONNECTION;
     }
     # the local zone does not store the connection details
     # then get them from the eudat.local rule set
     if (*conn == "") {
-        *result = SELECT ZONE_TYPE WHERE ZONE_NAME = '*zoneName';
-        foreach(*line in *result) {
-            msiGetValByKey(*line, "ZONE_TYPE", *type);
+        foreach ( *line in SELECT ZONE_TYPE WHERE ZONE_NAME = '*zoneName') {
+            *type = *line.ZONE_TYPE;
         }
         if (*type == "local") {
             getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
@@ -281,10 +279,7 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 
     *metaName = 'eudat_dpm_checksum_date:*resc';
     
-    msiMakeGenQuery("count(META_DATA_ATTR_VALUE)", "COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName'", *GenQIn);
-    msiExecGenQuery(*GenQIn, *GenQOut);
-    
-    foreach(*row in *GenQOut) {
+    foreach (*row in count(META_DATA_ATTR_VALUE)", "COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName') {
        *count = *row.META_DATA_ATTR_VALUE
         #*count = 0 means the attr was not set
         if (*count=="0"){
@@ -317,12 +312,11 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
     *modtime = "";
     logInfo("EUDATiCHECKSUMretrieve -> Looking at *path");
     msiSplitPath(*path, *coll, *name);
-    *d = SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll';
     #Loop over all resources, possibly the checksum was not computed for all of them
-    foreach(*c in *d) {
-        msiGetValByKey(*c, "DATA_CHECKSUM", *checksumTmp);
-        msiGetValByKey(*c, "DATA_RESC_NAME", *resc);      
-        msiGetValByKey(*c, "DATA_MODIFY_TIME", *modtime);
+    foreach ( *c in SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll') {
+        *checksumTmp = *c.DATA_CHECKSUM;
+        *resc = *c.DATA_RESC_NAME;      
+        *modtime = *c.DATA_MODIFY_TIME;
 
         if (*checksumTmp==""){
             logInfo("EUDATiCHECKSUMretrieve -> The iCHECKSUM on resource *resc is empty.");
@@ -384,11 +378,10 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
     else {
         # Look when the file has been created in iRODS
         msiSplitPath(*filePath, *fileDir, *fileName);   
-        *ec = SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir';
-        foreach(*ec) {
-            msiGetValByKey(*ec, "DATA_CREATE_TIME", *creationTime);
+        foreach ( *ec in SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir') {
+            *creationTime = *ec.DATA_CREATE_TIME;
             logDebug("EUDATgetObjectTimeDiff -> Created at  *creationTime");
-            msiGetValByKey(*ec, "DATA_MODIFY_TIME", *modifyTime);
+            *modifyTime = *ec.DATA_MODIFY_TIME;
             logDebug("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
         }
         if (*mode == "1") {
@@ -439,9 +432,8 @@ EUDATfileInPath(*path,*subColl) {
     logInfo("conditional acPostProcForCopy -> EUDATfileInPath");
     msiSplitPath(*path, *coll, *name);
     *b = bool("false");
-    *d = SELECT count(DATA_NAME) WHERE COLL_NAME like '*subColl' AND DATA_NAME = '*name';
-    foreach(*c in *d) {
-        msiGetValByKey(*c,"DATA_NAME",*num);
+    foreach ( *c in SELECT count(DATA_NAME) WHERE COLL_NAME like '*subColl' AND DATA_NAME = '*name' ) {
+        *num = *c.DATA_NAME;
         if(*num == '1') {
             logInfo("EUDATfileInPath -> found file *name in collection *subColl");
             *b = bool("true");
@@ -483,9 +475,8 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 {
     *Value = 'None'
     msiSplitPath(*Path,*parent,*child);
-    msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" , *B );
-    foreach ( *B ) {
-        msiGetValByKey( *B , "META_DATA_ATTR_VALUE" , *Value );
+    foreach ( *B in "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" ) {
+        *Value = *B.META_DATA_ATTR_VALUE;
     }
 }
 
@@ -512,9 +503,8 @@ EUDATModifyAVU(*Path, *Key, *Value)
     logInfo( "Set *Key into *Value (key_exist=*key_exist)" );
 	# Modified end
     if ( *key_exist != "0" ){
-        msiExecStrCondQuery( "SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'", *B );
-        foreach ( *B ) {
-            msiGetValByKey( *B, "META_DATA_ATTR_VALUE", *val ) ;
+        foreach ( *B  in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
+            *val = *B.META_DATA_ATTR_VALUE ;
         }
         msiAddKeyVal( *mdkey, *Key, *val );
         msiRemoveKeyValuePairsFromObj( *mdkey, *Path, *objType );
@@ -536,9 +526,8 @@ EUDATModifyAVU(*Path, *Key, *Value)
 EUDATcountMetaKeys( *Path, *Key, *Value )
 {
     msiSplitPath(*Path, *parent , *child );
-    msiExecStrCondQuery( "SELECT count(META_DATA_ATTR_VALUE) WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child'" , *B );
-    foreach ( *B ) {
-        msiGetValByKey( *B , "META_DATA_ATTR_VALUE" , *Value );
+    foreach ( *B in SELECT count(META_DATA_ATTR_VALUE) WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
+        *Value = *B.META_DATA_ATTR_VALUE;
     }
 }
 
