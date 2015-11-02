@@ -126,9 +126,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 EUDATSearchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
-               "null", "null", "null", *out1);
-    msiGetStdoutInExecCmdOut(*out1, *path1);
+#    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
+#               "null", "null", "null", *out1);
+    EUDATReplaceHash(*path, *path1);
     *status = EUDATePIDsearch("URL", "*serverID"++"*path1", *existing_pid);
     *status;
 }

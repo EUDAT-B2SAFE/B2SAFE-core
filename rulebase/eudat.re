@@ -17,7 +17,7 @@
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
-# EUDATReplaceSlash(*path, *out)
+# EUDATReplaceHash(*path, *out)
 # EUDATGetZoneNameFromPath(*path, *out)
 # EUDATGetZoneHostFromZoneName(*zoneName, *conn)
 # EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime)
@@ -204,20 +204,26 @@ logWithLevel(*level, *msg) {
     on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
 }
 
+
+
 #
-# Function: replace microservice msiReplaceSlash (eudat.c)
+# Function: replace epicclient function
 #
-# Author: Long Phan, JSC
+# Author: Robert Verkerk SURFsara
 #
-EUDATReplaceSlash(*path, *out) {
+EUDATReplaceHash(*path, *out) {
  
-    *list = split("*path","/");
-    *n = "";
-    foreach (*t in *list) {
-        *n = *n ++ *t ++ "_";
+    # replace #
+    *out=*path;
+    foreach ( *char in list("#","%","&") ) {
+       *list = split("*out","*char");
+       *n = "";
+       foreach (*t in *list) {
+          *n = *n ++ *t ++ "*";
+       }
+       msiStrchop(*n,*n_chop);
+       *out = *n_chop;
     }
-    msiStrchop(*n,*n_chop);
-    *out = *n_chop;
 }
 
 #
