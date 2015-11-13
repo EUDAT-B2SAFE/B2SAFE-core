@@ -1,4 +1,8 @@
-import unittest
+import sys
+if sys.version_info < (2, 7):
+    import unittest2 as unittest
+else:
+    import unittest
 import mock
 import httplib2
 from lxml import etree 
@@ -6,7 +10,6 @@ from lxml.etree import tostring
 import simplejson
 import base64
 import os.path
-import sys
 
 sys.path.append("../../cmd") 
 import epicclient
