@@ -15,6 +15,7 @@ STATUS=0
 EUDAT_RULEFILES=''
 
 # start default parameters for setup
+#===================================
 IRODS_CONF_DIR=/etc/irods
 #
 IRODS_DIR=/var/lib/irods/iRODS
@@ -39,6 +40,7 @@ USERS=
 LOG_LEVEL=
 LOG_DIR=
 SHARED_SPACE=
+#============================================
 # end set default parameters for installation
 #
 DATE_TODAY=`date +%Y%m%d`
@@ -53,11 +55,41 @@ JSON_CONFIG="false"
 
 read_parameters() {
 
-    if [ -e $INSTALL_CONFIG ]
+    if [ -e $INSTALL_CONFIG ] 
     then
-        . $INSTALL_CONFIG
+        source $INSTALL_CONFIG
     else
         echo "ERROR: $INSTALL_CONFIG not present!"
+        STATUS=1
+    fi
+
+    if [ $STATUS -eq 0 ]
+    then
+        IRODS_SERVICE_ACCOUNT_CONFIG="${IRODS_CONF_DIR}/service_account.config"
+        if [ -e $IRODS_SERVICE_ACCOUNT_CONFIG ]
+        then
+            source $IRODS_SERVICE_ACCOUNT_CONFIG
+        else
+            echo "ERROR: $IRODS_SERVICE_ACCOUNT_CONFIG not present!"
+            echo "Is iRODS installed?"
+            STATUS=1
+        fi
+    fi
+
+    return $STATUS
+}
+
+check_username() {
+
+    username=`whoami`
+
+    if ! [ "$username" == "$IRODS_SERVICE_ACCOUNT_NAME" ]
+    then
+        echo "ERROR: username: $username is different from the user who runs iRODS: $IRODS_SERVICE_ACCOUNT_NAME"
+        echo ""
+        echo "please run the script under the correct user:"
+        echo "sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c \"cd ${B2SAFE_PACKAGE_DIR}/package ; ./install.sh\" "
+        echo ""
         STATUS=1
     fi
 
@@ -500,25 +532,40 @@ update_get_metadata_parameters() {
 #
 echo "read_parameters"
 read_parameters
+STATUS=$?
+#
+# check user doing actions. It should be the user from:
+# /etc/irods/service_account.config
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "check username"
+    check_username
+    STATUS=$?
+fi
 
 #
 # check for json or normal config files
 # irods 4.1 and higher use json config files
 #
-echo "check iRODS config files"
-if [ -e "${IRODS_DIR}/../VERSION.json" ]
+if [ $STATUS -eq 0 ]
 then
-    JSON_CONFIG="true"
-    echo "We have iRODS 4.1 or higher. The config files are in json format"
+    echo "check iRODS config files"
+    if [ -e "${IRODS_DIR}/../VERSION.json" ]
+    then
+        JSON_CONFIG="true"
+        echo "We have iRODS 4.1 or higher. The config files are in json format"
+    fi
 fi
 
 #
 # create symbolic links to the eudat rulebase
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "create_links"
     create_links
+    STATUS=$?
 fi
 
 #
@@ -527,61 +574,68 @@ fi
 # we use links in the type of eudatxy.re.
 # (make sure to include the comma and no spaces)
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_server_config"
     if [ "$JSON_CONFIG" == "false" ]
     then
         update_server_config
+        STATUS=$?
     else
         update_server_config_json
+        STATUS=$?
     fi
 fi
 
 #
 # properly configure the default resource in /etc/irods/core.re
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_irods_core_resource"
     update_irods_core_resource
+    STATUS=$?
 fi
 
 #
 # install python scripts
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "install_python_scripts"
     install_python_scripts
+    STATUS=$?
 fi
 
 #
 # update the 'getEpicApiParameters' rule in '/opt/eudat/b2safe/rulebase/local.re'
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_get_epic_api_parameters"
     update_get_epic_api_parameters
+    STATUS=$?
 fi
 
 #
 # Set the proper values in the credentials file
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_credentials"
     update_credentials
+    STATUS=$?
 fi
 
 #
 # update the 'getAuthZParameters' rule in '/opt/eudat/b2safe/rulebase/local.re'
 # update authz.map.json
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_authz_map_json"
     update_get_auth_parameters
+    STATUS=$?
     #update_authz_map_json
 fi
 
@@ -589,25 +643,21 @@ fi
 # update the "getLogParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
 # update log.manager.conf
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_log_manager_conf"
     update_get_log_parameters
     update_log_manager_conf
+    STATUS=$?
 fi
 
 #
 # update the "getMetaParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
 #
-if [ $? -eq 0 ]
+if [ $STATUS -eq 0 ]
 then
     echo "update_metadata_manager"
     update_get_metadata_parameters
+    STATUS=$?
 fi
-
-
-#
-# create a shared space in all zones as configured in the eudat.re rulebase getSharedCollection function.
-#
-
 
