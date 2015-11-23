@@ -1,6 +1,6 @@
 *** Installation ***
 
-The following describes the procedure to enable B2SAFE release-3.0.0
+The following describes the procedure to enable B2SAFE release-3.x.y
 
 NOTE: iRODS is running as a normal user process. NOT as root. The package can
 be build by any user. During installation of the package it will use: 
@@ -42,7 +42,7 @@ To install/configure it in iRODS do following as the user who runs iRODS :
 sudo vi /opt/eudat/b2safe/packaging/install.conf
 
 # install/configure it as the user who runs iRODS
-source /etc/irods/service_account.conf 
+source /etc/irods/service_account.config
 sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/packaging/ ; ./install.sh"
 
 

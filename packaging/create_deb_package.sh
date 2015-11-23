@@ -150,7 +150,7 @@ To install/configure it in iRODS do following as the user who runs iRODS :
 sudo vi ${IRODS_PACKAGE_DIR}/packaging/install.conf
 
 # install/configure it as the user who runs iRODS
-source /etc/irods/service_account.conf 
+source /etc/irods/service_account.config 
 sudo su - \\\$IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd ${IRODS_PACKAGE_DIR}/packaging/ ; ./install.sh"
 
 EOF1
