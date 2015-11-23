@@ -71,7 +71,9 @@ read_parameters() {
             source $IRODS_SERVICE_ACCOUNT_CONFIG
         else
             echo "ERROR: $IRODS_SERVICE_ACCOUNT_CONFIG not present!"
-            echo "Is iRODS installed?"
+            echo "At the moment the file ownership of the b2safe package is wrong!"
+            echo "Is iRODS configured?"
+            echo "Remove the b2safe package and re-install after configuring iRODS"
             STATUS=1
         fi
     fi
