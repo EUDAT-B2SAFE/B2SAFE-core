@@ -1,20 +1,21 @@
 *** Installation ***
 
-The following describes the procedure to enable B2SAFE release-3.0.0
+The following describes the procedure to enable B2SAFE release-3.x.y
 
-NOTE: iRODS is running as a normal user process. NOT as root. The package needs 
-to be build by the user who runs iRODS. In the examples the user who runs 
-iRODS is "irods".
+NOTE: iRODS is running as a normal user process. NOT as root. The package can
+be build by any user. During installation of the package it will use: 
+"/etc/irods/service_account.config" to set the ownership of the files.
+
 
 It works as follows:
-- clone the b2safe project under the user which runs irods. NOT root
+- clone the b2safe project as any user. NOT root
   $ git clone https://github.com/EUDAT-B2SAFE/B2SAFE-core.git
 - go to the directory where the packaging files are:
   $ cd B2SAFE-core/packaging
 
 * RPM *
 
-- create package for the user who runs the irods instance:
+- create package:
   $ ./create_rpm_package.sh
 - login as root and install package:
   # rpm -ivh /home/irods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-3.0-0.noarch.rpm
@@ -23,10 +24,10 @@ It works as follows:
 
 * DEB *
 
-- create package for the user who runs the irods instance:
+- create package:
   $ ./create_deb_package.sh
 - login as root or use sudo to install package:
-  # dpkg -i --ignore-depends irods-icat /home/irods/debbuild/irods-eudat-b2safe_3.0-0.deb
+  $ sudo dpkg -i  /home/irods/debbuild/irods-eudat-b2safe_3.0-0.deb
   Selecting previously unselected package irods-eudat-b2safe.
   (Reading database ... .... files and directories currently installed.)
   Preparing to unpack .../irods-eudat-b2safe_3.0-0.deb ...
@@ -34,22 +35,36 @@ It works as follows:
   Setting up irods-eudat-b2safe (3.0-0) ...
 
 
-  The package b2safe has been installed in /opt/eudat/b2safe.
-  To install/configure it in iRODS do following as the user "irods" which runs iRODS 
+The package b2safe has been installed in /opt/eudat/b2safe.
+To install/configure it in iRODS do following as the user who runs iRODS :
+
+# update install.conf with correct parameters with your favorite editor
+sudo vi /opt/eudat/b2safe/packaging/install.conf
+
+# install/configure it as the user who runs iRODS
+source /etc/irods/service_account.config
+sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/packaging/ ; ./install.sh"
 
 
-- Perform the after installation tuning/updates as the user who runs the irods instance.
-  su - irods
-  cd /opt/eudat/b2safe/packaging
-  # update install.conf with correct parameters with your favorite editor. The 
-  # following need to be updated:
-    - DEFAULT_RESOURCE
-    - SERVER_ID
-    - BASE_URI
-    - USERNAME
-    - PREFIX
-  - perform the postinstallation script
-  $ ./install.sh
+
+NOTE: following need to be updated in "/opt/eudat/b2safe/packaging/install.conf":
+   - DEFAULT_RESOURCE
+   - SERVER_ID
+   - BASE_URI
+   - USERNAME
+   - PREFIX
+
+
+- check the python scripts for missing python libraries.
+  $ cd /opt/eudat/b2safe/cmd
+  $ ./authZmanager.py -h
+  $ ./epicclient.py --help
+  $ ./logmanager.py -h
+  $ ./messageManager.py -h
+  $ ./metadataManager.py -h
+
+Try to install missing packes with the standard package manager like apt, yum, zypper etc.
+If packages are not within the standards use pip and install the missing packages with pip. 
 
 
 DONE

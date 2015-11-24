@@ -15,8 +15,6 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:	irods-icat
 
 %define _whoami %(whoami)
-%define _irodsUID %(id -un `whoami`)
-%define _irodsGID %(id -gn `whoami`)
 %define _b2safehomepackaging %(pwd)
 %define _irodsPackage /opt/eudat/b2safe
  
@@ -75,7 +73,7 @@ rm -rf %{buildroot}
 #provide files to rpm. Set attributes 
 %files
 # default attributes
-%defattr(-,%{_irodsUID},%{_irodsUID},-)
+%defattr(-,-,-,-)
 # files
 # exclude .pyc and .py files
 %exclude %{_irodsPackage}/cmd/*.pyc
@@ -87,12 +85,12 @@ rm -rf %{buildroot}
 %{_irodsPackage}/rulebase
 %{_irodsPackage}/testRules
 # attributes on files and directory's
-%attr(-,%{_irodsUID},%{_irodsGID})   %{_irodsPackage}
-%attr(700,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/cmd/*.py
-%attr(600,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/conf/*.json
-%attr(600,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/conf/*.conf
-%attr(700,%{_irodsUID},%{_irodsGID}) %{_irodsPackage}/packaging/*.sh
-%attr(-,%{_irodsUID},%{_irodsGID}) /var/log/irods
+%attr(-,-,-)   %{_irodsPackage}
+%attr(700,-,-) %{_irodsPackage}/cmd/*.py
+%attr(600,-,-) %{_irodsPackage}/conf/*.json
+%attr(600,-,-) %{_irodsPackage}/conf/*.conf
+%attr(700,-,-) %{_irodsPackage}/packaging/*.sh
+%attr(-,-,-)   /var/log/irods
 %doc
 # config files
 %config(noreplace) %{_irodsPackage}/conf/*.json
@@ -141,11 +139,8 @@ LOG_LEVEL=DEBUG
 LOG_DIR=/var/log/irods
 #
 #
-SHARED_SPACE=/Zone0/replicate
 
 EOF
-
-chown %{_irodsUID}:%{_irodsGID} $INSTALL_CONF
 
 fi
 
@@ -153,16 +148,30 @@ fi
 cat << EOF
 
 The package b2safe has been installed in %{_irodsPackage}.
-To install/configure it in iRODS do following as the user %{_irodsUID} : 
+To install/configure it in iRODS do following as the user who runs iRODS :
 
-su - %{_irodsUID}
-cd %{_irodsPackage}/packaging
 # update install.conf with correct parameters with your favorite editor
-./install.sh
+sudo vi %{_irodsPackage}/packaging/install.conf
+
+# install/configure it as the user who runs iRODS
+source /etc/irods/service_account.config 
+sudo su - \$IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd %{_irodsPackage}/packaging/ ; ./install.sh"
 
 EOF
 
+# set owner of files to the user who run's iRODS
+IRODS_SERVICE_ACCOUNT_CONFIG=/etc/irods/service_account.config
+if [ -e $IRODS_SERVICE_ACCOUNT_CONFIG ]
+then
+    source $IRODS_SERVICE_ACCOUNT_CONFIG
+    chown -R $IRODS_SERVICE_ACCOUNT_NAME:$IRODS_SERVICE_GROUP_NAME %{_irodsPackage}
+    chown -R $IRODS_SERVICE_ACCOUNT_NAME:$IRODS_SERVICE_GROUP_NAME /var/log/irods
+fi
+
+
 %changelog
+* Fri Nov 20 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0
+- set owner of files during installation of rpm.
 * Fri Oct 23 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0
 - remove docs directory.
 * Thu Oct 15 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0

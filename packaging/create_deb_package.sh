@@ -3,8 +3,6 @@
 #set -x
 
 USERNAME=`whoami`
-IRODSUID=`id -un $USERNAME`
-IRODSGID=`id -gn $USERNAME`
 B2SAFEHOMEPACKAGING="$(cd $(dirname "$0"); pwd)"
 B2SAFEHOME=`dirname $B2SAFEHOMEPACKAGING`
 RPM_BUILD_ROOT="${HOME}/debbuild/"
@@ -21,7 +19,7 @@ PACKAGE="${PRODUCT}_${VERSION}-${RELEASE}"
 if [ "$USERNAME" = "root" ]
 then
 	echo "We are NOT allowed to run as root, exit"
-        echo "Run this script/procedure as the user who run's iRODS"
+        echo "Run this script/procedure as any user except root"
 	exit 1
 fi
 
@@ -137,12 +135,7 @@ LOG_LEVEL=DEBUG
 LOG_DIR=/var/log/irods
 #
 #
-SHARED_SPACE=/Zone0/replicate
-
 EOF2
-
-# set correct owner of file
-chown $IRODSUID:$IRODSGID \$INSTALL_CONF
 
 fi
 
@@ -151,14 +144,25 @@ fi
 cat << EOF1
 
 The package b2safe has been installed in ${IRODS_PACKAGE_DIR}.
-To install/configure it in iRODS do following as the user "$USERNAME" which runs iRODS 
+To install/configure it in iRODS do following as the user who runs iRODS :
 
-su - $USERNAME
-cd ${IRODS_PACKAGE_DIR}/packaging
 # update install.conf with correct parameters with your favorite editor
-./install.sh
+sudo vi ${IRODS_PACKAGE_DIR}/packaging/install.conf
+
+# install/configure it as the user who runs iRODS
+source /etc/irods/service_account.config 
+sudo su - \\\$IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd ${IRODS_PACKAGE_DIR}/packaging/ ; ./install.sh"
 
 EOF1
+
+# set owner of files to the user who run's iRODS
+IRODS_SERVICE_ACCOUNT_CONFIG=/etc/irods/service_account.config
+if [ -e \$IRODS_SERVICE_ACCOUNT_CONFIG ]
+then
+    source \$IRODS_SERVICE_ACCOUNT_CONFIG
+    chown -R \$IRODS_SERVICE_ACCOUNT_NAME:\$IRODS_SERVICE_GROUP_NAME ${IRODS_PACKAGE_DIR} 
+    chown -R \$IRODS_SERVICE_ACCOUNT_NAME:\$IRODS_SERVICE_GROUP_NAME /var/log/irods
+fi
 
 EOF
 
