@@ -63,8 +63,9 @@ NOTE: following need to be updated in "/opt/eudat/b2safe/packaging/install.conf"
   $ ./messageManager.py -h
   $ ./metadataManager.py -h
 
-Try to install missing packes with the standard package manager like apt, yum, zypper etc.
+Try to install missing packages with the standard package manager like apt, yum, zypper etc.
 If packages are not within the standards use pip and install the missing packages with pip. 
+
 
 
 DONE
