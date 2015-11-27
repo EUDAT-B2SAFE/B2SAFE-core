@@ -1,3 +1,9 @@
+B2SAFE package 3.0.2 [2015/11/27]
+improved deployment procedure: now it is possible to build the binary packages as a user different from the iRODS administrator.
+
+B2SAFE package 3.0.1 [2015/10/30]
+fixed support for debian package bulding
+
 B2SAFE package 3.0.0 [2015/10/23]
 This version is compatible with iRODS v4.x .
 It is still backward compatible with iRODS 3.3.1 .
