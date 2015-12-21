@@ -3,13 +3,12 @@
 logfile=remote.sync.log
 # possible values: INFO, DEBUG, ERROR, WARNING
 loglevel=INFO
-usersfile=../irods.external
-dnsfile=../irods.DNs.map
+usersfile=irods.remote.users
+dnsfile=irods.DNs.map
 
 [EUDAT]
 host=https://unity.eudat-aai.fz-juelich.de:8443/rest-admin/v1/
 username=
 password=
-carootdn=/CN=test.ca/OU=JSC/O=FZJ/L=Juelich/C=DE
+carootdn= /C=DE/L=Juelich/O=FZJ/OU=JSC
 ns_prefix=eudat_
-gridftp_cert_dn=/C=XX/O=YYYY/OU=Host/L=MyDept/CN=servername.mycompany.net

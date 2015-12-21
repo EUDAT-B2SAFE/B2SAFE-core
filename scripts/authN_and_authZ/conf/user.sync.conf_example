@@ -1,0 +1,36 @@
+# section containing the logging options
+[Logging]
+# possible values: INFO, DEBUG, ERROR, WARNING, CRITICAL
+log_level=INFO
+log_file=user.sync.log
+
+# section containing the sources for users and projects/groups'information
+[Sources]
+project_file=irods.local.users
+external_file=irods.remote.users
+dn_map_file=irods.DNs.map
+# set to "False" to define it false, set to "True" to set it to true
+local_authoritative=False
+# condition to filter the projects/groups to be added.
+# Only triplets are allowed: (attribute, operator, value).
+# Operators allowed are <,>,==,!=,<=,>=
+# Only numeric attributes and values are supported
+# Example: DiskQuota > 0
+condition=
+
+# section containing options for the notification system
+[Notification]
+# set to "False" to define it false, set to "True" to set it to true
+notification_active=True
+notification_sender=rodsmaster
+notification_receiver=admin@email
+
+# section containing options for iRODS operations
+[iRODS]
+internal_project_list=public,rodsadmin
+irods_home_dir=/iRODSZoneName/home/
+# if "False" the home directories for the sub-groups are not created.
+irods_subgroup_home=False
+# if "False" the home directory for the main group "EUDAT" is not created.
+irods_group_home=True
+irods_debug=False

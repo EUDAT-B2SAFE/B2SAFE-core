@@ -9,7 +9,6 @@ import pprint
 import ConfigParser
 import sys
 
-from utilities.jsonUtility import *
 from utilities.irodsUtility import *
 from utilities.synchTask import SynchronizationTask
 
@@ -35,7 +34,7 @@ class UserSync():
         
         try:
             filehandle = open(self.conf.dn_map_file, "r")
-            dns_map = json.load(filehandle, object_hook=JSONUtils().decode_dict)
+            dns_map = json.load(filehandle)
             filehandle.close()
         except Exception, e:
             logger.warning("problem while reading dn map file %s", 
@@ -51,8 +50,7 @@ class UserSync():
 
         try:
             filehandle = open(file_path, "r")
-            projects_external = json.load(filehandle, 
-                                          object_hook=JSONUtils().decode_dict)
+            projects_external = json.load(filehandle)
             filehandle.close()
         except Exception, e:
             logger.warning("problem while reading file %s", file_path)
@@ -200,7 +198,7 @@ class UserSync():
 
 
 ################################################################################
-# CINECA Client Configuration Class #
+# Configuration Class #
 ################################################################################
  
 class Configuration():
@@ -262,6 +260,7 @@ class Configuration():
             self._getConfOption('iRODS', 'internal_project_list').split(',')
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
         self.irods_subgroup_home = self._getConfOption('iRODS', 'irods_subgroup_home', True)
+        self.irods_group_home = self._getConfOption('iRODS', 'irods_group_home', True)
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
 
         
@@ -282,7 +281,7 @@ class Configuration():
 
 
 ################################################################################
-# CINECA User Synchronization Tool Command Line Interface #
+# B2SAFE User Synchronization Tool Command Line Interface #
 ################################################################################
 
 def sync(args):
@@ -298,7 +297,7 @@ def sync(args):
     
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='CINECA iRODS user sinchronization tool')
+    parser = argparse.ArgumentParser(description='B2SAFE user sinchronization tool')
     parser.add_argument("confpath",default="NULL",help="path to the configuration file")
     parser.add_argument("-d", "--dryrun", action="store_true",\
         help="execute a command without performing any real change")

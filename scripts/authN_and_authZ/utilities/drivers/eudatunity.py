@@ -15,17 +15,16 @@ class EudatRemoteSource:
         if self.debug:
             print "[", method, "]", msg
 
-    def __init__(self, main_project, subproject, conf, parent_logger=None):
+    def __init__(self, main_project, subgroups, conf, parent_logger=None):
         """initialize the object"""
         
         if (parent_logger): self.logger = parent_logger
         else: self.logger = logging.getLogger('eudat')
 
         self.main_project = main_project
-        self.subproject = subproject
+        self.subgroups = subgroups
 
-        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix', 
-                    'gridftp_cert_dn']
+        confkeys = ['host', 'username', 'password', 'carootdn', 'ns_prefix']
         missingp = []
         for key in confkeys:
             if not key in conf: missingp.append(key)
@@ -97,8 +96,8 @@ class EudatRemoteSource:
             if "persistent" in identity_types.keys():
                 # Here we build the DN: the way to build it could change
                 # in the future.
-                userDN = '/CN=' + users_map[member_id] + '/CN=' \
-                       + identity['value'] + self.conf['carootdn']
+                userDN = self.conf['carootdn'] + '/CN=' + identity['value'] \
+                       + '/CN=' + users_map[member_id] 
                 attr_list['DN'] = [userDN]
 
             attribs_map[users_map[member_id]] = attr_list
@@ -125,10 +124,10 @@ class EudatRemoteSource:
         Synchronize the remote users' list with a local json file (user db)
         """
         
-        if self.subproject is not None:
+        if self.subgroups is not None:
             filtered_list = {org:members for (org,members)
                              in self.remote_users_list['groups'].iteritems()
-                             if org == self.subproject}
+                             if org in self.subgroups}
         else:
             filtered_list = self.remote_users_list['groups']
 
@@ -151,18 +150,24 @@ class EudatRemoteSource:
         for the time beeing just the DNs are considered
         """
 
-        if self.subproject is not None:
+        self.logger.info('Checking user attributes ...')
+        if self.subgroups is not None:
+            users = []
+            for group in self.subgroups:
+                self.logger.debug('looking at group ' + group)
+                for user in self.remote_users_list['groups'][group]:
+                    self.logger.debug('looking at user ' + user)
+                    users.append(user)
+                    self.logger.debug('added user to the list ' + str(users))
             filtered_list = {user:attrs for (user,attrs)
                              in self.remote_users_list['attributes'].iteritems()
-                             if user in self.remote_users_list['groups'][self.subproject]}
+                             if user in users}
         else:
             filtered_list = self.remote_users_list['attributes']
        
         for user,attrs in filtered_list.iteritems():
 
             self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
-            if self.conf['gridftp_cert_dn']:
-                attrs['DN'].append(self.conf['gridftp_cert_dn'])
             user = self.conf['ns_prefix'] + user
             data[user] = attrs['DN']
             self.logger.debug('\tadded user ' + user + '\' DNs: ' 

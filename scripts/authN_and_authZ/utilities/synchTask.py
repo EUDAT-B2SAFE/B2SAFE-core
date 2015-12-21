@@ -13,7 +13,7 @@ import shutil
 from pprint import pformat
 from utilities.mailSender import MailSender
 from utilities.filters import Filters
-from utilities.jsonUtility import *
+#from utilities.jsonUtility import *
 from utilities.irodsUtility import *
 
 ##############################################################################
@@ -22,17 +22,17 @@ from utilities.irodsUtility import *
 #       irods_users: { 'user1': {user1_attr1, user1_attr2},
 #                      'user2': {user2_attr1, user2_attr2}
 #                    }
-#       irods_projects: { 'irods_group1': {'members': ['user1, user2']},
+#       irods_groups: { 'irods_group1': {'members': ['user1, user2']},
 #                         'irods_group2': {'members': ['user1, user2']}
 #                       }
-#       local_projects:{ 'main_group1': { 'PI': 'user1',
+#       local_groups:{ 'main_group1': { 'PI': 'user1',
 #                                         'groups': { 'group1': ['user8',
 #                                                                'user6'],
 #                                                     'group2': ['user1']
 #                                                   },
 #                                         'members': ['user1, user2']
 #                      }
-#       externals: { 'main_group1': { 'PI': 'user1',
+#       local_groups: { 'main_group1': { 'PI': 'user1',
 #                                     'groups': { 'group1': ['user8',
 #                                                            'user6'],
 #                                                 'group2': ['user1']
@@ -73,92 +73,92 @@ class SynchronizationTask():
             self.logger.setLevel(logging.INFO)
 
 
-    def _parseQuotas(self):
-        """Internal: Parse the quota info file."""
-
-        self.logger.info("Reading the quota info from the file %s", 
-                         self.conf.quota_file)
-
-        try:
-            with open(self.conf.quota_file, "r") as filehandle:
-                try:
-                    quotas = json.load(filehandle, object_hook=JSONUtils().decode_dict)
-                    return quotas
-                except (ValueError) as ve:
-                    self.logger.error('the file ' + self.conf.quota_file
-                                 + ' is not a valid json.')
-                    sys.exit(1)
-        except (IOError, OSError) as e:
-            with open(self.conf.quota_file, "w+") as filehandle:
-                json.dump({}, filehandle, indent=2, sort_keys=True)
-                self.logger.debug('impossible to read the file %s, so a new one has'
-                                  + ' been written', self.conf.quota_file)
-            return {}
-        
-        return None
-
-
-    def _writeQuota(self,quotas):
-        """Internal: Write the quota info to the file."""
-
-        self.logger.info("Writing the quota info to the file %s", 
-                         self.conf.quota_file)
-        try:
-            filehandle = open(self.conf.quota_file,"w")
-            json.dump(quotas, filehandle, indent=2, sort_keys=True)
-            filehandle.close()
-        except Exception, e:
-            self.logger.error("problem while writing quota file %s", 
-                              self.conf.quota_file)
-            self.logger.error("Error: %s", e)
-            return False
-
-        return True
+#    def _parseQuotas(self):
+#        """Internal: Parse the quota info file."""
+#
+#        self.logger.info("Reading the quota info from the file %s", 
+#                         self.conf.quota_file)
+#
+#        try:
+#            with open(self.conf.quota_file, "r") as filehandle:
+#                try:
+#                    quotas = json.load(filehandle, object_hook=JSONUtils().decode_dict)
+#                    return quotas
+#                except (ValueError) as ve:
+#                    self.logger.error('the file ' + self.conf.quota_file
+#                                 + ' is not a valid json.')
+#                    sys.exit(1)
+#        except (IOError, OSError) as e:
+#            with open(self.conf.quota_file, "w+") as filehandle:
+#                json.dump({}, filehandle, indent=2, sort_keys=True)
+#                self.logger.debug('impossible to read the file %s, so a new one has'
+#                                  + ' been written', self.conf.quota_file)
+#            return {}
+#        
+#        return None
 
 
-    def _updateQuota( self, proj_name ):
-        """Internal: Update the quota info file."""
+#    def _writeQuota(self,quotas):
+#        """Internal: Write the quota info to the file."""
+#
+#        self.logger.info("Writing the quota info to the file %s", 
+#                         self.conf.quota_file)
+#        try:
+#            filehandle = open(self.conf.quota_file,"w")
+#            json.dump(quotas, filehandle, indent=2, sort_keys=True)
+#            filehandle.close()
+#        except Exception, e:
+#            self.logger.error("problem while writing quota file %s", 
+#                              self.conf.quota_file)
+#            self.logger.error("Error: %s", e)
+#            return False
+#
+#        return True
 
-        self.logger.info("checking if an update of the quota info, related to the "
-                    + " project " + proj_name + ", is required")
-        quotas = self._parseQuotas() 
-        if proj_name in quotas.keys():
-            if (quotas[proj_name]['quota_limit'] != 
-                self.projects[proj_name][self.conf.quota_attribute]):
-                quotas[proj_name]['quota_limit'] = \
-                        self.projects[proj_name][self.conf.quota_attribute]
-                self._writeQuota(quotas)
-                self.logger.debug("updated the quota info, project: " + proj_name 
-                             + ", new quota limit value: " 
-                             + str(quotas[proj_name]['quota_limit']))
-            else:
-                self.logger.debug("nothing to update for project: " + proj_name)
-                return False
-        else:
-            quota = {'quota_limit':0, 'used_space':0, 
-                     'unity':self.conf.quota_unity, 'used_space_perc':0}
-            quota['quota_limit'] = \
-                self.projects[proj_name][self.conf.quota_attribute]
-            quotas[proj_name] = quota
-            self._writeQuota(quotas)
-            self.logger.debug("created a new quota info record for the project: "
-                         + proj_name + ", with value: " + pformat(quota))
 
-        return True
+#    def _updateQuota( self, proj_name ):
+#        """Internal: Update the quota info file."""
+#
+#        self.logger.info("checking if an update of the quota info, related to the "
+#                    + " project " + proj_name + ", is required")
+#        quotas = self._parseQuotas() 
+#        if proj_name in quotas.keys():
+#            if (quotas[proj_name]['quota_limit'] != 
+#                self.projects[proj_name][self.conf.quota_attribute]):
+#                quotas[proj_name]['quota_limit'] = \
+#                        self.projects[proj_name][self.conf.quota_attribute]
+#                self._writeQuota(quotas)
+#                self.logger.debug("updated the quota info, project: " + proj_name 
+#                             + ", new quota limit value: " 
+#                             + str(quotas[proj_name]['quota_limit']))
+#            else:
+#                self.logger.debug("nothing to update for project: " + proj_name)
+#                return False
+#        else:
+#            quota = {'quota_limit':0, 'used_space':0, 
+#                     'unity':self.conf.quota_unity, 'used_space_perc':0}
+#            quota['quota_limit'] = \
+#                self.projects[proj_name][self.conf.quota_attribute]
+#            quotas[proj_name] = quota
+#            self._writeQuota(quotas)
+#            self.logger.debug("created a new quota info record for the project: "
+#                         + proj_name + ", with value: " + pformat(quota))
+#
+#        return True
 
  
-    def _deleteQuota(self,proj_name):
-        """Internal: Delete the quota limit from the file."""
-
-        self.logger.info("deleting the quota limit")
-        quotas = self._parseQuotas()
-        if proj_name in quotas.keys():
-            del quotas[proj_name]
-        else:
-            self.logger.debug("no project quota to delete")
-
-        return self._writeQuota(quotas)
-
+#    def _deleteQuota(self,proj_name):
+#        """Internal: Delete the quota limit from the file."""
+#
+#        self.logger.info("deleting the quota limit")
+#        quotas = self._parseQuotas()
+#        if proj_name in quotas.keys():
+#            del quotas[proj_name]
+#        else:
+#            self.logger.debug("no project quota to delete")
+#
+#        return self._writeQuota(quotas)
+#
 
     def _getSubGroupsList(self):
         """Internal: get the list of projects per subgroup"""
@@ -209,8 +209,9 @@ class SynchronizationTask():
                     else:
                         newGroupFlag = True
                         print 'created group ' + sg + ' ' \
-                            + 'related to the project ' + proj_name + ' and ' \
-                            + 'deleted its home'
+                            + 'related to the project ' + proj_name
+                        if not self.conf.irods_subgroup_home:
+                            print ' and deleted its home'
                 else:
                     self.logger.debug("group %s has already been created", sg)
 
@@ -219,7 +220,6 @@ class SynchronizationTask():
                     userinfo = self.irodsu.getIrodsUser(user)
                     if (userinfo is not None) and \
                        ("No rows found" in userinfo.splitlines()[0]):
-#                    if not(user in self.irods_users.keys()):
                         if not(self.dryrun):
                             response = self.irodsu.createIrodsUsers(user)
                             if response[0] != 0:
@@ -234,20 +234,20 @@ class SynchronizationTask():
                                                   user)
                             else:
                                 self.logger.debug("created user %s", user)
-                                if self.conf.quota_active:
-                                    # quota from userDB is set in GB, while iRODS uses bytes
-                                    quota = self.toBytes( 
-                                            int(project[self.conf.quota_attribute]),
-                                            self.conf.quota_unity)
-                                    self.irodsu.setIrodsUserQuota(user,str(quota))
-                                    self.logger.debug("set the irods quota limit to " 
-                                                      + str(quota))
+#                                if self.conf.quota_active:
+#                                    # quota from userDB is set in GB, while iRODS uses bytes
+#                                    quota = self.toBytes( 
+#                                            int(project[self.conf.quota_attribute]),
+#                                            self.conf.quota_unity)
+#                                    self.irodsu.setIrodsUserQuota(user,str(quota))
+#                                    self.logger.debug("set the irods quota limit to " 
+#                                                      + str(quota))
                         else:
                             print "created user %s" % (user)
-                            if self.conf.quota_active:
-                                quotaGB = project[self.conf.quota_attribute]
-                                print "and set the irods quota limit to " \
-                                      + quotaGB + " GB"
+#                            if self.conf.quota_active:
+#                                quotaGB = project[self.conf.quota_attribute]
+#                                print "and set the irods quota limit to " \
+#                                      + quotaGB + " GB"
 
                     # add a new user to the sub-group only if the sub-group is new
                     # or it is old, but the user is not included among its members yet
@@ -268,10 +268,10 @@ class SynchronizationTask():
         self.logger.info("checking if there are users to be added to the group "
                     + proj_name)
         user_list = project['members']
-        if 'PI' in project.keys():
-            user_list.append(project['PI'])
-            # eliminate duplicates when a PI is also a member of the project
-            user_list = set(user_list)
+#        if 'PI' in project.keys():
+#            user_list.append(project['PI'])
+#            # eliminate duplicates when a PI is also a member of the project
+#            user_list = set(user_list)
         for user in [x for x in user_list
                      if (new_project_flag or 
                          not(x in self.irods_projects[proj_name]['members']))]:
@@ -289,30 +289,30 @@ class SynchronizationTask():
                         self.logger.error("failed to create the irods user %s", user)
                     else:
                         self.logger.debug("created irods user %s", user)
-                        if self.conf.quota_active:
-                            # quota from userDB is set in GB, while iRODS uses bytes
-                            quota = self.toBytes(
-                                         int(project[self.conf.quota_attribute]),
-                                         self.conf.quota_unity)
-                else:
-                    if self.conf.quota_active:
-                        quota_limit = self.irodsu.listIrodsUserQuota(user)
-                        # quota from userDB is set in GB, while iRODS uses bytes
-                        quota = quota_limit + self.toBytes(
-                                int(project[self.conf.quota_attribute] 
-                                   ), self.conf.quota_unity)
-                        self.irodsu.setIrodsUserQuota(user,str(quota))
-                        self.logger.debug("defined quota limit to %s GB for the user %s",
-                                     str(quota), user)                                     
+#                        if self.conf.quota_active:
+#                            # quota from userDB is set in GB, while iRODS uses bytes
+#                            quota = self.toBytes(
+#                                         int(project[self.conf.quota_attribute]),
+#                                         self.conf.quota_unity)
+#                else:
+#                    if self.conf.quota_active:
+#                        quota_limit = self.irodsu.listIrodsUserQuota(user)
+#                        # quota from userDB is set in GB, while iRODS uses bytes
+#                        quota = quota_limit + self.toBytes(
+#                                int(project[self.conf.quota_attribute] 
+#                                   ), self.conf.quota_unity)
+#                        self.irodsu.setIrodsUserQuota(user,str(quota))
+#                        self.logger.debug("defined quota limit to %s GB for the user %s",
+#                                     str(quota), user)                                     
                 self.irodsu.addIrodsUserToGroup(user, proj_name)
                 self.logger.debug("added irods user %s to the group %s", 
                              user, proj_name)
             else:
                 print "added user %s to the group %s" % (user, proj_name)
-                if self.conf.quota_active:
-                    quotaGB = project[self.conf.quota_attribute]
-                    print "and set the related user quota limit to %s GB" \
-                          % (quotaGB,)
+#                if self.conf.quota_active:
+#                    quotaGB = project[self.conf.quota_attribute]
+#                    print "and set the related user quota limit to %s GB" \
+#                          % (quotaGB,)
 
 
     def addProjects(self):
@@ -332,11 +332,13 @@ class SynchronizationTask():
             filterObj = Filters(self.logger)
             if filterObj.attr_filters(self.projects[proj_name], self.conf.condition):
                 if not(self.dryrun):
-                    if self.conf.quota_active:
-                        self._updateQuota(proj_name)
-                        self.logger.info("Added quota info for project: " 
-                                         + proj_name)
+#                    if self.conf.quota_active:
+#                        self._updateQuota(proj_name)
+#                        self.logger.info("Added quota info for project: " 
+#                                         + proj_name)
                     newGroupFlag = self.irodsu.createIrodsGroup(proj_name)
+                    if not self.conf.irods_group_home:
+                        self.irodsu.deleteGroupHome(proj_name)
                     if not newGroupFlag:
                         if self.conf.notification_active:
                             message = "creation of the irods group " + proj_name \
@@ -362,14 +364,14 @@ class SynchronizationTask():
         for proj_name in [x for x in self.projects.keys() 
                           if x in self.irods_projects.keys()]:
             self.logger.info("Updating the project: " + proj_name)
-            if self.conf.quota_active:
-                self._updateQuota(proj_name)
+#            if self.conf.quota_active:
+#                self._updateQuota(proj_name)
             # users are in the UserDB and not in iRODS
             self.addUsersToProject(proj_name, self.projects[proj_name])
             # add users from irods externals
             user_list = self.projects[proj_name]['members']
-            if 'PI' in self.projects[proj_name].keys():
-                user_list.append(self.projects[proj_name]['PI'])
+#            if 'PI' in self.projects[proj_name].keys():
+#                user_list.append(self.projects[proj_name]['PI'])
             for sg in self.projects[proj_name]['groups'].keys():
                 user_list += self.projects[proj_name]['groups'][sg]
             user_list = set(user_list)
@@ -407,18 +409,18 @@ class SynchronizationTask():
         s = set(self.conf.internal_project_list)
         for proj_name in [x for x in self.irods_projects.keys() if x not in s]:
 ##TODO add filtering criteria as in addProjects
-            quotaFlag = False
-            if self.conf.quota_active and proj_name in self.projects.keys():
-                quotaFlag = \
-                    len((self.projects[proj_name][self.conf.quota_attribute]).strip()) == 0 \
-                    or int(self.projects[proj_name][self.conf.quota_attribute]) == 0
+#            quotaFlag = False
+#            if self.conf.quota_active and proj_name in self.projects.keys():
+#                quotaFlag = \
+#                    len((self.projects[proj_name][self.conf.quota_attribute]).strip()) == 0 \
+#                    or int(self.projects[proj_name][self.conf.quota_attribute]) == 0
             # projects are in iRODS and not in userDB
             if (not(proj_name in sg_list.keys())
                 and (not(proj_name in self.projects.keys()) or quotaFlag)):
                 self.logger.info("The project: " + proj_name + " should be deleted")
                 if not(self.dryrun):
-                    if self.conf.quota_active:
-                        self._deleteQuota(proj_name)
+#                    if self.conf.quota_active:
+#                        self._deleteQuota(proj_name)
                     if self.conf.notification_active:
                         # send message
                         message = "project " + proj_name + " should be " \
@@ -448,38 +450,38 @@ class SynchronizationTask():
                 user_list = []
                 if (proj_name in self.projects.keys()):
                     user_list = self.projects[proj_name]['members']
-                    if 'PI' in self.projects[proj_name].keys():
-                        user_list.append(self.projects[proj_name]['PI'])
+#                    if 'PI' in self.projects[proj_name].keys():
+#                        user_list.append(self.projects[proj_name]['PI'])
                     for sg in self.projects[proj_name]['groups'].keys():
                         user_list += self.projects[proj_name]['groups'][sg]
                     user_list = set(user_list)
 ##TODO here should be managed user attributes
-                if user in user_list:
-                    if self.conf.quota_active:
-                        # quota from userDB is set in GB, while iRODS uses bytes
-                        if len((self.projects[proj_name][self.conf.quota_attribute]).strip()) > 0:
-                            total_quota_limit += self.toBytes(
-                                int(self.projects[proj_name][self.conf.quota_attribute]
-                                   ), self.conf.quota_unity)
-            if not(self.dryrun):
-                if self.conf.quota_active:
-                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
-                    if not old_quota_limit or old_quota_limit != total_quota_limit:
-                        self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
-                        self.logger.debug("set the new quota limit for user %s to %s GB", 
-                                          user, str(self.fromBytes(total_quota_limit,
-                                                                   self.conf.quota_unity)))
-                    else:
-                        self.logger.debug("no need to set new quota limit for user %s", user)
-            else:
-                if self.conf.quota_active:
-                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
-                    if not old_quota_limit or old_quota_limit != total_quota_limit:
-                        print("set the new quota limit for user " + user + " to "
-                              + str(self.fromBytes(total_quota_limit, 
-                                    self.conf.quota_unity)) + " GB")
-                    else:
-                        print("no need to set new quota limit for user " + user)
+#                if user in user_list:
+#                    if self.conf.quota_active:
+#                        # quota from userDB is set in GB, while iRODS uses bytes
+#                        if len((self.projects[proj_name][self.conf.quota_attribute]).strip()) > 0:
+#                            total_quota_limit += self.toBytes(
+#                                int(self.projects[proj_name][self.conf.quota_attribute]
+#                                   ), self.conf.quota_unity)
+#            if not(self.dryrun):
+#                if self.conf.quota_active:
+#                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+#                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+#                        self.irodsu.setIrodsUserQuota(user,str(total_quota_limit))
+#                        self.logger.debug("set the new quota limit for user %s to %s GB", 
+#                                          user, str(self.fromBytes(total_quota_limit,
+#                                                                   self.conf.quota_unity)))
+#                    else:
+#                        self.logger.debug("no need to set new quota limit for user %s", user)
+#            else:
+#                if self.conf.quota_active:
+#                    old_quota_limit = self.irodsu.listIrodsUserQuota(user)
+#                    if not old_quota_limit or old_quota_limit != total_quota_limit:
+#                        print("set the new quota limit for user " + user + " to "
+#                              + str(self.fromBytes(total_quota_limit, 
+#                                    self.conf.quota_unity)) + " GB")
+#                    else:
+#                        print("no need to set new quota limit for user " + user)
 
             # managing the dn of a user
             self.logger.debug("Updating the dn mapping for user: " + user)
@@ -499,14 +501,14 @@ class SynchronizationTask():
                             self.irodsu.addDNToUser(user,dn)
                             self.logger.info("the dn %s has been added for user "
                                              + "%s", dn, user)
-                            if (self.conf.gridftp_active 
-                                and dn != self.conf.gridftp_server_dn):
-                                with open(self.conf.gridmapfile, 'a+') as mapf:
-                                    mapf.write('"' + dn + '"' + " " + user + "\n")
-                                    self.logger.info("the dn %s associated to the"
-                                              + " user %s has been added to "
-                                              + "the gridmapfile %s", dn, user, 
-                                              self.conf.gridmapfile)
+#                            if (self.conf.gridftp_active 
+#                                and dn != self.conf.gridftp_server_dn):
+#                                with open(self.conf.gridmapfile, 'a+') as mapf:
+#                                    mapf.write('"' + dn + '"' + " " + user + "\n")
+#                                    self.logger.info("the dn %s associated to the"
+#                                              + " user %s has been added to "
+#                                              + "the gridmapfile %s", dn, user, 
+#                                              self.conf.gridmapfile)
                         else:
                             print "the dn " + dn + " has been added for user " \
                                   + user
@@ -528,39 +530,39 @@ class SynchronizationTask():
                                              self.conf.notification_receiver)
                             self.logger.info("the dn %s has been removed for "
                                         + "user %s", dn, user)
-                            if (self.conf.gridftp_active
-                                and dn != self.conf.gridftp_server_dn):
-                                statinfo = os.stat(self.conf.gridmapfile)
+#                            if (self.conf.gridftp_active
+#                                and dn != self.conf.gridftp_server_dn):
+#                                statinfo = os.stat(self.conf.gridmapfile)
                                 # If the original gridmafile has size > 0 then
                                 # create a backup
-                                if statinfo.st_size > 0:
-                                    try:
-                                        dest = self.conf.gridmapfile + ".bak"
-                                        shutil.copy(self.conf.gridmapfile, dest)
-                                    except IOError as e:
-                                        self.logger.error("Impossible to create"
-                                                          " a backup: " + e.strerror)
-                                with open(self.conf.gridmapfile, 'w+') as mapf:
-                                    content = mapf.readlines()
-                                    for line in content:
-                                        if not (dn in line.split()):
-                                            mapf.write(line)
-                                    self.logger.info("the dn %s associated to the"
-                                              + " user %s has been removed from"
-                                              + " the gridmapfile %s", dn, user,
-                                              self.conf.gridmapfile)
+#                                if statinfo.st_size > 0:
+#                                    try:
+#                                        dest = self.conf.gridmapfile + ".bak"
+#                                        shutil.copy(self.conf.gridmapfile, dest)
+#                                    except IOError as e:
+#                                        self.logger.error("Impossible to create"
+#                                                          " a backup: " + e.strerror)
+#                                with open(self.conf.gridmapfile, 'w+') as mapf:
+#                                    content = mapf.readlines()
+#                                    for line in content:
+#                                        if not (dn in line.split()):
+#                                            mapf.write(line)
+#                                    self.logger.info("the dn %s associated to the"
+#                                              + " user %s has been removed from"
+#                                              + " the gridmapfile %s", dn, user,
+#                                              self.conf.gridmapfile)
                         else:
                             print "the dn " + dn + " has been removed for " \
                                 + "user " + user
 
-    def toBytes(self, size, unity):
-        """Convert file size to byte"""
-        size_map = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3,
-                    'TB': 1024 ** 4}
-        return size * size_map[unity] 
+#    def toBytes(self, size, unity):
+#        """Convert file size to byte"""
+#        size_map = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3,
+#                    'TB': 1024 ** 4}
+#        return size * size_map[unity] 
 
-    def fromBytes(self, size, unity):
-        """Convert file size from byte"""
-        size_map = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3,
-                    'TB': 1024 ** 4}
-        return size / size_map[unity]
+#    def fromBytes(self, size, unity):
+#        """Convert file size from byte"""
+#        size_map = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3,
+#                    'TB': 1024 ** 4}
+#        return size / size_map[unity]
