@@ -12,10 +12,8 @@ import urllib
 from pprint import pformat
 import os
 import ConfigParser
+import ast
 
-from utilities.drivers.hbpIncf import *
-from utilities.drivers.euhit import *
-from utilities.drivers.myproxy import *
 from utilities.drivers.eudatunity import *
 
 logger = logging.getLogger('remote.users.sync')
@@ -36,9 +34,6 @@ class SyncRemoteUsers:
         parser = argparse.ArgumentParser(description='Synchronize remote user '
                                                      'accounts to a local json '
                                                      'file.')
-        parser.add_argument('-r', '--remove', action='store_true', dest='remove',
-                            default=False, help='remove users and groups that do'
-                                               ' not exist in the remote domain')
         parser.add_argument('-d', '--debug', action='store_true', 
                             dest='debug', default=False, 
                             help='print debug messages')
@@ -50,8 +45,8 @@ class SyncRemoteUsers:
         parser_group = subparsers.add_parser('syncto', 
                                              help='the syncronization target')
         parser_group.add_argument('group', help='the target group (or project)')
-        parser_group.add_argument('-s', '--subgroup', dest='subgroup',
-                                  default='', help='the target sub-group')
+        parser_group.add_argument('-s', '--subgroups', dest='subgroups',
+                                  default='', help='the target sub-groups')
 
         _args = parser.parse_args()
 
@@ -63,8 +58,10 @@ class SyncRemoteUsers:
         self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
         
         main_project = _args.group
-        subproject = _args.subgroup
-        remove = _args.remove
+        if (_args.subgroups is not None) and (len(_args.subgroups)) > 0:
+            subgroups = [n.strip() for n in _args.subgroups.split(",")]
+        else:
+           subgroups = None
         
         ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
@@ -81,42 +78,29 @@ class SyncRemoteUsers:
         
         userparam = {k:v for k,v in self.config.items(main_project)}
         data = None
-        # Get the json file containing the list of projects, sub-groups and 
+        # Write the json file containing the list of projects, sub-groups and 
         # related members
-        try:
-            with open(self.filepath, "r") as jsonFile:
-                try:
-                    data = json.load(jsonFile)
-                    if not main_project in data: 
-                        if 'type' not in userparam or userparam['type'] != 'attributes':
-                            data[main_project] = {"groups": {}, "members": []}
-                except (ValueError) as ve:
-                    self.logger.error('the file ' + self.filepath + ' is not a valid json.')
-                    sys.exit(1)
-        except (IOError, OSError) as e:
-            with open(self.filepath, "w+") as jsonFile:
-                if 'type' not in userparam or userparam['type'] != 'attributes':
-                    data = {main_project: {"groups": {}, "members": []}}
-                    jsonFile.write(json.dumps(data,indent=2))
-        if subproject and not subproject in data[main_project]['groups']:
-            if 'ns_prefix' in userparam and userparam['ns_prefix']:
-                data[main_project]['groups'][userparam['ns_prefix']+subproject] = []
-            else:
-                data[main_project]['groups'][subproject] = []
+        with open(self.filepath, "w+") as jsonFile:
+            if 'type' not in userparam or userparam['type'] != 'attributes':
+                data = {main_project: {"groups": {}, "members": []}}
+                jsonFile.write(json.dumps(data,indent=2))
+        if subgroups:
+            for subgroup in (x for x in subgroups \
+                             if x not in data[main_project]['groups']):
+                if 'ns_prefix' in userparam and userparam['ns_prefix']:
+                    data[main_project]['groups'][userparam['ns_prefix']+subgroup] = []
+                else:
+                    data[main_project]['groups'][subgroup] = []
 
         userdata = None
-        # Get the json file containing the list of distinguished names and users
-        try:
-            with open(self.dnsfilepath, "r") as jsonFile:
-                userdata = json.load(jsonFile)
-        except (IOError, OSError) as e:
-            with open(self.dnsfilepath, "w+") as jsonFile:
-                userdata = {}
-                jsonFile.write(json.dumps(userdata,indent=2))
+        # Write the json file containing the list of distinguished names and users
+        with open(self.dnsfilepath, "w+") as jsonFile:
+            userdata = {}
+            jsonFile.write(json.dumps(userdata,indent=2))
 
         if (main_project == 'EUDAT'):
             self.logger.info('Syncronizing local json file with eudat user DB...')
-            eudatRemoteSource = EudatRemoteSource(main_project, subproject,
+            eudatRemoteSource = EudatRemoteSource(main_project, subgroups,
                                                   userparam, self.logger)
             data = eudatRemoteSource.synchronize_user_db(data)
             userdata = eudatRemoteSource.synchronize_user_attributes(userdata)
