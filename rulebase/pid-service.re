@@ -126,9 +126,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 EUDATSearchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
-               "null", "null", "null", *out1);
-    msiGetStdoutInExecCmdOut(*out1, *path1);
+#    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
+#               "null", "null", "null", *out1);
+    EUDATReplaceHash(*path, *path1);
     *status = EUDATePIDsearch("URL", "*serverID"++"*path1", *existing_pid);
     *status;
 }
@@ -292,7 +292,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
     if (*type == '-c')  {
         *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
         foreach(*c in *d) {
-            msiGetValByKey(*c, "META_COLL_ATTR_VALUE", *FVALUE);
+            *FVALUE = *c.META_COLL_ATTR_VALUE;
             logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
             *status0 = bool("true");
         }
@@ -301,7 +301,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         msiSplitPath(*path, *coll, *name);
         *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
         foreach(*c in *d) {
-            msiGetValByKey(*c, "META_DATA_ATTR_VALUE", *FVALUE);
+            *FVALUE = *c.META_DATA_ATTR_VALUE;
             logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
             *status0 = bool("true");
         }
