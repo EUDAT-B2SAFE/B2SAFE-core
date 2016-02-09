@@ -23,7 +23,7 @@ def send(args):
         dweepy.dweet_for(args.queue, jsonPayLoad)
     except dweepy.DweepyError as e:
         logger.exception('Failed dweeting')
-        exit(1)
+        sys.exit(1)
 
 def getlast(args):
     """get the last message from the queue"""
@@ -33,7 +33,7 @@ def getlast(args):
     except dweepy.DweepyError as e:
         logger.exception('Failed to get the last message from queue %s', 
                           args.queue)
-        exit(1)
+        sys.exit(1)
     print json.dumps({jsonPayLoad[0]['created']:
                       jsonPayLoad[0]['content']['message']})
 
@@ -45,7 +45,7 @@ def getall(args):
     except dweepy.DweepyError as e:
         logger.exception('Failed to get all the message from queue %s', 
                           args.queue)
-        exit(1)
+        sys.exit(1)
     payLoad = {}
     for message in jsonPayLoad:
         payLoad[message['created']] = message['content']['message']

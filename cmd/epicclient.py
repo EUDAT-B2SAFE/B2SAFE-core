@@ -553,7 +553,7 @@ class EpicClient(object):
                         return True
 
                 self._debugmsg('removeLocationFromHandle', "the location " +
-                               value + " cannot be updated")
+                               oldvalue + " cannot be updated")
                 return False
 
 
@@ -691,7 +691,7 @@ class LocationType(object):
                                 + "with: " + newloc)
                 return True, main.toxml()
 
-        self._debugmsg('updateLocation', "cannot update location: " + loc)
+        self._debugmsg('updateLocation', "cannot update location: " + oldloc)
         return False, None
 
 
