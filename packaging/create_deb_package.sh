@@ -92,6 +92,7 @@ done
 
 # create postinstall scripts
 cat > $RPM_BUILD_ROOT${PACKAGE}/DEBIAN/postinst << EOF
+#!/bin/bash
 # script for postinstall actions
 
 # create configuration file if it does not exist yet
