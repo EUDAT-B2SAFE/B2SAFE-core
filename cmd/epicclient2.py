@@ -34,7 +34,6 @@ def search(args):
         extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    #client = EUDATHandleClient.instantiate_with_credentials(credentials)
     client = EUDATHandleClient.instantiate_for_read_and_search(
         credentials.get_server_URL(),
         credentials.get_prefix(),
@@ -64,7 +63,6 @@ def read(args):
         extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    #client = EUDATHandleClient.instantiate_with_credentials(credentials)
     client = EUDATHandleClient.instantiate_for_read_and_search(
         credentials.get_server_URL(),
         credentials.get_prefix(),
@@ -108,11 +106,8 @@ def create(args):
     handle = prefix+"/"+suffix
 
     # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_username_and_password(
-        credentials.get_server_URL(),
-        credentials.get_username(),
-        credentials.get_password(),
-        reverselookup_username=credentials.get_prefix(),
+    client = EUDATHandleClient.instantiate_with_credentials(
+        credentials,
         **extra_config)
 
     # pre-process the input parameters for the handle api
@@ -153,11 +148,8 @@ def modify(args):
         extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_username_and_password(
-        credentials.get_server_URL(),
-        credentials.get_username(),
-        credentials.get_password(),
-        reverselookup_username=credentials.get_prefix(),
+    client = EUDATHandleClient.instantiate_with_credentials(
+        credentials,
         **extra_config)
 
     kvpairs = dict([(args.key, args.value)])
@@ -188,11 +180,8 @@ def delete(args):
         extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_username_and_password(
-        credentials.get_server_URL(),
-        credentials.get_username(),
-        credentials.get_password(),
-        reverselookup_username=credentials.get_prefix(),
+    client = EUDATHandleClient.instantiate_with_credentials(
+        credentials,
         **extra_config)
 
     if args.key is None:
@@ -216,11 +205,8 @@ def relation(args):
         extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_username_and_password(
-        credentials.get_server_URL(),
-        credentials.get_username(),
-        credentials.get_password(),
-        reverselookup_username=credentials.get_prefix(),
+    client = EUDATHandleClient.instantiate_with_credentials(
+        credentials,
         **extra_config)
 
     # add relation to 10320/LOC
