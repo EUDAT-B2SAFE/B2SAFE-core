@@ -28,6 +28,17 @@ def search(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    # set username and password for search
+    if 'reverse_username' in credentials.get_config():
+        reverselookup_username = credentials.get_config()['reverse_username']
+    else:
+        reverselookup_username = credentials.get_prefix()
+
+    if 'reverse_password' in credentials.get_config():
+        reverselookup_password = credentials.get_config()['reverse_password']
+    else:
+        reverselookup_password = credentials.get_password()
+
     # retrieve and set extra values
     extra_config = {}
     if 'HTTPS_verify' in credentials.get_config():
@@ -36,8 +47,8 @@ def search(args):
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_for_read_and_search(
         credentials.get_server_URL(),
-        credentials.get_prefix(),
-        credentials.get_password(),
+        reverselookup_username,
+        reverselookup_password,
         **extra_config)
 
     kvpairs = dict([(args.key, str(''.join(args.value)))])
@@ -57,6 +68,17 @@ def read(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    # set username and password for search
+    if 'reverse_username' in credentials.get_config():
+        reverselookup_username = credentials.get_config()['reverse_username']
+    else:
+        reverselookup_username = credentials.get_prefix()
+
+    if 'reverse_password' in credentials.get_config():
+        reverselookup_password = credentials.get_config()['reverse_password']
+    else:
+        reverselookup_password = credentials.get_password()
+
     # retrieve and set extra values
     extra_config = {}
     if 'HTTPS_verify' in credentials.get_config():
@@ -65,8 +87,8 @@ def read(args):
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_for_read_and_search(
         credentials.get_server_URL(),
-        credentials.get_prefix(),
-        credentials.get_password(),
+        reverselookup_username,
+        reverselookup_password,
         **extra_config)
 
     # set default return value
