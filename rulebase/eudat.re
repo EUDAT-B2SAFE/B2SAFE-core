@@ -61,8 +61,9 @@ EUDATAuthZ(*user, *action, *target, *response) {
     getAuthZParameters(*authZMapPath);
     logDebug("checking authorization for *user to perform: *action *target");
     msiExecCmd("authZmanager.py", "*authZMapPath check *user '*action' '*target'",
-               "null", "null", "null", *out);
-    msiGetStdoutInExecCmdOut(*out, *response);
+               "null", "null", "null", *outAuthZ);
+    msiGetStdoutInExecCmdOut(*outAuthZ, *response);
+    msifree_microservice_out(*outAuthZ);
     if (*response == "False") {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
@@ -121,7 +122,8 @@ EUDATMessage(*queue, *message) {
     if (*enabled) {
         logInfo("sending message '*message' to the queue '*queue'");
         msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
-                   "null", "null", "null", *out);
+                   "null", "null", "null", *outMessage);
+        msifree_microservice_out(*outMessage);
     }
 }
 
@@ -142,7 +144,8 @@ EUDATLog(*message, *level) {
     getLogParameters(*logConfPath);
     logInfo("logging message '*message'");
     msiExecCmd("logmanager.py", "*logConfPath log *level *message",
-               "null", "null", "null", *out);
+               "null", "null", "null", *outLog);
+    msifree_microservice_out(*outLog);
 }
 
 
@@ -172,14 +175,15 @@ EUDATQueue(*action, *message, *number) {
     }
     logInfo("logging action '*action' for message '*message'");
     msiExecCmd("logmanager.py", "*logConfPath *action *options *message",
-               "null", "null", "null", *out);
+               "null", "null", "null", *outQueue);
     if (*action == 'pop' || *action == 'queuesize') {
-        msiGetStdoutInExecCmdOut(*out, *message);
+        msiGetStdoutInExecCmdOut(*outQueue, *message);
     }
     if (*action == 'pop' && int(*number) > 1) {
         *message = triml(*message, "[");
         *message = trimr(*message, "]");
     }
+    msifree_microservice_out(*outQueue);
 }
 
 #
@@ -570,8 +574,9 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
             *extraMetaData = *extraMetaData ++ " -r *ror";
         }
         msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
-                ++ " -i *pid *extraMetaData", "null", "null", "null", *out);
-        msiGetStdoutInExecCmdOut(*out, *resp);
+                ++ " -i *pid *extraMetaData", "null", "null", "null", *outMeta);
+        msiGetStdoutInExecCmdOut(*outMeta, *resp);
+        msifree_microservice_out(*outMeta);
     }
 }
 

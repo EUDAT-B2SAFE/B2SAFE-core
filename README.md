@@ -31,3 +31,11 @@ https://github.com/irods/irods/issues/2928
 But it is related to the iput operation with the bulk option.
 And the leak is smaller: 2 GB of memory/10^6 object uploaded.
 Therefore for 30 users running bulk upload in parallel of collection of 10^4 objects, just 600 MB are enough.
+
+---------------
+Memory Leak Fix
+---------------
+
+- iRODS development package needed. Installation instructions here: https://github.com/irods/contrib/issues/7#issuecomment-172605195
+
+- After it is possible to use msifree_microservice_out integrated in the rulebase code.
