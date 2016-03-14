@@ -178,7 +178,6 @@ EUDATePIDcreatemsi(*path, *extraType, *PID, *ifcheksum) {
         logsError('There is still no support for extraType into the PID')
     }
 
-    *UUIDReq = 'https://www.uuidgenerator.net/api/version1'
     *checksum = ''
     if (*ifcheksum == bool("true") ) {
         logInfo("EUDATePIDcreatemsi -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
