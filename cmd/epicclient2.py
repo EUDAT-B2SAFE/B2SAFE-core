@@ -28,6 +28,7 @@ def search(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+
     # set username and password for search
     if 'reverse_username' in credentials.get_config():
         reverselookup_username = credentials.get_config()['reverse_username']
@@ -41,8 +42,6 @@ def search(args):
 
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_for_read_and_search(
@@ -68,27 +67,13 @@ def read(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
-    # set username and password for search
-    if 'reverse_username' in credentials.get_config():
-        reverselookup_username = credentials.get_config()['reverse_username']
-    else:
-        reverselookup_username = credentials.get_prefix()
-
-    if 'reverse_password' in credentials.get_config():
-        reverselookup_password = credentials.get_config()['reverse_password']
-    else:
-        reverselookup_password = credentials.get_password()
 
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
-    client = EUDATHandleClient.instantiate_for_read_and_search(
+    client = EUDATHandleClient.instantiate_for_read_access(
         credentials.get_server_URL(),
-        reverselookup_username,
-        reverselookup_password,
         **extra_config)
 
     # set default return value
@@ -116,10 +101,9 @@ def create(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # create a handle to put. Concate the prefix with a new generated suffix
     prefix = str(credentials.get_prefix())
@@ -164,10 +148,9 @@ def modify(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_with_credentials(
@@ -196,10 +179,9 @@ def delete(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_with_credentials(
@@ -221,10 +203,9 @@ def relation(args):
 
     # load credentials
     credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+
     # retrieve and set extra values
     extra_config = {}
-    if 'HTTPS_verify' in credentials.get_config():
-        extra_config['HTTPS_verify'] = credentials.get_config()['HTTPS_verify']
 
     # setup connection to handle server
     client = EUDATHandleClient.instantiate_with_credentials(
