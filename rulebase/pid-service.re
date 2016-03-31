@@ -206,8 +206,19 @@ EUDATePIDcreatemsi(*path, *extraType, *PID, *ifcheksum) {
     *postFields."data" = *PIDRecord
     *postFields."headers" = 'Content-type: application/json'
 
-    msiCurlPost(*BaseRequest, *postFields, *response);
-    EUDATSearchPIDmsi(*path1, *PID)
+    *PID = 'empty';
+
+    *attempt = 0;
+    while ((*PID == 'empty') && (*attempt < 3))
+    {
+        msiCurlPost(*BaseRequest, *postFields, *response);
+        EUDATSearchPIDmsi(*path1, *PID);
+        if (*PID == 'empty')
+        {
+            logError('Error trying to get PID for *fullPath . Retrying...');
+        }
+        *attempt = *attempt+1;
+    }
 
     *PID = *prefix ++ '/' ++ *PID
     logInfo("EUDATePIDcreatemsi -> Created handle is: *PID");
