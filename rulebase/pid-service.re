@@ -115,7 +115,6 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 
 # -----------------------------------------------------------------------------
 # Searching for a PID using URL replacing "#", "%" and "&" with "*"
-# (uses replaceHash in epicclient.py)
 # Parameters:
 #   *path       	[IN]    the path of the replica
 #   *existing_pid	[OUT]   existing PID
@@ -126,8 +125,6 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 EUDATSearchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-#    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
-#               "null", "null", "null", *out1);
     EUDATReplaceHash(*path, *path1);
     *status = EUDATePIDsearch("URL", "*serverID"++"*path1", *existing_pid);
     *status;
@@ -322,10 +319,10 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 # Author: Giacomo Mariani, CINECA
 # Edited by:  Robert Verkerk, SURFsara
 #
-EUDATePIDcreate(*path, *extraType, *PID, *ifcheksum) {
+EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     
-    if (*ifcheksum == bool("true") ) {
+    if (*ifchecksum == bool("true") ) {
         logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
         EUDATiCHECKSUMget(*path, *checksum, *modtime);
         *extChksum="";
@@ -344,6 +341,10 @@ EUDATePIDcreate(*path, *extraType, *PID, *ifcheksum) {
          logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
          *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
+
+    # add the default 10320/LOC to each created PID
+    *execCmd="*execCmd"++" --loc10320 '*serverID"++"*path'";
+
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *PID);
     logInfo("EUDATePIDcreate -> Created handle is: *PID");
@@ -370,9 +371,27 @@ EUDATePIDsearch(*field, *value, *PID) {
     msiExecCmd("epicclient.py","*credStoreType *credStorePath search *field *value", "null", "null", "null", *out);
     msiGetStdoutInExecCmdOut(*out, *PID);
     logInfo("EUDATePIDsearch -> search handle response = *PID");
+    # before: 841/test. A single entry.
+    # new   : ["841/test"]. An array/list of multiple PID's separated by "," and a space
     if ( str(*PID) == "empty" ) { 
         *status0=bool("false"); 
         logInfo("EUDATePIDsearch -> search handle response = no PID");
+    } else {
+        # remove brackets, quotes and spaces from the "*PID" string
+        *outStr=str(*PID);
+        foreach ( *char in list("[","]","\""," ") ) {
+            *list = split("*outStr","*char");
+            *n = "";
+            foreach (*t in *list) {
+                *n = *n ++ *t;
+            }
+            *outStr = *n;
+        }
+
+        # create a list of PID's
+        *PIDlist = split(*outStr, ",");
+        # extract the first element of the list 
+        *PID=elem(*PIDlist, 0);
     }
     *status0;
 }

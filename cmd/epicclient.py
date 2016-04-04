@@ -259,21 +259,15 @@ class EpicClient(object):
         idn = 0
         root = etree.Element('locations')
 
-        if l10320 is None:
+        handle_array = [{'type': 'URL', 'parsed_data': location}]
+        if l10320 is not None:
             # loc10320 = ('<locations><location id="0" href="' + str(location) +
             #            '" /></locations>')
-            self._debugmsg('createHandle', "loc10320 = None")
-            etree.SubElement(root, 'location', id=str(idn), href=str(location))
-        else:
-            etree.SubElement(root, 'location', id=str(idn), href=str(location))
             for item in l10320:
-                idn += 1
                 etree.SubElement(root, 'location', id=str(idn), href=str(item))
-
-        loc10320 = tostring(root)
-
-        handle_array = [{'type': 'URL', 'parsed_data': location}]
-        handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320})
+                idn += 1
+            loc10320 = tostring(root)
+            handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320})
         if ((checksum) and (checksum is not None)):
             handle_array.append({'type': 'CHECKSUM', 'parsed_data': checksum})
         if ((extratype) and (extratype is not None)):
