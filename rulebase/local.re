@@ -88,8 +88,8 @@ getMessageParameters(*msgLogPath, *enabled) {
 # 
 getB2SAFEVersion(*version) {
     *major_version = "3";
-    *minor_version = "0";
-    *sub_version = "2";
+    *minor_version = "1";
+    *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 
