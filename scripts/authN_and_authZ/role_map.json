@@ -1,0 +1,13 @@
+{
+  "b2safe_reader" : {
+    "organization"  : [
+      "eudat_EUDAT-Staff",
+      "eudat_eudat:b2safe"
+    ],
+    "user" : []
+  },
+  "b2safe_admin" : {
+    "organization" : [],
+    "user" : ["eudat_ccacciari"]
+  } 
+}

@@ -67,71 +67,97 @@ class SynchronizationTask():
 #            pp.pprint(projects)
             
         if 'groups' in project.keys():
-            for sg in project['groups'].keys():
-
-                newGroupFlag = False
-                if not(sg in self.irods_projects.keys()):
+            for user in project['groups'].keys():
+            
+            #### erastova: added creation of the irods user
+        
+                userinfo = self.irodsu.getIrodsUser(user)
+                if (userinfo is not None) and \
+                   ("No rows found" in userinfo.splitlines()[0]):
                     if not(self.dryrun):
-                        newGroupFlag = self.irodsu.createIrodsGroup(sg)
-                        if not newGroupFlag:
+                        response = self.irodsu.createIrodsUsers(user)
+                        if response[0] != 0:
                             if self.conf.notification_active:
-                                message = "creation of the irods group: " + sg \
-                                        + " failed, related to the project: " \
-                                        + proj_name
+                                message = "creation of the irods user " \
+                                          + user + " failed"
                                 mailsnd = MailSender()
-                                mailsnd.send(message, self.conf.notification_sender,
-                                             self.conf.notification_receiver)
-                            self.logger.debug("failed to create the irods group %s "
-                                            + "related to the project %s", sg, proj_name)
+                                mailsnd.send(message, 
+                                    self.conf.notification_sender, 
+                                    self.conf.notification_receiver)
+                            self.logger.error("failed to create the irods user %s", user)
                         else:
-                            self.logger.debug("created group %s related to the project %s",
-                                              sg, proj_name)
-                            if not self.conf.irods_subgroup_home:
-                                self.irodsu.deleteGroupHome(sg)
-                                self.logger.debug("deleted group %s's home "
-                                                + "related to the project %s",
-                                                  sg, proj_name)
+                            self.logger.debug("created user %s", user)
                     else:
-                        newGroupFlag = True
-                        print 'created group ' + sg + ' ' \
-                            + 'related to the project ' + proj_name
-                        if not self.conf.irods_subgroup_home:
-                            print ' and deleted its home'
-                else:
-                    self.logger.debug("group %s has already been created", sg)
+                        print "created user %s" % (user)
+                                   
+             #### erastova: added creation of the irods user
 
-                for user in project['groups'][sg]:
+#        if 'groups' in project.keys():
+#            for sg in project['groups'].keys():        
+#                newGroupFlag = False
+#                if not(sg in self.irods_projects.keys()):
+#                    if not(self.dryrun):
+#                        newGroupFlag = self.irodsu.createIrodsGroups(sg)
+#                        if not newGroupFlag:
+#                            if self.conf.notification_active:
+#                                message = "creation of the irods group: " + sg \
+#                                        + " failed, related to the project: " \
+#                                        + proj_name
+#                                mailsnd = MailSender()
+#                                mailsnd.send(message, self.conf.notification_sender,
+#                                             self.conf.notification_receiver)
+#                            self.logger.debug("failed to create the irods group %s "
+#                                            + "related to the project %s", sg, proj_name)
+#                        else:
+#                            self.logger.debug("created group %s related to the project %s",
+#                                              sg, proj_name)
+#                            if not self.conf.irods_subgroup_home:
+#                                self.irodsu.deleteGroupHome(sg)
+#                                self.logger.debug("deleted group %s's home "
+#                                                + "related to the project %s",
+#                                                  sg, proj_name)
+#                    else:
+#                        newGroupFlag = True
+#                        print 'created group ' + sg + ' ' \
+#                            + 'related to the project ' + proj_name
+#                        if not self.conf.irods_subgroup_home:
+#                            print ' and deleted its home'
+#                else:
+#                    self.logger.debug("group %s has already been created", sg)
+#
+#                for user in project['groups'][sg]:
+#
+#                    userinfo = self.irodsu.getIrodsUser(user)
+#                    if (userinfo is not None) and \
+#                       ("No rows found" in userinfo.splitlines()[0]):
+#                        if not(self.dryrun):
+#                            response = self.irodsu.createIrodsUsers(user)
+#                            if response[0] != 0:
+#                                if self.conf.notification_active:
+#                                    message = "creation of the irods user " \
+#                                              + user + " failed"
+#                                    mailsnd = MailSender()
+#                                    mailsnd.send(message, 
+#                                                 self.conf.notification_sender,
+#                                                 self.conf.notification_receiver)
+#                                self.logger.error("failed to create the irods user %s", 
+#                                                  user)
+#                            else:
+#                                self.logger.debug("created user %s", user)
+#                        else:
+#                            print "created user %s" % (user)
+#                    # add a new user to the sub-group only if the sub-group is new
+#                    # or it is old, but the user is not included among its members yet
+#                    if (newGroupFlag) \
+#                        or (sg in self.irods_projects.keys() \
+#                        and not (user in self.irods_projects[sg]['members'])):
+#                        if not(self.dryrun):
+#                            self.irodsu.addIrodsUserToGroup(user,sg)
+#                            self.logger.debug("added user %s to the group %s",
+#                                         user, sg)
+#                        else:
+#                            print "added user %s to the group %s" % (user, sg)
 
-                    userinfo = self.irodsu.getIrodsUser(user)
-                    if (userinfo is not None) and \
-                       ("No rows found" in userinfo.splitlines()[0]):
-                        if not(self.dryrun):
-                            response = self.irodsu.createIrodsUsers(user)
-                            if response[0] != 0:
-                                if self.conf.notification_active:
-                                    message = "creation of the irods user " \
-                                              + user + " failed"
-                                    mailsnd = MailSender()
-                                    mailsnd.send(message, 
-                                                 self.conf.notification_sender,
-                                                 self.conf.notification_receiver)
-                                self.logger.error("failed to create the irods user %s", 
-                                                  user)
-                            else:
-                                self.logger.debug("created user %s", user)
-                        else:
-                            print "created user %s" % (user)
-                    # add a new user to the sub-group only if the sub-group is new
-                    # or it is old, but the user is not included among its members yet
-                    if (newGroupFlag) \
-                        or (sg in self.irods_projects.keys() \
-                        and not (user in self.irods_projects[sg]['members'])):
-                        if not(self.dryrun):
-                            self.irodsu.addIrodsUserToGroup(user,sg)
-                            self.logger.debug("added user %s to the group %s",
-                                         user, sg)
-                        else:
-                            print "added user %s to the group %s" % (user, sg)
 
 
     def addUsersToProject(self, proj_name, project, new_project_flag=False):
@@ -252,7 +278,8 @@ class SynchronizationTask():
 ##TODO add filtering criteria as in addProjects
             # projects are in iRODS and not in userDB
             if (not(proj_name in sg_list.keys())
-                and (not(proj_name in self.projects.keys()) or quotaFlag)):
+                #and (not(proj_name in self.projects.keys()) or quotaFlag)):
+                and (not(proj_name in self.projects.keys()) )):
                 self.logger.info("The project: " + proj_name + " should be deleted")
                 if not(self.dryrun):
                     if self.conf.notification_active:
@@ -289,6 +316,11 @@ class SynchronizationTask():
                     user_list = set(user_list)
 ##TODO here should be managed user attributes
 
+#### erastova: since now we have one irods user with many dns
+#### I have changed futher on string dn to list dn
+#### for example, self.irodsu.addDNToUser(user,dn[0])
+#### instead of self.irodsu.addDNToUser(user,dn)
+
             # managing the dn of a user
             self.logger.debug("Updating the dn mapping for user: " + user)
             out = self.irodsu.getUserDN(user)
@@ -300,26 +332,27 @@ class SynchronizationTask():
             # the user is in the map file, but not in irods
             if (self.dn_map is not None and user in self.dn_map.keys()):
                 for dn in self.dn_map[user]:
-                    if not(dn in dn_list):
+                    if not(dn[0] in dn_list):
                         self.logger.debug("the dn %s is not in irods for user "
-                                          + "%s, so it will be added", dn, user)
+                                          + "%s, so it will be added", dn[0], user)
                         if not(self.dryrun):
-                            self.irodsu.addDNToUser(user,dn)
+                            self.irodsu.addDNToUser(user,dn[0])
                             self.logger.info("the dn %s has been added for user "
-                                             + "%s", dn, user)
+                                             + "%s", dn[0], user)
                         else:
-                            print "the dn " + dn + " has been added for user " \
-                                  + user
+                            print "the dn " + dn[0] + " has been added for user " + user
 
             # the user is in irods, but not in the map file
             if (self.dn_map is not None):
-                for dn in dn_list:
+                for dn0 in dn_list:
+                    dn = []
+                    dn.append(dn0)
                     if not(user in self.dn_map.keys()) \
                         or not(dn in self.dn_map[user]):
-                        self.logger.debug("the dn %s is not in map file for "
+                        if not(self.dryrun):
+                            self.logger.debug("the dn %s is not in map file for "
                                      + "user %s, so it will be removed", 
                                      dn, user)
-                        if not(self.dryrun):
                             self.irodsu.removeUserDN(user,dn)
                             if self.conf.notification_active:
                                 message = "removed user " + user + "'s DN: " + dn
@@ -329,5 +362,7 @@ class SynchronizationTask():
                             self.logger.info("the dn %s has been removed for "
                                         + "user %s", dn, user)
                         else:
+                            print "the dn " + dn + " is not in map file for " \
+                                     + "user " + user + ", so it will be removed"
                             print "the dn " + dn + " has been removed for " \
                                 + "user " + user

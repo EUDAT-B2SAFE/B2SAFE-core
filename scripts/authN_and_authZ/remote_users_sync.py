@@ -39,6 +39,9 @@ class SyncRemoteUsers:
                             help='print debug messages')
         parser.add_argument('conf', default='remote.users.sync.conf',
                             help='path to the configuration file')
+                            
+        parser.add_argument('role_map', default='role_map.json',
+                            help='path to the role map file')
 
         subparsers = parser.add_subparsers(title='Target group',
                                            help='additional help')
@@ -58,6 +61,7 @@ class SyncRemoteUsers:
         self.dnsfilepath = self._getConfOption('Common', 'dnsfile')
         
         main_project = _args.group
+        role_map = _args.role_map
         if (_args.subgroups is not None) and (len(_args.subgroups)) > 0:
             subgroups = [n.strip() for n in _args.subgroups.split(",")]
         else:
@@ -101,7 +105,7 @@ class SyncRemoteUsers:
         if (main_project == 'EUDAT'):
             self.logger.info('Syncronizing local json file with eudat user DB...')
             eudatRemoteSource = EudatRemoteSource(main_project, subgroups,
-                                                  userparam, self.logger)
+                                                  userparam, role_map, self.logger)
             data = eudatRemoteSource.synchronize_user_db(data)
             userdata = eudatRemoteSource.synchronize_user_attributes(userdata)
         else:
