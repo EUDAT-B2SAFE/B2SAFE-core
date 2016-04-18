@@ -413,10 +413,6 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 EUDATSearchPID(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-#    msiExecCmd("epicclient.py","*credStoreType *credStorePath replaceHash *path", 
-#               "null", "null", "null", *outSP);
-#    msiGetStdoutInExecCmdOut(*outSP, *path1);
-#    msifree_microservice_out(*outSP);
     EUDATReplaceHash(*path, *path1);
     *status = EUDATePIDsearch("URL", "*serverID"++"*path1", *existing_pid);
     *status;
@@ -447,7 +443,10 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
         msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *existing_pid --key URL",
                    "null", "null", "null", *outSPC);
         msiGetStdoutInExecCmdOut(*outSPC, *URL);
-        msifree_microservice_out(*outSPC);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outSPC);
+        }
         if("*serverID*parent" != *parent1) {
             *existing_pid ="empty";
             logInfo("parent  = *serverID*parent ; parent1 = *parent1");
@@ -476,7 +475,10 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *epicApi*childPID",
                "null", "null", "null", *outUPwNC);
     msiGetStdoutInExecCmdOut(*outUPwNC, *response);
-    msifree_microservice_out(*outUPwNC);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outUPwNC);
+    }
     if(*epicDebug > 1) {
     	logDebug("update handle location response = *response");
     }
@@ -495,12 +497,18 @@ EUDATGeteRorPid(*pid, *ror) {
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR", 
                "null", "null", "null", *outGRP);
     msiGetStdoutInExecCmdOut(*outGRP, *ror);
-    msifree_microservice_out(*outGRP);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outGRP);
+    }
     if(*ror=="None") {
         msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", 
                    "null", "null", "null", *outGRP1);
         msiGetStdoutInExecCmdOut(*outGRP1, *ror);
-        msifree_microservice_out(*outGRP1);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outGRP1);
+        }
         if(*ror=="None") {
             logInfo("geteRorPID -> NO ROR for *pid ");
         }
@@ -633,15 +641,18 @@ EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
     }
     
     if (*extraType != "empty") {
-         logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
-         *execCmd="*execCmd"++" --extratype \"*extraType\"";
+        logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
+        *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
     # add the default 10320/LOC to each created PID
     *execCmd="*execCmd"++" --loc10320 '*serverID"++"*path'";
 
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *outGRP2);
     msiGetStdoutInExecCmdOut(*outGRP2, *PID);
-    msifree_microservice_out(*outGRP2);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outGRP2);
+    }
     logInfo("EUDATePIDcreate -> Created handle is: *PID");
 }
 
@@ -665,7 +676,10 @@ EUDATePIDsearch(*field, *value, *PID) {
     *status0 = bool("true");
     msiExecCmd("epicclient.py","*credStoreType *credStorePath search *field *value", "null", "null", "null", *outPidSearch);
     msiGetStdoutInExecCmdOut(*outPidSearch, *PID);
-    msifree_microservice_out(*outPidSearch);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outPidSearch);
+    }
     logInfo("EUDATePIDsearch -> search handle response = *PID");
     # before: 841/test. A single entry.
     # new   : ["841/test"]. An array/list of multiple PID's separated by "," and a space
@@ -708,7 +722,10 @@ EUDATeCHECKSUMupdate(*PID, *path) {
     msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID CHECKSUM *checksum",
                "null", "null", "null", *outeCu);
     msiGetStdoutInExecCmdOut(*outeCu, *response);
-    msifree_microservice_out(*outeCu);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outeCu);
+    }
     logDebug("[EUDATeCHECKSUMupdate] modify handle response = *response");
     *ror = 'None';
     EUDATStoreJSONMetadata(*path, *PID, *ror, *checksum, *modtime);
@@ -730,11 +747,17 @@ EUDATeURLupdate(*PID, *newURL) {
     msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID URL \"*newURL\"",
                "null", "null", "null", *outEUU);
     msiGetStdoutInExecCmdOut(*outEUU, *response);
-    msifree_microservice_out(*outEUU);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outEUU);
+    }
     logInfo("EUDATeURLupdate -> modify handle response = *response");
     msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID 10320/LOC \"*oldURL\" \"*newURL\"",
                "null", "null", "null", *outEUUL);
-    msifree_microservice_out(*outEUUL);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outEUUL);
+    }
 }
 
 #
@@ -752,7 +775,10 @@ EUDATeURLsearch(*PID, *URL) {
     msiExecCmd("epicclient.py","*credStoreType *credStorePath read *PID --key URL ",
                "null", "null", "null", *outEUS);
     msiGetStdoutInExecCmdOut(*outEUS, *URL);
-    msifree_microservice_out(*outEUS);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outEUS);
+    }
     logInfo("EUDATeURLsearch -> response = *URL");
 }
 
@@ -773,14 +799,20 @@ EUDATePIDremove(*path, *force) {
     if (EUDATSearchPID(*path, *pid)) {
         msiExecCmd("epicclient.py","*credStoreType *credStorePath read --key 10320/LOC *pid", "null", "null", "null", *outEPR);
         msiGetStdoutInExecCmdOut(*outEPR, *loc10320);
-        msifree_microservice_out(*outEPR);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outEPR);
+        }
         logInfo("EUDATePIDremove -> get 10320/LOC from handle response = *loc10320");
         if (("*loc10320" like "Error*")||("*loc10320" == "")||("*loc10320" like "None*")) {
             logInfo("EUDATePIDremove -> 10320/LOC does not exist or is empty: PID will be deleted");
             msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
                        "null", "null", "null", *outEPR1);
             msiGetStdoutInExecCmdOut(*outEPR1, *response3);
-            msifree_microservice_out(*outEPR1);
+            getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+            if (*msiFreeEnabled) {
+                msifree_microservice_out(*outEPR1);
+            }
             logInfo("EUDATePIDremove -> delete handle response = *response3");
             # The PID record could be associated to a replica.
             # The field 10320/LOC of the parent PID record should be updated
@@ -791,7 +823,10 @@ EUDATePIDremove(*path, *force) {
             msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
                        "null", "null", "null", *outEPR2);
             msiGetStdoutInExecCmdOut(*outEPR2, *response3);
-            msifree_microservice_out(*outEPR2);
+            getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+            if (*msiFreeEnabled) {
+                msifree_microservice_out(*outEPR2);
+            }
             logInfo("EUDATePIDremove -> delete handle response = *response3");
         }
         else {
@@ -870,7 +905,10 @@ EUDATeRORupdate(*pid,*newRor) {
         msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *pid EUDAT/ROR *newRor", 
                    "null", "null", "null", *outRU);
         msiGetStdoutInExecCmdOut(*outRU, *response);
-        msifree_microservice_out(*outRU);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outRU);
+        }
         logInfo("EUDATeCHECKSUMupdate -> modify handle response = *response");
     }
 }
