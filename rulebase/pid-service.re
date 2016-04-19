@@ -15,18 +15,6 @@
 #
 # EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID)
 # EUDATSearchPID(*path, *existing_pid)
-#
-###############################################
-# Test rule to be compared with the one above
-# EUDATPidsForCollmsi(*collPath)
-# EUDATCreatePIDmsi(*parent_pid, *path, *ror, *iCATCache, *newPID)
-# EUDATePIDcreatemsi(*path, *extraType, *PID, *ifchecksum)
-# EUDATSearchPIDmsi(*path, *existing_pid)
-# EUDATePIDcreatemsi(*path, *extraType, *PID, *ifchecksum)
-# parseCredentials (*baseuri, *username, *prefix, *password)
-# 
-###############################################
-#
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
 # EUDATGeteRorPid(*pid, *ror)
@@ -43,283 +31,8 @@
 # EUDATiRORupdate(*source, *pid)
 # EUDATeRORupdate(*pid,*newRor)
 # EUDATPidsForColl(*collPath)
-# 
-
-
-# Test rules to be evaluated
-
-
-#-----------------------------------------------------------------------------
-# Create PIDs for all collections and objects in the collection recursively
-# ROR is assumed to be "None"
-#
-# Parameters:
-# *collPath    [IN] path of the collection
-#
-# Author: Elena Erastova, RZG
-#-----------------------------------------------------------------------------
-EUDATPidsForCollmsi(*collPath) {
-
-    logInfo("[EUDATPidsForCollmsi] Creating PIDs for collection *collPath");
-
-    # Verify that source input path is a collection
-    msiGetObjType(*collPath, *type);
-    if (*type != '-c') {
-        logError("Input path *collPath is not a collection");
-        fail;
-    }
-    # Create PIDs for all subcollections in collection recursively
-    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
-        *subCollPath = *RowC.COLL_NAME;
-        EUDATCreatePIDmsi("None", *subCollPath, "None", bool("true"), *newPID);
-    }
-    # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
-        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-        EUDATCreatePIDmsi("None", *objPath, "None", bool("true"), *newPID);
-    }
-}
-#
-# Generate a new PID for a digital object.
-# Fields stored in the PID record: URL, ROR and CHECKSUM
-# adds a ROR field if (*ror != "None")
-#
-# Parameters:
-#   *parent_pid [IN]    the PID of the digital object that was replicated to us (not necessarily the ROR)
-#   *path       [IN]    the path of the replica to store with the PID record
-#   *ror        [IN]    the ROR PID (absolute url) of the digital object that we want to store.
-#   *iCATCache  [IN]    the boolean flag to enable creation of PID in the iCAT 
-#   *newPID     [OUT]   the pid generated for this replica 
-#
-# Author: Willem Elbers, MPI-TLA
-# Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara; Javier Quinteros, GFZ
-#
-EUDATCreatePIDmsi(*parent_pid, *path, *ror, *iCATCache, *newPID) {
-
-    logInfo("create pid for *path and save *ror as ror");
-    if (!EUDATisMetadata(*path)) {
-        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-
-        #check if PID already exists
-        EUDATSearchPIDmsi(*path, *existing_pid);
-   
-        if((*existing_pid == "empty") || (*existing_pid == "None")) {
-            # add extraType parameters
-            *extraType = "empty";
-
-            # add ror as extratype parameter
-            if (*ror != "None" && *ror != "") {
-                logInfo("Update Parent PID with field ROR");
-                *extraType = "EUDAT/ROR=*ror";
-            }        
-
-            # add ppid as extratype parameter
-            if (*parent_pid != "None" && *parent_pid != "") {
-                logInfo("Update Parent PID with field PPID");
-                if (*extraType != "empty") {
-                      *extraType = "*extraType"++";EUDAT/PPID=*parent_pid";
-                } else {
-                      *extraType = "EUDAT/PPID=*parent_pid";
-                } 
-            }
-
-            # create PID
-        
-            # Verify the type of the input path (collection / data object)
-            msiGetObjType(*path, *type);
-        
-            # If it is a collection - do not compute checksum
-            if (*type == '-c') {
-                EUDATePIDcreatemsi(*path, *extraType, *newPID, bool("false"));
-            }
-            # If it is a data object - compute checksum and add it to PID
-            else if (*type == '-d') {
-                EUDATePIDcreatemsi(*path, *extraType, *newPID, bool("true"));
-            }
-            # creation of the file based metadata record
-            *checksum = "";
-            *modtime = "";
-            EUDATStoreJSONMetadata(*path, *newPID, *ror, *checksum, *modtime);
-
-            if (*iCATCache) {
-                # Add PID into iCAT
-                logInfo("Saving PID into field AVU -PID- of iCAT *path with PID = *newPID");
-                EUDATiPIDcreate(*path, *newPID);
-            }
- 
-        }
-        else {
-            *newPID = *existing_pid;
-            logInfo("PID already exists (*newPID)");
-        }
-    }
-    else {
-        logInfo("Skipped PID creation on metadata path: *path");
-    }
-}
-
-#
-# The function create ePID.
-#
-# Environment variable used:
-#
-# Arguments:
-#   *path            [IN]   The full iRODS path of the object
-#   *extraType       [IN]   extra parameters
-#   *PID             [OUT]  The created ePID.
-#
-# Author: Giacomo Mariani, CINECA
-# Edited by:  Robert Verkerk, SURFsara
-#
-EUDATePIDcreatemsi(*path, *extraType, *PID, *ifcheksum) {
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
-    
-    if (*extraType != "empty") {
-        logsError('There is still no support for extraType into the PID')
-    }
-
-    *checksum = ''
-    if (*ifcheksum == bool("true") ) {
-        logInfo("EUDATePIDcreatemsi -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-        EUDATiCHECKSUMget(*path, *checksum, *modtime);
-    }
-    
-    EUDATReplaceHash(*path, *path1);
-    *fullPath = *serverID ++ *path
-
-    # Construct here the query to build the PID record
-    *PIDRecord = '[{"type": "URL", "parsed_data": "*fullPath"},'
-    *PIDRecord = *PIDRecord ++ '{"type": "10320/LOC", "parsed_data": "<locations><location href=\\"*fullPath\\" id=\\"0\\"/></locations>"},'
-
-    # Include field CHECKSUM only if I requested it and I was able to calculate it
-    if (*checksum != '') {
-        *PIDRecord = *PIDRecord ++ '{"type": "CHECKSUM", "parsed_data": "*checksum"},'
-    }
-
-    *PIDRecord = *PIDRecord ++ '{"type": "STATUS", "parsed_data": "test"}]'
-
-    parseCredentials(*baseuri, *user, *prefix, *password);
-    *url = triml(*baseuri, 'http://');
-
-    *BaseRequest = "http://" ++ *user ++ ":" ++ *password ++ "@*url*prefix/";
-
-    *postFields."data" = *PIDRecord
-    *postFields."headers" = 'Content-type: application/json'
-
-    *PID = 'empty';
-
-    *attempt = 0;
-    while ((*PID == 'empty') && (*attempt < 3))
-    {
-        msiCurlPost(*BaseRequest, *postFields, *response);
-        EUDATSearchPIDmsi(*path1, *PID);
-        if (*PID == 'empty')
-        {
-            logError('Error trying to get PID for *fullPath . Retrying...');
-        }
-        *attempt = *attempt+1;
-    }
-
-    *PID = *prefix ++ '/' ++ *PID
-    logInfo("EUDATePIDcreatemsi -> Created handle is: *PID");
-}
-
-# -----------------------------------------------------------------------------
-# Searching for a PID using URL replacing "#", "%" and "&" with "*"
-# Parameters:
-#   *path               [IN]    the path of the replica
-#   *existing_pid       [OUT]   existing PID
-#   *status             [REI]   false if no value is found, true elsewhere 
-#
-# Author: Javier Quinteros, GFZ
-# -----------------------------------------------------------------------------
-EUDATSearchPIDmsi(*path, *existing_pid) {
-    logInfo("search pid for *path");
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    EUDATReplaceHash(*path, *path1);
-
-    parseCredentials(*baseuri, *user, *prefix, *password);
-
-    *url = triml(*baseuri, 'http://');
-
-    *BaseRequest = "http://" ++ *user ++ ":" ++ *password ++ "@*url*prefix/?URL=*serverID";
-
-    # Search if the given file has already an EPIC PID and save in *Path
-    *Request = *BaseRequest ++ *path1;
-    msiCurlGetStr(*Request, *existing_pid);
-
-    # Read the response and append to the result
-    *existing_pid = trimr(*existing_pid, '\n');
-
-    *status = bool("true")
-    if(*existing_pid == "") {
-        *status = bool("false")
-        *existing_pid = "empty"
-    }
-    *status;
-}
-
-# -----------------------------------------------------------------------------
-# Parse the credentials to connect to an EPIC server. A file called
-# "credentials" MUST contain all the connection details in the home folder of
-# the user running this rule.
-# Parameters:
-#   *baseuri            [OUT]   URI of the EPIC server
-#   *username           [OUT]   username
-#   *prefix             [OUT]   prefix
-#   *password           [OUT]   password
-#
-# Author: Javier Quinteros, RZG
-# -----------------------------------------------------------------------------
-
-parseCredentials (*baseuri, *username, *prefix, *password) {
-    # Parse the file "credentials" that MUST be located on the home directory
-    # of the user executing this rule
-
-    *baseuri = 'http://rz-vm160.gfz-potsdam.de/v2/handles/'
-    *username = "COMPLETE-USERNAME"
-    *password = "COMPLETE-PASSWORD"
-    *prefix = "12345"
-
-    # This was the first approach to read it from a configuration file with the same
-    # format as the file in /opt/eudat/b2safe/conf/credentials
-    # After a talk with Claudio, he mentioned that this would not fit some use cases, so
-    # I switch to the semi-hardcoded approach in a similar way as getEpicApiParameters is
-    # doing (see above).
-    #
-    # *zone = $rodsZoneClient;
-    # *user = $userNameClient;
-    # *pathCred = "/*zone/home/*user/credentials";
-    # # *err = errorcode(*msiObjStat(*pathCred, *objStat));
-    # msiDataObjOpen(*pathCred, *L_FD);
-    # msiDataObjRead(*L_FD, 10000, *buff);
-    # *content = str(*buff);
-    # # Read "baseuri"
-    # *baseuriAux = triml(*content, "baseuri\"");
-    # *baseuri = elem(split(*baseuriAux, '"'), 1);
-    # # Read "username"
-    # *usernameAux = triml(*content, "username\"");
-    # *username = elem(split(*usernameAux, '"'), 1);
-    # # Read "prefix"
-    # *prefixAux = triml(*content, "prefix\"");
-    # *prefix = elem(split(*prefixAux, '"'), 1);
-    # # Read "password"
-    # *passwordAux = triml(*content, "password\"");
-    # *password = elem(split(*passwordAux, '"'), 1);
-    # msiDataObjClose(*L_FD, *junk1);
-}
-
-
-# End of test rules
-
-
-
-
-
-
-
-
-
+# EUDATePIDcreateCurl(*path, *extraType, *PID, *ifchecksum)
+# EUDATSearchPIDCurl(*path, *existing_pid)
 
 
 #
@@ -335,16 +48,22 @@ parseCredentials (*baseuri, *username, *prefix, *password) {
 #   *newPID     [OUT]   the pid generated for this replica 
 #
 # Author: Willem Elbers, MPI-TLA
-# Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara
+# Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara, Javier Quinteros, GFZ
 #
 EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 
     logInfo("create pid for *path and save *ror as ror");
     if (!EUDATisMetadata(*path)) {
         getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
 
         #check if PID already exists
-        EUDATSearchPID(*path, *existing_pid);
+        if (*msiCurlEnabled) {
+            EUDATSearchPIDCurl(*path, *existing_pid);
+        }
+        else {
+            EUDATSearchPID(*path, *existing_pid);
+        }
    
         if((*existing_pid == "empty") || (*existing_pid == "None")) {
             # add extraType parameters
@@ -373,11 +92,21 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
         
             # If it is a collection - do not compute checksum
             if (*type == '-c') {
-                EUDATePIDcreate(*path, *extraType, *newPID, bool("false"));
+                if (*msiCurlEnabled) {
+                    EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("false"));
+                }
+                else {
+                    EUDATePIDcreate(*path, *extraType, *newPID, bool("false"));   
+                }
             }
             # If it is a data object - compute checksum and add it to PID
             else if (*type == '-d') {
-                EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
+                if (*msiCurlEnabled) {
+                    EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("true"));
+                }
+                else {
+                    EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
+                }
             }
             # creation of the file based metadata record
             *checksum = "";
@@ -943,3 +672,130 @@ EUDATPidsForColl(*collPath) {
         EUDATCreatePID("None", *objPath, "None", bool("true"), *newPID);
     }
 }
+
+
+# The function create ePID.
+#
+# Environment variable used:
+#
+# Arguments:
+#   *path            [IN]   The full iRODS path of the object
+#   *extraType       [IN]   extra parameters
+#   *ifcheksum       [IN]   boolean value: True if the checksum has to be added
+#   *PID             [OUT]  The created ePID.
+#
+# Author: Giacomo Mariani, CINECA
+# Edited by: Robert Verkerk, SURFsara
+# Edited by: Javier Quinteros, GFZ
+
+EUDATePIDcreateCurl(*path, *extraType, *PID, *ifcheksum) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
+
+    # Construct here the query to build the PID record
+    EUDATReplaceHash(*path, *path1);
+    *fullPath = *serverID ++ *path1;
+    *PIDRecord = '[{"type": "URL", "parsed_data": "*fullPath"},';
+    *PIDRecord = *PIDRecord ++ '{"type": "10320/LOC", "parsed_data": "<locations><location href=\\"*fullPath\\" id=\\"0\\"/></locations>"},';
+
+    # Include field CHECKSUM only if I requested it and I was able to calculate it
+    if (*ifcheksum == bool("true") ) {
+        logInfo("EUDATePIDcreateCurl -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
+        EUDATiCHECKSUMget(*path, *checksum, *modtime);
+        if (*checksum != '') {
+            *PIDRecord = *PIDRecord ++ '{"type": "CHECKSUM", "parsed_data": "*checksum"},';
+        }
+    }
+
+    if (*extraType != "empty") {
+        logInfo("EUDATePIDcreateCurl -> Add PID with extratype parameter: *extraType");
+        *listET = split("*extraType",";");
+        foreach (*kv in *listET) {
+            *tupleET = split(*kv, "=");
+            *keyET = elem(*tupleET,0);
+            *valueET = elem(*tupleET,1);
+            *PIDRecord = *PIDRecord ++ '{"type": "*keyET", "parsed_data": "*valueET"},';
+        }
+    }
+
+    *PIDRecord = trimr(*PIDRecord, ',');
+    *PIDRecord = *PIDRecord ++ ']';
+
+    parseCredentials(*baseuri, *user, *prefix, *password);
+
+    if (*baseuri like "http://*") {
+        *url = triml(*baseuri, 'http://');
+        *protocol = 'http://';
+    }
+    if (*baseuri like "https://*") {
+        *url = triml(*baseuri, 'https://');
+        *protocol = 'https://';
+    }
+
+    *BaseRequest = *protocol ++ *user ++ ":" ++ *password ++ "@*url*prefix/";
+
+    *postFields."data" = *PIDRecord
+    *postFields."headers" = 'Content-type: application/json'
+
+    *PID = 'empty';
+
+    *attempt = 0;
+    while ((*PID == 'empty') && (*attempt < 3))
+    {
+        logInfo("EUDATePIDcreateCurl -> CURL request to create a new PID");
+        logDebug("EUDATePIDcreateCurl -> CurlPost(*BaseRequest, *postFields, response)");
+        msiCurlPost(*BaseRequest, *postFields, *response);
+#        logDebug("EUDATePIDcreateCurl -> Response: *response");
+        EUDATSearchPIDCurl(*path1, *PID);
+        if (*PID == 'empty')
+        {
+            logError('Error trying to get PID for *fullPath . Retrying...');
+        }
+        *attempt = *attempt+1;
+    }
+
+    *PID = *prefix ++ '/' ++ *PID
+    logInfo("EUDATePIDcreateCurl -> Created handle is: *PID");
+}
+
+# -----------------------------------------------------------------------------
+# Searching for a PID using URL replacing "#", "%" and "&" with "*"
+# Parameters:
+#   *path               [IN]    the path of the replica
+#   *existing_pid       [OUT]   existing PID
+#   *status             [REI]   false if no value is found, true elsewhere 
+#
+# Author: Javier Quinteros, GFZ
+# -----------------------------------------------------------------------------
+
+EUDATSearchPIDCurl(*path, *existing_pid) {
+    logInfo("search pid for *path");
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    parseCredentials(*baseuri, *user, *prefix, *password);
+
+    if (*baseuri like "http://*") {
+        *url = triml(*baseuri, 'http://');
+        *protocol = 'http://';
+    }
+    if (*baseuri like "https://*") {
+        *url = triml(*baseuri, 'https://');
+        *protocol = 'https://';
+    }
+    *BaseRequest = *protocol ++ *user ++ ":" ++ *password ++ "@*url*prefix/?URL=*serverID";
+
+    # Search if the given file has already an EPIC PID and save in *Path
+    EUDATReplaceHash(*path, *path1);
+    *Request = *BaseRequest ++ *path1;
+    logDebug("EUDATSearchPIDCurl -> msiCurlGetStr(*Request, existing_pid)");
+    msiCurlGetStr(*Request, *existing_pid);
+
+    # Read the response and append to the result
+    *existing_pid = trimr(*existing_pid, '\n');
+
+    *status = bool("true")
+    if(*existing_pid == "") {
+        *status = bool("false")
+        *existing_pid = "empty"
+    }
+    *status;
+}
+
