@@ -63,7 +63,10 @@ EUDATAuthZ(*user, *action, *target, *response) {
     msiExecCmd("authZmanager.py", "*authZMapPath check *user '*action' '*target'",
                "null", "null", "null", *outAuthZ);
     msiGetStdoutInExecCmdOut(*outAuthZ, *response);
-    msifree_microservice_out(*outAuthZ);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outAuthZ);
+    }
     if (*response == "False") {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
@@ -123,7 +126,10 @@ EUDATMessage(*queue, *message) {
         logInfo("sending message '*message' to the queue '*queue'");
         msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
                    "null", "null", "null", *outMessage);
-        msifree_microservice_out(*outMessage);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outMessage);
+        }
     }
 }
 
@@ -145,7 +151,10 @@ EUDATLog(*message, *level) {
     logInfo("logging message '*message'");
     msiExecCmd("logmanager.py", "*logConfPath log *level *message",
                "null", "null", "null", *outLog);
-    msifree_microservice_out(*outLog);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outLog);
+    }
 }
 
 
@@ -183,7 +192,10 @@ EUDATQueue(*action, *message, *number) {
         *message = triml(*message, "[");
         *message = trimr(*message, "]");
     }
-    msifree_microservice_out(*outQueue);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outQueue);
+    }
 }
 
 #
@@ -576,7 +588,10 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
         msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
                 ++ " -i *pid *extraMetaData", "null", "null", "null", *outMeta);
         msiGetStdoutInExecCmdOut(*outMeta, *resp);
-        msifree_microservice_out(*outMeta);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outMeta);
+        }
     }
 }
 
