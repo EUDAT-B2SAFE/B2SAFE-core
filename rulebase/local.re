@@ -117,7 +117,8 @@ getMessageParameters(*msgLogPath, *enabled) {
 # Arguments:
 # *msiFreeEnabled  [OUT] if True the msiFree plugin must be deployed
 # *msiCurlEnabled  [OUT] if True the msiCurl plugin must be deployed 
-# *authzEnabled    [OUT] if True the 
+# *authzEnabled    [OUT] if True the authorization mechanism enforces the assertions 
+#                        defined in the file retrieved by getAuthZParameters.
 #
 # Author: Claudio Cacciari (Cineca)
 #
