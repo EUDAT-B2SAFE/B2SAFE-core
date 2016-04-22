@@ -40,6 +40,13 @@ USERS=
 LOG_LEVEL=
 LOG_DIR=
 SHARED_SPACE=
+# EUDAT iRODS rules behavioral parameters. Because these are later added
+# sensible defaults are chosen.a they can be overridden by adding them to
+# the configuration in install.conf
+AUTHZ_ENABLED=true
+MSIFREE_ENABLED=false
+MSICURL_ENABLED=false
+#
 #============================================
 # end set default parameters for installation
 #
@@ -522,6 +529,39 @@ update_get_metadata_parameters() {
     return $STATUS
 }
 
+update_get_conf_parameters() {
+
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v AUTHZ_ENABLED=$AUTHZ_ENABLED -v MSIFREE_ENABLED=$MSIFREE_ENABLED -v MSICURL_ENABLED=$MSICURL_ENABLED '{
+            if ( $1 ~ /^ +\*authzEnabled/ ) {
+                $1=$1"=bool(\""AUTHZ_ENABLED"\");"
+                $2=""
+            }
+            if ( $1 ~ /^ +\*msiFreeEnabled/ ) {
+                $1=$1"=bool(\""MSIFREE_ENABLED"\");"
+                $2=""
+            }
+            if ( $1 ~ /^ +\*msiCurlEnabled/ ) {
+                $1=$1"=bool(\""MSICURL_ENABLED"\");"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
+
 
 
 ########################
@@ -660,6 +700,16 @@ if [ $STATUS -eq 0 ]
 then
     echo "update_metadata_manager"
     update_get_metadata_parameters
+    STATUS=$?
+fi
+
+#
+# update the "getConfParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "update_conf_parameters"
+    update_get_conf_parameters
     STATUS=$?
 fi
 
