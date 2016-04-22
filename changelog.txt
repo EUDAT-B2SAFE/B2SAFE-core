@@ -1,3 +1,9 @@
+B2SAFE package 3.1.0 [2016/04/22]
+- added support for HSv8
+- initial implementation of the role based approach for the authorization mechanism
+- fixed the memory leak related to the call of external executables
+- added the option to switch to a faster configuration for the PID creation
+
 B2SAFE package 3.1.0-beta [2016/02/09]
 new version of the authentication scripts
 
