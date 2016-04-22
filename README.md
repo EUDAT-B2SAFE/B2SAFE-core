@@ -1,6 +1,5 @@
 B2SAFE
 ===========
-
 B2SAFE service code for EUDAT project.
 
 It is released under BSD license.
@@ -10,32 +9,14 @@ The EUDAT (http://www.eudat.eu) B2SAFE Service offers functionality to replicate
 ---------------
 Deployment
 ---------------
-
 See install.txt .
 
 ---------------
 Documentation
 ---------------
-
-http://eudat.eu/services/userdoc
+https://github.com/EUDAT-B2SAFE/B2SAFE-core/wiki
 
 ---------------
 Known issues
 ---------------
-
-- the iRODS server forks an irods agent for each client request: each irods agent handling a PID creation request allocates about 1 GB of memory/10^4 object registered, due to a memory leak.
-Therefore in order to manage concurrent requests coming from, for example, 30 users, involving the registration of collections of 10^4 objects, the B2SAFE administrator should plan to provide at least 32 GB of memory dedicated to the B2SAFE instance (https://github.com/irods/irods/issues/2929).
-
-- a similar issue is already tracked in the iRODS github:
-https://github.com/irods/irods/issues/2928
-But it is related to the iput operation with the bulk option.
-And the leak is smaller: 2 GB of memory/10^6 object uploaded.
-Therefore for 30 users running bulk upload in parallel of collection of 10^4 objects, just 600 MB are enough.
-
----------------
-Memory Leak Fix
----------------
-
-- iRODS development package needed. Installation instructions here: https://github.com/irods/contrib/issues/7#issuecomment-172605195
-
-- After it is possible to use msifree_microservice_out integrated in the rulebase code.
+https://github.com/EUDAT-B2SAFE/B2SAFE-core/wiki/Known-issues
