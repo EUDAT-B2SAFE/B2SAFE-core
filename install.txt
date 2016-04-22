@@ -53,6 +53,9 @@ NOTE: following need to be updated in "/opt/eudat/b2safe/packaging/install.conf"
    - BASE_URI
    - USERNAME
    - PREFIX
+   - AUTHZ_ENABLED (default=true)
+   - MSIFREE_ENABLED (default=true for fresh installation, =false for update)
+   - MSICURL_ENABLED (default=false)
 
 
 - check the python scripts for missing python libraries.
