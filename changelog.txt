@@ -1,4 +1,4 @@
-B2SAFE package 3.1.0 [2016/04/22]
+B2SAFE package 3.1.1 [2016/04/22]
 - added support for HSv8
 - initial implementation of the role based approach for the authorization mechanism
 - fixed the memory leak related to the call of external executables
