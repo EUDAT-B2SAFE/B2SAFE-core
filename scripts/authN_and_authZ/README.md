@@ -12,15 +12,15 @@ Deployment
 ---------------
 Just download the directory and run the scripts as the B2SAFE admin user.
 
-1. remote_users_sync.py conf/remote.users.sync.conf syncto EUDAT
+1. remote_users_sync.py conf/remote.users.sync.conf conf/role_map.json syncto EUDAT
 2. user_sync.py conf/user.sync.conf sync 
 
 ---------------
 Documentation
 ---------------
-There are two configuration files:
+There are three configuration files:
 
-1. $ cat conf/remote.users.sync.conf:
+1) $ cat conf/remote.users.sync.conf:
 ```
 # section containing the common options
 [Common]
@@ -39,7 +39,7 @@ ns_prefix=eudat_
 ```
 Just add username/password of the unity REST admin interface
 
-2. $ cat conf/user.sync.conf_example: 
+2) $ cat conf/user.sync.conf_example: 
 ```
 # section containing the logging options
 [Logging]
@@ -78,6 +78,24 @@ irods_subgroup_home=False
 irods_group_home=True
 irods_debug=False
 ```
+3) cat conf/role_map.json:
+```
+{
+  "b2safe_reader" : {
+    "organization"  : [
+      "eudat_EUDAT-Staff",
+      "eudat_eudat:b2safe"
+    ],
+    "user" : []
+  },
+  "b2safe_admin" : {
+    "organization" : [],
+    "user" : ["eudat_guybrush"]
+  } 
+}
+```
+The above role map example maps any user belonging to the organization *eudat_EUDAT-Staff* or *eudat_eudat:b2safe* to the role *b2safe_reader* (a rodsuser in iRODS terminology) and the user *eudat_guybrush* to the role *b2safe_admin*. 
+
 The mechanism add new users and groups automatically, but does not delete them. 
 Instead it notifies via email the *notification_receiver* that a user or a group should be removed.
 

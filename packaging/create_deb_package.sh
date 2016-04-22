@@ -136,6 +136,18 @@ LOG_LEVEL=DEBUG
 LOG_DIR=/var/log/irods
 #
 #
+# iRODS behavioral parameters
+#
+# check if user is authorized to perform several functions
+AUTHZ_ENABLED=true
+#
+# enable if iRODS contrib package is installed with msifree microservice to
+# prevent memory leaks in iRODS
+MSIFREE_ENABLED=true
+#
+# enable if a speedup is to be used. (won't work in future versions)
+MSICURL_ENABLED=false
+#
 EOF2
 
 fi

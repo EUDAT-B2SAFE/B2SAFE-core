@@ -18,13 +18,42 @@
 # Author: Willem Elbers (MPI-PL)
 #
 getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) {
-    *credStoreType="os";
-    *credStorePath="/srv/irods/current/modules/B2SAFE/cmd/credentials_test";
+    *credStoreType="os"; 
+    *credStorePath="/srv/irods/current/modules/B2SAFE/cmd/credentials_test"; 
     *epicApi="http://hdl.handle.net/";
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*authzEnabled) {
+        EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Parse the credentials to connect to an EPIC server. A file called
+# "credentials" MUST contain all the connection details in the home folder of
+# the user running this rule.
+# Parameters:
+#   *baseuri            [OUT]   URI of the EPIC server
+#   *username           [OUT]   username
+#   *prefix             [OUT]   prefix
+#   *password           [OUT]   password
+#
+# Author: Javier Quinteros, RZG
+# -----------------------------------------------------------------------------
+#
+parseCredentials (*baseuri, *username, *prefix, *password) {
+
+    *baseuri = 'https://epic3.storage.surfsara.nl/v2_test/handles/'
+    *username = "<username>"
+    *password = "<password>"
+    *prefix = "<prefix>"
+ 
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled); 
+    if (*authzEnabled) {
+        EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", "EPIC credentials", *response);
+    }
 }
 
 # Provides parameters for the authorization mechanism
@@ -36,7 +65,7 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
 # Author: Claudio Cacciari (Cineca)
 #
 getAuthZParameters(*authZMapPath) {
-    *authZMapPath="/srv/irods/current/modules/B2SAFE/cmd/authz.map.json";
+    *authZMapPath="/srv/irods/current/modules/B2SAFE/cmd/authz.map.json"; 
 }
 
 # Provides parameters for the logging mechanism
@@ -47,7 +76,7 @@ getAuthZParameters(*authZMapPath) {
 # Author: Claudio Cacciari (Cineca)
 #
 getLogParameters(*logConfPath) {
-    *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf";
+    *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf"; 
 }
 
 
@@ -61,7 +90,7 @@ getLogParameters(*logConfPath) {
 # Author: Claudio Cacciari (Cineca)
 
 getMetaParameters(*metaConfPath, *enabled) {
-    *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf";
+    *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf"; 
     *enabled=bool("false");
 }
 
@@ -77,6 +106,26 @@ getMetaParameters(*metaConfPath, *enabled) {
 getMessageParameters(*msgLogPath, *enabled) {
     *msgLogPath="/var/log/irods/messageManager.log";
     *enabled=bool("false");
+}
+
+#Provides parameters for some B2SAFE configurations.
+# The plugin msifree_microservice_out is a bug fixing to avoid memory leak
+# in case of collection replication involving thousands of files and the
+# parameter msiFreeEnabled enables it.
+# The CURL plugin 
+#
+# Arguments:
+# *msiFreeEnabled  [OUT] if True the msiFree plugin must be deployed
+# *msiCurlEnabled  [OUT] if True the msiCurl plugin must be deployed 
+# *authzEnabled    [OUT] if True the authorization mechanism enforces the assertions 
+#                        defined in the file retrieved by getAuthZParameters.
+#
+# Author: Claudio Cacciari (Cineca)
+#
+getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
+    *msiFreeEnabled=bool("true");
+    *authzEnabled=bool("true");
+    *msiCurlEnabled=bool("false");
 }
 
 # Provides version of the B2SAFE
