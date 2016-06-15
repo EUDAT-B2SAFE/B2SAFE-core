@@ -1,0 +1,20 @@
+# section containing the logging options
+[Logging]
+# possible values: INFO, DEBUG, ERROR, WARNING, CRITICAL
+log_level=DEBUG
+log_file=log/b2safe_neo4j.log
+
+# section containing the sources for users and projects/groups'information
+[GraphDB]
+address=localhost:8888
+username=
+password=
+path=/db/data/
+
+[iRODS]
+zone_name=cinecaDMPZone
+zone_ep=dmp1.novalocal:1247
+# list of resources separated by comma: res_name1:res_path1,res_name2:res_path2
+resources=cinecaRes1:/mnt/data/irods/Vault
+irods_home_dir=/cinecaDMPZone/home
+irods_debug=True
