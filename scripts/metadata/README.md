@@ -2,6 +2,7 @@ B2SAFE Metadata Management
 ===========
 
 This set of scripts aims to get metadata from the B2SAFE service and upload them to a GraphDB (Neo4J).
+They rely on the py2neo library v2.0.8.
 
 In order to get the list of options, just type:
 ```
