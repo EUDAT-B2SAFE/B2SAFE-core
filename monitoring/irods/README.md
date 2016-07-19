@@ -1,17 +1,18 @@
+iRODS probe
+===========
+
 Nagios probe for the B2SAFE component iRODS
 
-Dependencies
-#############
+## Dependencies
 
 It requires that the following iRODS packages are available in the environment:
 http://irods.org/download/ -> iCommands CLI
 
-Configuration
-#############
+## Configuration
 
 The script "check_irods.sh" relies on the authentication methods supported by iRODS.
 Then it requires the setting of the irods user environment, creating a file like this:
-
+```
 {
     "irods_default_hash_scheme": "MD5", 
     "irods_default_resource": "cinecaRes1",
@@ -23,11 +24,11 @@ Then it requires the setting of the irods user environment, creating a file like
     "irods_zone_name": "cinecaDMPZone2",
     "irods_authentication_scheme": "native"
 }
-
+```
 The values have to be replaced according to the local configuration.
 Finally a second file is required, containing just the password for the iRODS user dedicated to the monitoring.
 The script can be executed with the following input parameters:
-
+```
 Usage: check_irods.sh [-h|-v|-n|-d|-t time|-f file|-p file]
        -h help
        -v version
@@ -36,3 +37,4 @@ Usage: check_irods.sh [-h|-v|-n|-d|-t time|-f file|-p file]
        -n implies no trash can enabled within the iRODS instance.
        -d debug enabled.
        -t timeout limit in seconds. The default is 30 s.
+```
