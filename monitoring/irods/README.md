@@ -28,7 +28,7 @@ The values have to be replaced according to the local configuration.
 Finally a second file is required, containing just the password for the iRODS user dedicated to the monitoring.
 The script can be executed with the following input parameters:
 
-Usage: check_irods.sh [-h|-v|-n|-d|-f file|-p file]
+Usage: check_irods.sh [-h|-v|-n|-d|-t time|-f file|-p file]
        -h help
        -v version
        -f the path of the iRODS environment json file. See iRODS documentation for details.

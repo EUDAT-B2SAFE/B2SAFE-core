@@ -39,7 +39,7 @@ UNKNOWN="3"
 
 usage() {
 	echo "This is an iRODS health check."
-        echo "Usage: check_irods.sh [-h|-v|-n|-d|-f file|-p file]"
+        echo "Usage: check_irods.sh [-h|-v|-n|-d|-t time|-f file|-p file]"
         echo "       -h help"
         echo "       -v version"
         echo "       -f the path of the iRODS environment json file. See iRODS documentation for details."
