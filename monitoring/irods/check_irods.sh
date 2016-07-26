@@ -29,6 +29,7 @@
 ##
 
 VERSION="0.6"
+SUB_VERSION="0"
 
 ### Settings
 # Nagios return codes
