@@ -28,7 +28,7 @@
 # Irods updates the available free space once a day.
 ##
 
-VERSION="0.5"
+VERSION="0.6"
 
 ### Settings
 # Nagios return codes
@@ -248,6 +248,46 @@ function run_with_timeout {
     )
 }
 
+execute_checks() {
+
+        if [ "$DEBUG" != 0 ]; then
+             echo "Initializing credentials: $iinit < $opt_p"
+             $iinit < $opt_p
+        else
+             $iinit < $opt_p >/dev/null 2>&1
+        fi
+
+        safety
+
+        PERFDATA="$(perfdataf)"
+
+        writeafile
+        writestatus="$?"
+        listafile
+        liststatus="$?"
+        getafile
+        getstatus="$?"
+        removeafile
+        removestatus="$?"
+        if [ $NOTRASHCAN == 0 ]; then
+            removetrash
+            removetrashstatus="$?"
+        else
+            removetrashstatus=0
+        fi
+
+        ### Checking the returns of the functions
+
+        if [ "$writestatus" != 0 ] || [ "$liststatus" != 0 ] || [ "$getstatus" != 0 ] || [ "$removestatus" != 0 ] || [ "$removetrashstatus" != 0 ]; then
+	    echo "CRITICAL: writestatus = $writestatus, liststatus = $liststatus, getstatus = $getstatus, removestatus = $removestatus, removetrashstatus = $removetrashstatus | $PERFDATA"
+	    exit $CRITICAL
+        elif [ "$writestatus" == 0 ] || [ "$liststatus" != 0 ] || [ "$getstatus" == 0 ] || [ "$removestatus" == 0 ] || [ "$removetrashstatus" == 0 ]; then
+	    echo "OK: writestatus = $writestatus, liststatus = $liststatus, getstatus = $getstatus, removestatus = $removestatus, removetrashstatus = $removetrashstatus | $PERFDATA"
+	    exit $OK
+        fi
+}
+
+
 ### Execution
 
 if [ "$#" == "0" ]; then
@@ -300,45 +340,6 @@ if [ "$DEBUG" != 0 ]; then
       echo "Exporting: IRODS_ENVIRONMENT_FILE=$opt_f"
 fi
 export IRODS_ENVIRONMENT_FILE=$opt_f
-
-execute_checks() {
-
-        if [ "$DEBUG" != 0 ]; then
-             echo "Initializing credentials: $iinit < $opt_p"
-             $iinit < $opt_p
-        else
-             $iinit < $opt_p >/dev/null 2>&1
-        fi
-
-        safety
-
-        PERFDATA="$(perfdataf)"
-
-        writeafile
-        writestatus="$?"
-        listafile
-        liststatus="$?"
-        getafile
-        getstatus="$?"
-        removeafile
-        removestatus="$?"
-        if [ $NOTRASHCAN == 0 ]; then
-            removetrash
-            removetrashstatus="$?"
-        else
-            removetrashstatus=0
-        fi
-
-### Checking the returns of the functions
-
-        if [ "$writestatus" != 0 ] || [ "$liststatus" != 0 ] || [ "$getstatus" != 0 ] || [ "$removestatus" != 0 ] || [ "$removetrashstatus" != 0 ]; then
-	    echo "CRITICAL: writestatus = $writestatus, liststatus = $liststatus, getstatus = $getstatus, removestatus = $removestatus, removetrashstatus = $removetrashstatus | $PERFDATA"
-	    exit $CRITICAL
-        elif [ "$writestatus" == 0 ] || [ "$liststatus" != 0 ] || [ "$getstatus" == 0 ] || [ "$removestatus" == 0 ] || [ "$removetrashstatus" == 0 ]; then
-	    echo "OK: writestatus = $writestatus, liststatus = $liststatus, getstatus = $getstatus, removestatus = $removestatus, removetrashstatus = $removetrashstatus | $PERFDATA"
-	    exit $OK
-        fi
-}
 
 run_with_timeout execute_checks $TIMEOUT
 
