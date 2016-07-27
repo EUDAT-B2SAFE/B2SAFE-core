@@ -11,14 +11,14 @@ http://irods.org/download/ -> iCommands CLI
 
 ## Deployment
 
-It is possible to just copy the script and the related configuration files to the wanted directory.
-Or to create a rpm package, following the next steps.
-Go to the directory monitoring/packaging.
-Execute the script create_rpm_package.sh.
-Deploy the rpm package.
-By default the script is place in:
-/usr/libexec/argo-monitoring/probes/b2safe/check_irods.sh
-The configuration files in:
+It is possible to just copy the script and the related configuration files to the wanted directory.  
+Or to create a rpm package, following the next steps.  
+Go to the directory monitoring/packaging.  
+Execute the script create_rpm_package.sh.  
+Deploy the rpm package.  
+By default the script is place in:  
+/usr/libexec/argo-monitoring/probes/b2safe/check_irods.sh  
+The configuration files in:  
 /etc/nagios/plugins/b2safe/irods
 
 ## Configuration
