@@ -1,0 +1,21 @@
+# section containing the logging options
+[Logging]
+# possible values: INFO, DEBUG, ERROR, WARNING, CRITICAL
+log_level=DEBUG
+log_file=log/b2safe_neo4j.log
+
+# section containing the sources for users and projects/groups'information
+[GraphDB]
+address=localhost:7474
+username=
+password=
+path=/db/data/
+
+[iRODS]
+zone_name=
+zone_ep=
+# list of resources separated by comma: res_name1:res_path1,res_name2:res_path2
+resources=
+irods_home_dir=
+# Boolean value: True | False
+irods_debug=False
