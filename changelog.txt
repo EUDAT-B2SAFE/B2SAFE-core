@@ -1,3 +1,8 @@
+B2SAFE package 3.2-beta [2016/08/24]
+It includes two main new features:
+1) the monitoring probe for iRODS: a bash script compatible with nagios-like tools to actively monitor the iRODS server
+2) the metadata ingestion scripts: a set of python script to generate a METS manifest file for a collection, parse it and populate a neo4j graphDB.
+
 B2SAFE package 3.1.1 [2016/04/22]
 - added support for HSv8
 - initial implementation of the role based approach for the authorization mechanism
