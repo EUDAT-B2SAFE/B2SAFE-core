@@ -7,6 +7,8 @@ import logging
 import logging.handlers
 import libmets
 import pprint
+import uuid
+
 from nested_lookup import nested_lookup
 from irodsUtility import *
 
@@ -63,6 +65,8 @@ class MetsParser(object):
         fileGrpList = {}
         for fileGrp_element in fileGrpElemList:
             fileGrp = {}
+            if fileGrp_element.ID is None:
+                fileGrp_element.ID = 'GROUP_' + str(uuid.uuid4())
             self.logger.debug('File group ID: ' + fileGrp_element.ID)
             fileGrp['files'] = self._parseFileType(fileGrp_element.file)
             fileGrp['groups'] = self._parseFileGrpType(fileGrp_element.fileGrp)

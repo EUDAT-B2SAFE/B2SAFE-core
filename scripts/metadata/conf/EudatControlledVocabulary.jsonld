@@ -1,0 +1,94 @@
+{
+  "@id": "http://eudat.eu/jsondld#1.0"
+  "@context": {
+    "eudat": "./EudatControlledVocabulary.jsonld",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "eudat:Structure",
+      "@type": "rdfs:Class",
+      "rdfs:comment": "eudat entity structure",
+      "rdfs:label": "Structure",
+      "http://schema.org/rangeIncludes": {
+        "@id": "eudat:Entity"
+      }
+    },    
+    {
+      "@id": "eudat:Entity",
+      "@type": "rdfs:Class",
+      "rdfs:comment": "eudat entity",
+      "rdfs:label": "Entity",
+      "path": "xsd:string",
+      "type": "eudat:EntityType",
+      "format": "xsd:string"
+    },
+    {
+      "@id": "eudat:EntityType",
+      "@type": "rdf:Property",
+      "rdfs:comment": "entity type controlled vocabulary",
+      "rdfs:label": "EntityType",
+      "http://schema.org/rangeIncludes": [
+        {
+          "@id": "eudat:DescriptiveMetaData"
+        },
+        {
+          "@id": "eudat:AdministrativeMetaData"
+        },
+        {
+          "@id": "eudat:StructuralMetaData"
+        },
+        {
+          "@id": "eudat:Data"
+        },
+        {
+          "@id": "eudat:Composite"
+        }
+      ]   
+    },
+    { 
+      "@id": "eudat:DescriptiveMetaData",
+      "@type": "eudat:EntityType",
+      "rdfs:comment": "descriptive metadata entity",
+      "rdfs:label": "DescriptiveMetaData"
+    },
+    {
+      "@id": "eudat:AdministrativeMetaData",
+      "@type": "eudat:EntityType",
+      "rdfs:comment": "administrative metadata entity",
+      "rdfs:label": "AdministrativeMetaData"
+    },
+    {
+      "@id": "eudat:StructuralMetaData",
+      "@type": "eudat:EntityType",
+      "rdfs:comment": "manifest",
+      "rdfs:label": "StructuralMetaData"
+    },
+    {
+      "@id": "eudat:Data",
+      "@type": "eudat:EntityType",
+      "rdfs:comment": "data entity",
+      "rdfs:label": "Data"
+    },
+    {
+      "@id": "eudat:Composite",
+      "@type": "eudat:EntityType",
+      "rdfs:comment": "mixed entity",
+      "rdfs:label": "Composite"
+    },
+    {
+      "@id": "eudat:isRelatedTo",
+      "@type": "rdf:Property",
+      "http://schema.org/domainIncludes": {
+        "@id": "eudat:Entity"
+      },
+      "http://schema.org/rangeIncludes": {
+        "@id": "eudat:Entity"
+      },
+      "rdfs:comment": "Define a relation between entities",
+      "rdfs:label": "isRelatedTo"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import logging.handlers
 import ConfigParser
 import manifest
 import pprint
+import hashlib
 
 from py2neo import Graph, Node, Relationship, authenticate, GraphError
 
@@ -15,26 +16,24 @@ logger = logging.getLogger('GraphDBClient')
 
 ##################################################
 # Person(name:'guybrush')
-# MetaData (Structural|Descriptive|Administrative)
-# Data ()
-# Composite ()
 # Person - [:IS_DEFINED_IN] -> Zone
 # DigitalEntity (EudatChecksum:'xyz', location:'/Zone/path/to/file')
-# DigitalEntity - [:IS_OF_TYPE] -> MetaData|Data|Composite
 # DigitalEntity - [:STORED_IN] -> Resource - [:IS_AVAILABLE_IN] -> Zone
 # DigitalEntity - [:IS_OWNED_BY] -> Person
 # DigitalEntity - [:BELONGS_TO] -> Aggregation
-# DigitalEntity - [:IS_REPLICA_OF{PPID, ROR}] -> DigitalEntity
+# DigitalEntity - [:IS_REPLICA_OF{PPID, ROR}] -> Pointer{type}
+# DigitalEntity - [:IS_MASTER_OF{Replica}] -> Pointer{type}
 # DigitalEntity - [:UNIQUELY_IDENTIFIED_BY] -> PID{EudatChecksum:'xyz'}
 
 class GraphDBClient():
     
-    def __init__(self, conf):
+    def __init__(self, conf, rootPath):
         """
         Graph initialization
         """
     
         self.conf = conf
+        self.root = rootPath
 
         self.irodsu = manifest.IRODSUtils(self.conf.irods_home_dir,
                                           logger,
@@ -76,51 +75,6 @@ class GraphDBClient():
         else:
             logger.info('Node "Zone" found')
 
-        logger.info("Initializing data and metadata nodes")
-        
-        metaStruct = Node("Metadata", "Structural")
-        metaDescr = Node("Metadata", "Descriptive")
-        metaAdmin = Node("Metadata", "Administrative")
-        data = Node("Data")
-        composite = Node("Composite")
- 
-        cquery = "MATCH n WHERE n:Metadata AND n:Structural RETURN n"
-        rec_list = self.graph.cypher.execute(cquery)
-        if rec_list.one:
-            metaStruct = rec_list.one
-        else:
-            self.graph.create(metaStruct)
-        cquery = "MATCH n WHERE n:Metadata AND n:Descriptive RETURN n"
-        rec_list = self.graph.cypher.execute(cquery)
-        if rec_list.one:
-            metaDescr = rec_list.one
-        else:
-            self.graph.create(metaDescr)
-        cquery = "MATCH n WHERE n:Metadata AND n:Administrative RETURN n"
-        rec_list = self.graph.cypher.execute(cquery)
-        if rec_list.one:
-            metaAdmin = rec_list.one
-        else:
-            self.graph.create(metaAdmin)        
-
-        if not self.graph.find_one("Data"):
-            self.graph.create(data)
-        if not self.graph.find_one("Composite"):
-            self.graph.create(composite)
-
-        self.eudat_type_map = { 'Descriptive': ['descriptive metadata entity'],
-                                'Administrative': ['administrative metadata entity'],
-                                'Structural': ['manifest'],
-                                'Data': ['data entity'],
-                                'Composite': ['mixed entity']
-                              }
-
-        self.eudat_type_node_map = { 'Descriptive': metaDescr,
-                                     'Administrative': metaAdmin,
-                                     'Structural': metaStruct,
-                                     'Data': self.graph.find_one("Data"),
-                                     'Composite': self.graph.find_one("Composite")
-                                   }
 
 # dynamic data ###################################
 
@@ -137,7 +91,7 @@ class GraphDBClient():
             path = ''
             sumValue = ''
             agg = self._createUniqueNode("Aggregation", d['name'],
-                                                        path[6:],
+                                                        path[7:],
                                                         sumValue,
                                                         d['type'])
             if len(d['filePaths']) > 0:
@@ -146,10 +100,11 @@ class GraphDBClient():
                     if self.conf.dryrun: 
                         print "get the checksum based on path: " + str(path)
                     else:
-                        agg.properties['location'] = path[6:]
+                        agg.properties['location'] = path[7:]
                         agg.push()
                         logger.debug('Updated location of entity: ' + str(agg))
-                        sumValue = self.irodsu.getChecksum(path[6:])
+                        absolutePath = self.root + '/' + path[7:]
+                        sumValue = self.irodsu.getChecksum(absolutePath)
                         if sumValue:
                             agg.properties['checksum'] = sumValue
                             agg.push()
@@ -176,32 +131,36 @@ class GraphDBClient():
             leafs = []
             if len(d['filePaths']) > 0:
                 for fp in d['filePaths']:
-                    de = self._defineDigitalEntity(d['name'], fp[6:], d['type'])
+                    de = self._defineDigitalEntity(d['name'], fp[7:], d['type'])
                     leafs.append(de)
             else:
-                de = self._defineDigitalEntity(d['name'], fp[6:], d['type'])
+                de = self._defineDigitalEntity(d['name'], fp[7:], d['type'])
                 leafs.append(de)
 
             return leafs
      
  
-    def _defineDigitalEntity(self, name, path, dtype):
+    def _defineDigitalEntity(self, name, path, dtype, absolute=False):
  
         if self.conf.dryrun: 
             sumValue = ''
         else:
-            sumValue = self.irodsu.getChecksum(path)
+            absolutePath = path
+            if not absolute:
+                absolutePath = self.root + '/' + path
+            sumValue = self.irodsu.getChecksum(absolutePath)
 #TODO what if checksum is null?
         de = self._createUniqueNode("Digital Entity",name,path,sumValue,dtype)
         logger.debug('Created node: ' + str(de))
-        self._defineTypeRelation(de)
-        self._defineResourceRelation(de)
-        self._definePIDRelation(de)
-        self._defineOwnershipRelation(de)
+        self._defineResourceRelation(de, absolute)
+        self._definePIDRelation(de, absolute)
+        self._defineMasterRelation(de, absolute)
+        self._defineReplicaRelation(de, absolute)
+        self._defineOwnershipRelation(de, absolute)
         return de
 
 
-    def _definePIDRelation(self, de):
+    def _definePIDRelation(self, de, absolute=False):
 
         if self.conf.dryrun:
             print ("create the graph relation ["+str(de)+","
@@ -210,9 +169,12 @@ class GraphDBClient():
 
         path = de.properties["location"]
         sumValue = de.properties["checksum"]
-        pid = self.irodsu.getMetadata(path, 'PID')
-        if pid:
-            pidNode = Node("Persistent Identifier", value = pid['PID'],
+        absolutePath = path
+        if not absolute:
+            absolutePath = self.root + '/' + path
+        pids = self.irodsu.getMetadata(absolutePath, 'PID')
+        if pids and len(pids) > 0:
+            pidNode = Node("Persistent Identifier", value = pids[0],
                                                     checksum = sumValue)
             de_is_uniquely_identified_by_pid = Relationship(de,
                                                             "UNIQUELY_IDENTIFIED_BY",
@@ -224,7 +186,65 @@ class GraphDBClient():
         return False
 
 
-    def _defineOwnershipRelation(self, de):
+    def _defineMasterRelation(self, de, absolute=False):
+
+        if self.conf.dryrun:
+            print ("create the graph relation ["+str(de)+","
+                   "IS_MASTER_OF,replica]")
+            return True
+
+        path = de.properties["location"]
+        absolutePath = path
+        if not absolute:
+            absolutePath = self.root + '/' + path
+        replicas = self.irodsu.getMetadata(absolutePath, 'Replica')       
+        for rpointer in replicas: 
+            po = self._createPointer('iRODS', rpointer)
+            de_is_master_of_po = Relationship(de, "IS_MASTER_OF", po)
+            self.graph.create_unique(de_is_master_of_po)
+            logger.debug('Created relation: ' + str(de_is_master_of_po))
+            return True
+
+        return False
+
+
+    def _defineReplicaRelation(self, re, absolute=False):
+
+        if self.conf.dryrun:
+            print ("create the graph relation ["+str(re)+","
+                   "IS_REPLICA_OF,replica]")
+            return True
+
+        parent = None
+        path = re.properties["location"]
+        absolutePath = path
+        if not absolute:
+            absolutePath = self.root + '/' + path
+        masters = self.irodsu.getMetadata(absolutePath, 'ROR')
+        if masters and len(masters) > 0:
+            master = masters[0]
+            parents = self.irodsu.getMetadata(absolutePath, 'PPID')
+            if parents and len(parents) > 0:
+                parent = parents[0]
+        else:
+            return False
+
+        po = self._createPointer('unknown', master)
+        re_is_replica_of_po = Relationship(re, "IS_REPLICA_OF", po)
+        re_is_replica_of_po.properties["relation"] = 'ROR'
+        self.graph.create_unique(re_is_replica_of_po)
+        logger.debug('Created relation: ' + str(re_is_replica_of_po))
+        if parent:
+            po = self._createPointer('unknown', parent)
+            re_is_replica_of_po = Relationship(re, "IS_REPLICA_OF", po)
+            re_is_replica_of_po.properties["relation"] = 'PPID'
+            self.graph.create_unique(re_is_replica_of_po)
+            logger.debug('Created relation: ' + str(re_is_replica_of_po))
+
+        return True
+
+
+    def _defineOwnershipRelation(self, de, absolute=False):
       
         if self.conf.dryrun:
             print ("create the graph relation ["+str(de)+",IS_OWNED_BY,"
@@ -232,7 +252,10 @@ class GraphDBClient():
             return True
  
         path = de.properties["location"]
-        owners = self.irodsu.getOwners(path)
+        absolutePath = path
+        if not absolute:
+            absolutePath = self.root + '/' + path
+        owners = self.irodsu.getOwners(absolutePath)
         logger.debug('Got the list of owners: ' + str(owners))
         if owners:
             for owner in owners:
@@ -249,7 +272,7 @@ class GraphDBClient():
         return False
 
 
-    def _defineResourceRelation(self, de):
+    def _defineResourceRelation(self, de, absolute=False):
 
         if self.conf.dryrun:
             print ("create the graph relation ["+str(de)+",IS_STORED_IN,"
@@ -257,7 +280,10 @@ class GraphDBClient():
             return True
 
         path = de.properties["location"]
-        resources = self.irodsu.getResources(path)
+        absolutePath = path
+        if not absolute:
+            absolutePath = self.root + '/' + path
+        resources = self.irodsu.getResources(absolutePath)
         if resources:
             for res in resources:
                 resN = self.graph.find_one('Resource', 'name', res)
@@ -269,48 +295,45 @@ class GraphDBClient():
         return False
 
 
-    def _defineTypeRelation(self, de):
-
-        dtype = de.properties['nodetype']
-        for eudat_type,type_list in self.eudat_type_map.items():
-           if dtype in type_list:
-
-               if self.conf.dryrun:
-                   print ("create the graph relation ["+str(de)+","
-                          "IS_OF_TYPE,"+eudat_type+"]")
-                   return True
-
-               tnode = self.eudat_type_node_map[eudat_type]
-               de_is_of_type_tnode = Relationship(de, "IS_OF_TYPE", tnode)
-               self.graph.create_unique(de_is_of_type_tnode)
-               logger.debug('Created relation: ' + str(de_is_of_type_tnode))
-               return True
-        return False
-
-
     def _createUniqueNode(self, eudat_type, name, path, checksum, d_type):
-
+   
+        
+        entityNew = Node(eudat_type, location = path,
+                                     name = name,
+                                     checksum = checksum,
+                                     nodetype = d_type)
         if self.conf.dryrun: 
-            entity = Node(eudat_type, location = path,
-                                      name = name,
-                                      checksum = checksum,
-                                      nodetype = d_type)
             print ("create the graph node ["+str(entity)+"]")
         else:
-
             if len(path) > 0:
                 entity = self.graph.find_one(eudat_type, "location", path)
             else:
                 entity = self.graph.find_one(eudat_type, "name", name)
             if entity is None:
-                entity = Node(eudat_type, location = path,
-                                          name = name,
-                                          checksum = checksum,
-                                          nodetype = d_type)
+                entity = entityNew  
             self.graph.create(entity)
-            logger.debug('Created entity: ' + str(entity))
+            logger.debug('Entity created: ' + str(entity))
 
         return entity
+
+
+    def _createPointer(self, pointer_type, value):
+
+        hashVal = hashlib.md5(value).hexdigest()
+        pointerNew = Node('Pointer', type = pointer_type,
+                                  value = value,
+                                  name = hashVal)
+        if self.conf.dryrun:
+            print ("create the graph node ["+str(pointer)+"]")
+        else:
+            pointer = self.graph.find_one('Pointer', "name", hashVal)
+            if pointer is None:
+                pointer = pointerNew
+            self.graph.create(pointer)
+            logger.debug('Created pointer: ' + str(pointer))
+
+        return pointer
+
 
 ################################################################################
 # Configuration Class #
@@ -386,13 +409,14 @@ def sync(args):
 
     configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
     configuration.parseConf();
-    gdbc = GraphDBClient(configuration)
+    path = args.path.rsplit('/',1)[0]
+    gdbc = GraphDBClient(configuration, path)
      
     logger.info("Sync starting ...")
     mp = manifest.MetsParser(configuration, logger)
     logger.info("Reading METS manifest ...")
     irodsu = manifest.IRODSUtils(configuration.irods_home_dir, logger,
-                        configuration.irods_debug)
+                                 configuration.irods_debug)
     xmltext = irodsu.getFile(args.path + '/manifest.xml')
     structuralMaps = mp.parse(xmltext)
     for smap in structuralMaps:
