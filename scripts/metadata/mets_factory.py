@@ -74,7 +74,8 @@ class MetsManifest():
         with open(self.conf.md_jsonld_file, 'r') as f:
             collStruct = json.load(f)
         self.logger.debug('Building the METS structural map section')
-        smap = self.buildStructMap(ftree.keys()[0], collStruct)
+        rootName = ftree.keys()[0] + '_' + str(uuid.uuid4())
+        smap = self.buildStructMap(rootName, collStruct)
         mf.structMap.append(smap)
         self.manifest = mf
 
@@ -134,7 +135,7 @@ class MetsManifest():
         self.logger.debug('Building the METS structMapType')  
         # initialize the structural map section
         smap = structMapType(TYPE="Relational")
-        divMain = divType(LABEL=rootName, TYPE="digital collection")
+        divMain = divType(LABEL=rootName, TYPE="digitalCollection")
         temp_div = {}
         temp_rel = {}
         future_rel = {}
@@ -199,7 +200,7 @@ class MetsManifest():
         if 'isRelatedTo' in entity.keys():
             # analyze the relations of this entity with others
             label = 'rel_' + str(uuid.uuid4())
-            divRel = divType(LABEL=label, TYPE="entity relation")
+            divRel = divType(LABEL=label, TYPE="entityRelation")
             divRel.append(div)
             for relation in entity['isRelatedTo']:
                 normPathRel = relation['@id'][2:]
