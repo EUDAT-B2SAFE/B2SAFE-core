@@ -29,13 +29,13 @@
     },
     {
       "@type": "Entity",
-      "path": "_:claudio/collection_A/datum_1.dat",
+      "path": "_:claudio/${dir}/${n}_1.dat",
       "type": "Data",
       "format": "miniseed",
       "isRelatedTo": [
         { "@id": "_:claudio/test.txt" },
         { "@id": "_:claudio/test3.txt" },
-        { "@id": "_:claudio/collection_A/metadatum_1.txt"}
+        { "@id": "_:claudio/${dir}/meta${n}_1.txt"}
       ]      
     },    
     {
