@@ -4,6 +4,7 @@
 import subprocess
 import logging
 import os
+import json
 
 
 ##############################################################################
@@ -168,47 +169,64 @@ class IRODSUtils():
                 # split the root path in parent and child(relative or absolute)
                 parent, fpath = self._pathSplit(lines[0].strip()[:-1], abs_path)
                 # recursive loop over collections
-                tree[fpath] = self._parseColl(fpath, {'__files__': []}, 
-                                              lines[1:], abs_path)
+                tree[fpath], ind = self._parseColl(fpath, {'__files__': []}, 
+                                                   lines[1:], abs_path)
 
             return (rc, tree)
 
         return (rc, None)
 
     
-    def _parseColl(self, parent_path,  tree, lines, abs_path=True):
+    def _parseColl(self, parent_path, tree, lines, abs_path=True):
 
         i = 0
+        tc = 0
         for line in lines:
+            self.logger.debug('Skip function: ' + str(i) + ' < ' + str(tc))
+            if i < tc:
+                i += 1
+                continue
             self.logger.debug('Walking through the path: ' + parent_path)
+            self.logger.debug('line: ' + line)
             i += 1
             # parse the content of a single dir
             if line.startswith('  '):
+                self.logger.debug('We are in the single dir')
                 # the path is a collection
                 if line.lstrip().startswith('C-'):
+                    self.logger.debug('It is a collection')
                     coll = line.split('C- ')[1].strip()
                     parent, norm_coll = self._pathSplit(coll, abs_path)
                     # save it only if it is a subdir of the current parent 
                     # collection
+                    self.logger.debug('the parent: ' + parent)
                     if parent == parent_path:
                         tree[norm_coll] = {'__files__': []}
                 # the path is a file
                 else:
+                    self.logger.debug('It is a file')
                     # save it only if it is part of the current parent dir
                     if len(tree) == 1:
                         tree['__files__'].append(line.strip())
             # enter inside a new dir
             else:
+                self.logger.debug('We are in a different dir')
                 parent, fpath = self._pathSplit(line.strip()[:-1], abs_path)
                 # parse the subdir
+                self.logger.debug('the parent: ' + parent + ', the fpath: ' +fpath)
                 if fpath in tree:
-                    tree[fpath] = self._parseColl(fpath, tree[fpath], 
-                                                  lines[i:], abs_path)
+                    self.logger.debug('fpath is in the tree')
+                    tree[fpath], counter = self._parseColl(fpath, tree[fpath], 
+                                                           lines[i:], abs_path)
+                    self.logger.debug('counter is :' + str(counter))
+                    tc = counter + i
+                    self.logger.debug('total counter is :' + str(tc))
                 # return if it is not a subdir
                 else:
-                    return tree
+                    self.logger.debug('fpath is not in the tree')
+                    return tree, i-2
 
-        return tree                  
+        return tree, i-2    
 
 
     def _pathSplit(self, path, absolute=True):

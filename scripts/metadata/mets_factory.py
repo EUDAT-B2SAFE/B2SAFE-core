@@ -97,16 +97,16 @@ class MetsManifest():
             if not self.conf.abs_path:
                 # the path are absolute
                 parent = root + '/' + coll
-                groupId = coll + '_' + str(uuid.uuid4())
+                groupId = '_' + coll + '_' + str(uuid.uuid4())
             else:
                 # the path are relative
                 parent = coll
-                groupId = coll.rsplit('/', 1)[1] + '_' + str(uuid.uuid4())
+                groupId = '_' + coll.rsplit('/', 1)[1] + '_' + str(uuid.uuid4())
             fgrp = fileGrpType(ID=groupId)
             fgrp_files = fileGrpType(ID=groupId+'__files__')
             for fp in dirs[coll]['__files__']:
                 # loop over the files of the collection
-                fileId = fp + '_' + str(uuid.uuid4())
+                fileId = '_' + fp + '_' + str(uuid.uuid4())
                 ft = fileType(ID=fileId)
                 # create a METS element FLocat
                 loc = CTD_ANON_19(LOCTYPE='URL')
@@ -149,7 +149,6 @@ class MetsManifest():
                               pprint.pformat(entity)))
             normPath = entity['path'][2:]
             self.logger.debug('with path: ' + normPath)
-#            pathSubSet = fnmatch.filter(self.fileMap.keys(), normPath)
             pathSubSet = self.patternMatch(normPath, self.fileMap.keys())
             self.logger.debug('which matches the following patterns: ' 
                               + pprint.pformat(pathSubSet.keys()))
@@ -236,12 +235,10 @@ class MetsManifest():
     def patternMatch(self, pattern, targets):
 
         transRegex = fnmatch.translate(pattern)
-        print 'transRegex: ' + transRegex
         templateNames = re.findall(r'\$\{(\w+)\}', pattern)
         if templateNames:
             for tNames in templateNames:
                 transRegex = transRegex.replace('\$\{'+ tNames +'\}', r'(?P<'+ tNames +'>\w+)')
-                print 'transRegex: ' + transRegex
         pathRegex = transRegex + '$'
         template = re.compile(pathRegex)
         pathSubSet = {}
@@ -250,7 +247,6 @@ class MetsManifest():
             if m:
                 pathSubSet[item] = {}
                 for tNames in templateNames:
-                    print tNames + ' = ' + str(m.group(tNames))
                     pathSubSet[item][tNames] = m.group(tNames)
 
         return pathSubSet 
@@ -287,8 +283,8 @@ class Configuration():
             loglevel = 'DEBUG'
         logger.setLevel(self.log_level[loglevel])
         rfh = logging.handlers.RotatingFileHandler(logfilepath, \
-                                                   maxBytes=8388608, \
-                                                   backupCount=9)
+                                                   maxBytes=50000000, \
+                                                   backupCount=10)
         formatter = logging.Formatter('%(asctime)s %(levelname)s: '
                                     + '[%(funcName)s] %(message)s')
         rfh.setFormatter(formatter)
@@ -301,7 +297,8 @@ class Configuration():
       
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
-        self.irods_resource = self._getConfOption('iRODS', 'irods_resource')
+#TODO add it to the configuration and exploit when possible in irods command
+#        self.irods_resource = self._getConfOption('iRODS', 'irods_resource')
 
         
     def _getConfOption(self, section, option, boolean=False):
