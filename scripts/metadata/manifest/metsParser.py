@@ -43,12 +43,12 @@ class MetsParser(object):
                 obj_name = ''
             obj['name'] = obj_name
             obj['type'] = div_element.TYPE
-            filePaths = []
+            filePaths = {}
             for fptr_element in div_element.fptr:
                 self.logger.debug('FPTR: ' + fptr_element.FILEID)
                 pathList = self._pathListExtractor(fptr_element.FILEID,
                                                    fileGroups)
-                filePaths += pathList
+                filePaths[fptr_element.FILEID] = pathList
             obj['filePaths'] = filePaths
             obj['nestedObjects'] = self._parseDivType(div_element.div,
                                                       fileGroups)

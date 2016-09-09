@@ -288,16 +288,18 @@ class GraphDBClient():
                                                         d['type'])
             # if the aggregation has a file path, it means that it is a package
             if len(d['filePaths']) > 0:
-                if len(d['filePaths']) == 1:
-                    path = d['filePaths'][0]
+                if (len(d['filePaths']) == 1 
+                    and len(d['filePaths'][d['filePaths'].keys()[0]]) == 1):
+                    pathId = d['filePaths'].keys()[0]
+                    path = d['filePaths'][pathId][0]
                     if self.conf.dryrun: 
                         print "get the checksum based on path: " + str(path)
                     else:
                         agg.properties['location'] = path[7:]
                         agg.push()
                         logger.debug('Updated location of entity: ' + str(agg))
-                        agg = self._defineDigitalEntity(d['name'], path[7:], 
-                                                        d['type'], agg)
+                        agg = self._defineDigitalEntity(None, path[7:], 
+                                                        d['type'], d['name'], agg)
                 # the manifest supports multiple file paths, 
                 # but they are not yet supported by this script                
                 else:                
@@ -319,9 +321,11 @@ class GraphDBClient():
         else:
             leafs = []
             if len(d['filePaths']) > 0:
-                for fp in d['filePaths']:
-                    de = self._defineDigitalEntity(d['name'], fp[7:], d['type'])
-                    leafs.append(de)
+                for fid in d['filePaths']:
+                    for fp in d['filePaths'][fid]:
+                        de = self._defineDigitalEntity(d['name'], fp[7:], 
+                                                       d['type'], fid)
+                        leafs.append(de)
             # if there is not a path, the leaf is an aggregation, even if an empty one.
             else:
                 path = ''
@@ -335,7 +339,7 @@ class GraphDBClient():
             return leafs
      
  
-    def _defineDigitalEntity(self, name, path, dtype, de=None, absolute=False):
+    def _defineDigitalEntity(self, fmt, path, dtype, name, de=None, absolute=False):
  
         absolutePath = path
         # if the path of the files in the manifest a relative,
@@ -355,10 +359,9 @@ class GraphDBClient():
 #TODO what if checksum is null?
         else:
             # build the digital entity
-            dename = name + '_' + str(uuid.uuid4())
-            de = self._createUniqueNode("DigitalEntity", dename, path, sumValue,
+            de = self._createUniqueNode("DigitalEntity", name, path, sumValue,
                                                          dtype)
-            de.properties['format'] = name
+            de.properties['format'] = fmt
             if not self.conf.dryrun:
                 de.push()
             logger.debug('Created node: ' + str(de))
