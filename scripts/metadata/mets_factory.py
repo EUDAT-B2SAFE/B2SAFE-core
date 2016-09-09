@@ -234,19 +234,25 @@ class MetsManifest():
 
     def patternMatch(self, pattern, targets):
 
+        # translate the unix shell like pattern syntax to regular expression
         transRegex = fnmatch.translate(pattern)
+        # check if there are templates variable in the path: ${varName}
         templateNames = re.findall(r'\$\{(\w+)\}', pattern)
         if templateNames:
             for tNames in templateNames:
+                # for each template var creates a regex group
                 transRegex = transRegex.replace('\$\{'+ tNames +'\}', r'(?P<'+ tNames +'>\w+)')
         pathRegex = transRegex + '$'
         template = re.compile(pathRegex)
         pathSubSet = {}
+        # loop over all the patterns to filter them according to the regex expression
         for item in targets:
             m = template.match(item)
             if m:
                 pathSubSet[item] = {}
                 for tNames in templateNames:
+                    # store in a dictionary the values of the template vars used in a 
+                    # each pattern
                     pathSubSet[item][tNames] = m.group(tNames)
 
         return pathSubSet 
