@@ -2,7 +2,11 @@ B2SAFE Metadata Management
 ===========
 
 This set of scripts aims to get metadata from the B2SAFE service and upload them to a GraphDB (Neo4J).
-They rely on the py2neo library v2.0.8.
+They rely on the py2neo library v2.0.8.  
+
+There are two main scripts:
+ * mets_factory.py: it takes the path of a collection and a document describing the data-metadata relations, as inputs, and builds an XML document, which represents the manifest of that collection. The collection path can be file system based or part of the irods namespace. The data-metadata relation document has to be compliant with the json-ld format and the EUDAT controlled vocabulary, while the manifest is a METS formatted document.
+ * b2safe_neo4j_client.py: it take in iput the manifest file and translate its content together with some metadata got from the B2SAFE service into a graph, which is stored in a neo4j DB.
 
 In order to get the list of options, just type:
 ```
