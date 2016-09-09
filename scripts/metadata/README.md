@@ -8,6 +8,29 @@ There are two main scripts:
  * mets_factory.py: it takes the path of a collection and a document describing the data-metadata relations, as inputs, and builds an XML document, which represents the manifest of that collection. The collection path can be file system based or part of the irods namespace. The data-metadata relation document has to be compliant with the json-ld format and the EUDAT controlled vocabulary, while the manifest is a METS formatted document.
  * b2safe_neo4j_client.py: it take in iput the manifest file and translate its content together with some metadata got from the B2SAFE service into a graph, which is stored in a neo4j DB.
 
+## mets_factory
+In the conf directory there are examples of the two file s required by this script: the metadata.json and the configuration file.
+```
+$ ./mets_factory.py -h
+usage: mets_factory.py [-h] [-dbg] [-d] (-i IRODS | -f FILESYSTEM) confpath
+
+METS factory
+
+positional arguments:
+  confpath              path to the configuration file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -dbg, --debug         enable debug
+  -d, --dryrun          run without performing any real change
+  -i IRODS, --irods IRODS
+                        irods path
+  -f FILESYSTEM, --filesystem FILESYSTEM
+                        fs path
+```
+
+## b2safe_neo4j_client
+
 In order to get the list of options, just type:
 ```
 $ ./b2safe_neo4j_client.py -h
