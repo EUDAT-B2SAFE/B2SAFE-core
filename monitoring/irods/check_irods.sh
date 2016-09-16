@@ -55,6 +55,11 @@ if [ "$?" != 0 ]; then
 	echo "UNKNOWN: problem creating tempfile as user $USER on hostname $HOSTNAME."
 	exit 3
 fi
+WORK_DIR=$(mktemp -d)
+if [ "$?" != 0 ]; then
+        echo "UNKNOWN: problem creating tempdir as user $USER on hostname $HOSTNAME."
+        exit 3
+fi
 # This removes the path to the file
 FILENAMEONIRODS=$(basename $TEMPFILE)
 
@@ -123,7 +128,6 @@ perfdataf() {
 }
 
 writeafile() {
-
         which $iput >/dev/null 2>&1
         if [ "$?" != 0 ]; then
                 echo "UNKNOWN: Could not find iput in \$PATH"
@@ -159,14 +163,12 @@ listafile() {
 }
 
 getafile() {
-
         which $iget >/dev/null 2>&1
         if [ "$?" != 0 ]; then
                 echo "UNKNOWN: Could not find iget in \$PATH"
                 exit $UNKNOWN
         fi
-
-	cd
+	cd 
         if [ "$DEBUG" != 0 ]; then
                 echo "Executing command: $iget -v $FILENAMEONIRODS"
                 $iget -v "$FILENAMEONIRODS"
@@ -175,7 +177,6 @@ getafile() {
         fi
         IGETSTATUS="$?"
         if [ "$DEBUG" != 0 ]; then
-                echo "Executing command: $rm -v $FILENAMEONIRODS"
                 $rm -v "$FILENAMEONIRODS"
         else
                 $rm "$FILENAMEONIRODS"
@@ -250,6 +251,13 @@ function run_with_timeout {
 }
 
 execute_checks() {
+    
+        if [ "$DEBUG" != 0 ]; then
+             echo "Exporting IRODS_ENVIRONMENT_FILE=$opt_f"
+             echo "Exporting HOME=$WORK_DIR"
+        fi
+        declare -x IRODS_ENVIRONMENT_FILE="$opt_f"
+        declare -x HOME="$WORK_DIR"
 
         if [ "$DEBUG" != 0 ]; then
              echo "Initializing credentials: $iinit < $opt_p"
@@ -276,6 +284,15 @@ execute_checks() {
         else
             removetrashstatus=0
         fi
+
+        unset IRODS_ENVIRONMENT_FILE
+
+        if [ "$DEBUG" != 0 ]; then
+                echo "Executing command: $rm -v -rf $WORK_DIR"
+                $rm -v -rf "$WORK_DIR"
+        else
+                $rm -rf "$WORK_DIR"
+        fi        
 
         ### Checking the returns of the functions
 
@@ -336,11 +353,6 @@ if [ "$opt_t" == "" ]; then
 else
       TIMEOUT=$opt_t
 fi
-
-if [ "$DEBUG" != 0 ]; then
-      echo "Exporting: IRODS_ENVIRONMENT_FILE=$opt_f"
-fi
-export IRODS_ENVIRONMENT_FILE=$opt_f
 
 run_with_timeout execute_checks $TIMEOUT
 
