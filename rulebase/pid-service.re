@@ -85,27 +85,23 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
                 } 
             }
 
-            # create PID
-        
             # Verify the type of the input path (collection / data object)
             msiGetObjType(*path, *type);
+
+            # create PID
+
+            EUDATePIDcreate(*path, *extraType, *newPID);
         
-            # If it is a collection - do not compute checksum
-            if (*type == '-c') {
-                if (*msiCurlEnabled) {
+            if (*msiCurlEnabled) {
+                # Verify the type of the input path (collection / data object)
+                msiGetObjType(*path, *type);
+                # If it is a collection - do not compute checksum
+                if (*type == '-c') {
                     EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("false"));
                 }
-                else {
-                    EUDATePIDcreate(*path, *extraType, *newPID, bool("false"));   
-                }
-            }
-            # If it is a data object - compute checksum and add it to PID
-            else if (*type == '-d') {
-                if (*msiCurlEnabled) {
+                # If it is a data object - compute checksum and add it to PID
+                else if (*type == '-d') {
                     EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("true"));
-                }
-                else {
-                    EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
                 }
             }
             # creation of the file based metadata record
@@ -351,30 +347,34 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 # Author: Giacomo Mariani, CINECA
 # Edited by:  Robert Verkerk, SURFsara
 #
-EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
+EUDATePIDcreate(*path, *extraType, *PID) {
+
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     
-    if (*ifchecksum == bool("true") ) {
-        logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-        EUDATiCHECKSUMget(*path, *checksum, *modtime);
-        *extChksum="";
-        if (*checksum != "") {
-            *extChksum=" --checksum *checksum";
+    EUDATiCHECKSUMget(*path, *checksum, *modtime);
+    *extChksum="";
+    if (*checksum != "") {
+        *extChksum=" --checksum *checksum";
+        *url="*serverID"++"/dataObject"++"*path";
+        if (*extraType != "empty") {
+            *extraType = "*extraType"++";EUDAT/CHECKSUM=*checksum";
+        } else {
+            *extraType = "EUDAT/CHECKSUM=*checksum";
         }
-        *execCmd="*credStoreType *credStorePath create '*serverID"++"*path'"++"*extChksum";
+        *extraType = "*extraType"++";EUDAT/CHECKSUM_TIMESTAMP=*modtime";
     }
-    
     else {
-        logInfo("EUDATePIDcreate -> Add PID withOUT CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-        *execCmd="*credStoreType *credStorePath create '*serverID"++"*path'"
+        *url="*serverID"++"/collection"++"*path";
     }
+    logInfo("[EUDATePIDcreate] Create PID (CHECKSUM:*checksum, OBJPATH:*path) as user: $userNameClient");
+    *execCmd="*credStoreType *credStorePath create '*url'"++"*extChksum";       
     
     if (*extraType != "empty") {
-        logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
+        logInfo("[EUDATePIDcreate] Create PID with extratype parameter: *extraType");
         *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
     # add the default 10320/LOC to each created PID
-    *execCmd="*execCmd"++" --loc10320 '*serverID"++"*path'";
+    *execCmd="*execCmd"++" --loc10320 '*url'";
 
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *outGRP2);
     msiGetStdoutInExecCmdOut(*outGRP2, *PID);
@@ -382,7 +382,7 @@ EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outGRP2);
     }
-    logInfo("EUDATePIDcreate -> Created handle is: *PID");
+    logInfo("[EUDATePIDcreate] Created handle is: *PID");
 }
 
 #
