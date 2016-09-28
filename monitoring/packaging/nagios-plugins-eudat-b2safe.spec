@@ -2,7 +2,7 @@ Name:		nagios-plugins-eudat-b2safe
 Version:	%{_version}
 Release:	%{_release}
 #Release:	1%{?dist}
-Summary:	 nagios probe for b2safe
+Summary:	nagios probe for b2safe
 
 Group:		Application
 License:	open BSD License
@@ -12,13 +12,13 @@ BuildArch:	noarch
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires:	
-#Requires:	irods-icommands
+Requires:	irods-icommands
 
 %define _whoami %(whoami)
 %define _b2safehomepackaging %(pwd)
-%define _b2safeNagiosPackage /usr/libexec/argo-monitoring/probes/b2safe
-%define _b2safeNagiosTmp     /var/lib/argo-monitoring/b2safe
-%define _b2safeNagiosConfig  /etc/nagios/plugins/b2safe
+%define _b2safeNagiosPackage /usr/libexec/argo-monitoring/probes/eudat-b2safe
+%define _b2safeNagiosTmp     /var/lib/argo-monitoring/eudat-b2safe
+%define _b2safeNagiosConfig  /etc/nagios/plugins/eudat-b2safe
 
 %description
 This nagios plugin provides the nessecary scripts and config files to test
