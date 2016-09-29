@@ -7,7 +7,9 @@ It is implemented as a bash script.
 ## Dependencies
 
 It requires that the following iRODS packages are available in the environment:
-http://irods.org/download/ -> iCommands CLI
+http://irods.org/download/ -> iCommands CLI  
+It is also possible to add to your environment a repository containing the iRODS iCommands so that the dependency is solved automatically:  
+http://rpm-repo.argo.grnet.gr/ARGO/[devel|prod]/[centos6|centos7]/
 
 ## Deployment
 
