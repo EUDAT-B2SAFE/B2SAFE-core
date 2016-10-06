@@ -53,3 +53,6 @@ Usage: check_irods.sh [-h|-v|-n|-d|-t time|-f file|-p file]
        -d debug enabled.
        -t timeout limit in seconds. The default is 30 s.
 ```
+It uploads, reads, downloads and removes a file of few KB in size.  
+It relies on plain iRODS icommand operations, without involving specific EUDAT rules.
+It is up to the iRODS administrator, who sets the user dedicated to the monitoring, to decide how much "power" to give to that user. For example the execution of rules can be denied. The user can have a dedicated home space or share that of an existing project/community.
