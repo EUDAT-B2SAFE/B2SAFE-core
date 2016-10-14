@@ -4,6 +4,15 @@
 #                                                                              #
 ################################################################################
 
+# Provides the log level for the EUDAT specific rules
+# 
+# Arguments:
+# *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2]
+#                   0:ERROR, 1:INFO, 2:DEBUG
+getEUDATLoggerLevel(*euLogLevel) {
+    *euLogLevel=2
+}
+
 #
 # Provides parameters for the connection with the EPIC service
 # 

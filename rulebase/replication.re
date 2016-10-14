@@ -118,9 +118,9 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
     } else {
 
         logInfo("[EUDATReplication] *msg");
-        if (*registered) {
+        if (EUDATtoBoolean(*registered)) {
             logDebug("replicating registered data");
-            *status = EUDATRegDataRepl(*source, *destination, *recursive, *response);
+            *status = EUDATRegDataRepl(*source, *destination, EUDATtoBoolean(*recursive), *response);
         } else {
             logDebug("replicating data without PID registration");
             msiGetObjType(*source,*source_type);
@@ -347,7 +347,7 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
 
     EUDATGetZoneNameFromPath(*destination, *zoneName);
     EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
-    logDebug("Remote zone name: *zoneName, connection contact: *zoneConn");
+    logDebug("[EUDATPIDRegistration] remote zone name: *zoneName, connection contact: *zoneConn");
 
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
@@ -357,12 +357,15 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
         EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
     }
     else {
-        EUDATSearchAndDefineRoR(*source, *parentPID, *parentROR);
-        logDebug("The path *destination has PPID=*parentPID and ROR=*parentROR");
+        *parentROR = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/ROR");
+        *fio = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIO");
+        *fixed = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIXED_CONTENT");
+        logDebug("[EUDATPIDRegistration] the path *destination has EUDAT/PARENT=*parentPID, "
+                 ++ "EUDAT/ROR=*parentROR, EUDAT/FIO=*fio, EUDAT/FIXED_CONTENT=*fixed");
         # create a PID for the replica which is done on the remote server
         # using remote execution
         remote(*zoneConn,"null") {
-            EUDATCreatePID(*parentPID,*destination,*parentROR,bool("true"),*childPID);
+            EUDATCreatePID(*parentPID, *destination, *parentROR, *fio, *fixed, *childPID);
         }
         # update parent PID with a child one 
         # if the child exists in ICAT on the remote server
@@ -397,52 +400,48 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
-#
 EUDATSearchAndCreatePID(*path, *pid) {
 
-    logDebug("query PID of path *path");
+    logDebug("[EUDATSearchAndCreatePID] query PID of path *path");
     EUDATiFieldVALUEretrieve(*path, "PID", *pid);
-    logDebug("Retrieved the iCAT PID value *pid for path *path");
+    logDebug("[EUDATSearchAndCreatePID] retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
-        EUDATCreatePID("None",*path,"None",bool("true"),*pid);
+        EUDATCreatePID("None", *path, "None", "None", "false", *pid);
         EUDATiPIDcreate(*path, *pid);
     }
 }
 
 #-----------------------------------------------------------------------------
-# Search RoR for a given path and in case it is not found, 
-# it defines RoR equal to the PID.
+# Search key/value pair for a given path
 #
 # Parameters:
 # *path       [IN]  iRODS path
-# *parentPID  [IN]  the PID associated to path
-# *parentROR  [OUT] ROR related to path
+# *pid        [IN]  the PID associated to path
+# *key        [IN]  The name of the PID field
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
-#
-EUDATSearchAndDefineRoR(*path, *pid, *ROR) {
+EUDATSearchAndDefineField(*path, *pid, *key) {
 
-    *ROR = "None";
-    # get ROR of the source file from ICAT
-    EUDATiFieldVALUEretrieve(*path, "EUDAT/ROR", *ROR);
-    # if there is no entry for the ROR in ICAT, get it from EPIC
-    if (*ROR == "None") {
-        EUDATGeteRorPid(*pid, *ROR);
-        # if there is a ROR in EPIC create it in ICAT
-        if (*ROR != "None") {
-            EUDATCreateAVU("EUDAT/ROR", *ROR, *path);
+    logDebug("[EUDATSearchAndDefineField] query PID *pid and path *path to get *key");
+    *val = "None";
+    # get *key of the *path from ICAT
+    EUDATiFieldVALUEretrieve(*path, *key, *val);
+    logDebug("[EUDATSearchAndDefineField] got *key=*val from iCAT");
+    # if there is no entry for the *key in ICAT, get it from EPIC
+    if (*val == "None") {
+        *val = EUDATGeteValPid(*pid, *key);
+        logDebug("[EUDATSearchAndDefineField] got *key=*val from PID service");
+        # if there is a *key in EPIC create it in ICAT
+        if (*val != "None") {
+            EUDATCreateAVU(*key, *val, *path);
         }
     }
-    # otherwise ROR will be parentPID
-    if (*ROR == "None") {
-        *ROR = *pid;
-    }
+    *val
 }
 
-
-#-----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
 # Compare cheksums of data objects in the source and destination
 #  collection recursively
 #
@@ -461,8 +460,6 @@ EUDATSearchAndDefineRoR(*path, *pid, *ROR) {
 # Author: Elena Erastova, RZG
 # Author: Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-#
-
 EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
 
     *check_response = "";

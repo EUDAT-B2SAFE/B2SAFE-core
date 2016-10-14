@@ -28,7 +28,6 @@
 # EUDATfileInPath(*path,*subColl)
 # EUDATCreateAVU(*Key,*Value,*Path)
 # EUDATgetLastAVU(*Path, *Key, *Value)
-# EUDATModifyAVU(*Path, *Key, *Value) DEPRECATED
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime)
 #---- repository packages ---
@@ -202,16 +201,25 @@ EUDATQueue(*action, *message, *number) {
 # Logging policies
 #
 
-logInfo(*msg) {
-    logWithLevel("info", *msg);
+logDebug(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level == 2) {
+        logWithLevel("debug", *msg);
+    }
 }
 
-logDebug(*msg) {
-    logWithLevel("debug", *msg);
+logInfo(*msg) {
+    getEUDATLoggerLevel(*level);
+    if ((*level == 1) || (*level == 2)) {
+        logWithLevel("info", *msg);
+    }
 }
 
 logError(*msg) {
-    logWithLevel("error", *msg);
+    getEUDATLoggerLevel(*level);
+    if ((*level == 0) || (*level == 1) || (*level == 2)) {
+        logWithLevel("error", *msg);
+    }
 }
 
 logWithLevel(*level, *msg) {
@@ -220,7 +228,21 @@ logWithLevel(*level, *msg) {
     on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
 }
 
-
+#-----------------------------------------------
+# Function: trsnsfrom string to boolean value
+#
+# Author: Claudio Cacciari (Cineca)
+#-----------------------------------------------
+EUDATtoBoolean(*var) {
+    logDebug("[EUDATtoBoolean] converting variable *var to boolean");
+    if (*var == "None" || *var == "" || *var == "False" || *var == "false" || *var == "FALSE") {
+        *status = bool("false");
+    }
+    else {
+        *status = bool("true");
+    }
+    *status
+}
 
 #
 # Function: replace epicclient function
@@ -305,11 +327,11 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
        *count = *row.META_DATA_ATTR_VALUE
         #*count = 0 means the attr was not set
         if (*count=="0"){
-            logInfo("EUDATiCHECKSUMdate -> Setting *metaName for *coll/*name.");
+            logInfo("[EUDATiCHECKSUMdate] setting *metaName=*modTime for *coll/*name.");
             msiString2KeyValPair("*metaName=*modTime",*kvpaircs);
             msiSetKeyValuePairsToObj(*kvpaircs, "*coll/*name", "-d")
         }else{
-            logDebug("EUDATiCHECKSUMdate -> *metaName already set for *coll/*name.");
+            logInfo("[EUDATiCHECKSUMdate] *metaName already set for *coll/*name.");
         }   
     }   
 }   
@@ -332,7 +354,7 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
     *status = bool("false");
     *checksum = "";
     *modtime = "";
-    logInfo("EUDATiCHECKSUMretrieve -> Looking at *path");
+    logInfo("[EUDATiCHECKSUMretrieve] Looking at *path");
     msiSplitPath(*path, *coll, *name);
     #Loop over all resources, possibly the checksum was not computed for all of them
     foreach ( *c in SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll') {
@@ -341,10 +363,10 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
         *modtime = *c.DATA_MODIFY_TIME;
 
         if (*checksumTmp==""){
-            logInfo("EUDATiCHECKSUMretrieve -> The iCHECKSUM on resource *resc is empty.");
+            logInfo("[EUDATiCHECKSUMretrieve] the iCHECKSUM on resource *resc is empty.");
         }else{
             *checksum=*checksumTmp;
-            logInfo("EUDATiCHECKSUMretrieve -> Found iCHECKSUM = *checksum on resource *resc.");
+            logInfo("[EUDATiCHECKSUMretrieve] iCHECKSUM = *checksum on resource *resc.");
             #EUDATiCHECKSUMdate is called here instead just after msiDataObjChksum in EUDATiCHECKSUMget
             #because it is not the only possible point the checksum may be computed
             #other ones are "ichksum", "iput -k", "irepl" (on checksumed source) called by the user.
@@ -475,11 +497,10 @@ EUDATfileInPath(*path,*subColl) {
 # Author: Long Phan, JSC
 # Modified: Elena Erastova, RZG, 27.08.2015
 # 
-EUDATCreateAVU(*Key,*Value,*Path) {
-    logDebug("[EUDATCreateAVU] Adding AVU = *Key with *Value to metadata of *Path");
-    msiAddKeyVal(*Keyval,*Key, *Value);
-    writeKeyValPairs('serverLog', *Keyval, " is : ");
-    msiGetObjType(*Path,*objType);
+EUDATCreateAVU(*Key, *Value, *Path) {
+    logDebug("[EUDATCreateAVU] Adding AVU: *Key = *Value to metadata of *Path");
+    msiAddKeyVal(*Keyval, *Key, *Value);
+    msiGetObjType(*Path, *objType);
     msiSetKeyValuePairsToObj(*Keyval, *Path, *objType);
 }
 
@@ -500,39 +521,6 @@ EUDATgetLastAVU(*Path, *Key, *Value)
     foreach ( *B in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
         *Value = *B.META_DATA_ATTR_VALUE;
     }
-}
-
-#-----------------------------------------------------------------------------
-# Change a value in iCAT
-#
-# Parameters:
-# *Path  [IN] target object to assign a new value
-# *Key   [IN] target key to assign a new value
-# *Value [IN] new value to be assigned
-#
-# Author: Pascal Dugénie, CINES
-# Modified : S Coutin 23/01/2015
-# Now it has the same functionality as EUDATCreateAVU : Erastova, 27.08.2015
-#
-# DEPRECATED
-#-----------------------------------------------------------------------------
-EUDATModifyAVU(*Path, *Key, *Value)
-{
-    msiSplitPath( *Path, *parent, *child );
-    msiGetObjType( *Path, *objType );
-	# Modified begin 
-    EUDATcountMetaKeys( *Path, *Key, *key_exist );
-    logInfo( "Set *Key into *Value (key_exist=*key_exist)" );
-	# Modified end
-    if ( *key_exist != "0" ){
-        foreach ( *B  in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
-            *val = *B.META_DATA_ATTR_VALUE ;
-        }
-        msiAddKeyVal( *mdkey, *Key, *val );
-        msiRemoveKeyValuePairsFromObj( *mdkey, *Path, *objType );
-    }
-    msiAddKeyVal( *mdkey, *Key, *Value );
-    msiAssociateKeyValuePairsToObj( *mdkey, *Path, *objType );
 }
 
 #-----------------------------------------------------------------------------
@@ -580,7 +568,7 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
             *extraMetaData = "-c *checksum -t *modtime";
         }
         if (*ror == "" || *ror == 'None') {
-            EUDATGeteRorPid(*pid, *ror);
+            *ror = EUDATGeteValPid(*pid, "EUDAT/ROR");
         }
         if (*ror != "") {
             *extraMetaData = *extraMetaData ++ " -r *ror";
@@ -638,30 +626,24 @@ EUDATrp_ingestObject( *source )
     rp_getRpIngestParameters(*protectArchive, *archiveOwner);
     logInfo("ingestObject-> Check for (*source)");
     EUDATiCHECKSUMget(*source, *checksum, *modtime);
-    EUDATModifyAVU(*source, "INFO_Checksum" , *checksum );
+    EUDATCreateAVU("INFO_Checksum", *checksum, *source);
 # Modified begin 
     EUDATgetLastAVU(*source, "OTHER_original_checksum", *orig_checksum);
 # Modified end
     if ( *checksum == *orig_checksum )
     {
         logInfo("ingestObject-> Checksum is same as original = *checksum");
-        EUDATModifyAVU(*source, "ADMIN_Status" , "Checksum_ok" ) ;
-        # Extract the ROR value from iCat
-# Modified begin 
-# TODO: clarify how the 'EUDAT/ROR' should be added as iCAT metadata pair
-#       current version assumes the ROR is available in the EUDAT/ROR AVU, as this is done by repository package
-#       *RorValue = ""
+        EUDATCreateAVU("ADMIN_Status", "Checksum_ok", *source);
 	EUDATgetLastAVU( *source, "EUDAT/ROR" , *RorValue );
-# Modified end 
-        EUDATCreatePID("None", *source, *RorValue, bool("true"), *PID);
+        EUDATCreatePID("None", *source, *RorValue, "None", "false", *PID);
         # test PID creation
         if((*PID == "empty") || (*PID == "None") || (*PID == "error")) {
             logInfo("ingestObject-> ERROR while creating the PID for *source PID = *PID");
-            EUDATModifyAVU(*source, "ADMIN_Status" , "ErrorPID" ) ;
+            EUDATCreateAVU("ADMIN_Status", "ErrorPID", *source);
         }
         else {
             logInfo("ingestObject-> PID created for *source PID = [*PID] ROR = [*RorValue]");
-            EUDATModifyAVU(*source, "ADMIN_Status" , "Archive_ok" ) ;
+            EUDATCreateAVU("ADMIN_Status", "Archive_ok", *source);
             if (*protectArchive) {
                 logInfo("ingestObject-> changing *source owner to = *archiveOwner with read access to$userNameClient");
                 msiSetACL("default","read",$userNameClient,*source);
@@ -672,7 +654,7 @@ EUDATrp_ingestObject( *source )
     else
     {
         logInfo("ingestObject-> Checksum (*checksum) is different than original (*orig_checksum)");
-        EUDATModifyAVU(*source, "ADMIN_Status" , "ErrorChecksum" ) ;
+        EUDATCreateAVU("ADMIN_Status", "ErrorChecksum", *source);
     }
 }
 
@@ -687,9 +669,9 @@ EUDATrp_ingestObject( *source )
 #-----------------------------------------------------------------------------
 EUDATrp_transferInitiated( *source )
 {
-   EUDATModifyAVU(*source, "ADMIN_Status" , "TransferStarted" ) ;
+   EUDATCreateAVU("ADMIN_Status", "TransferStarted", *source);
    msiGetSystemTime( *TimeNow, "human" );
-   EUDATModifyAVU(*source, "INFO_TimeOfStart", *TimeNow ) ;
+   EUDATCreateAVU("INFO_TimeOfStart", *TimeNow, *source);
 }
 
 #-----------------------------------------------------------------------------
@@ -703,7 +685,7 @@ EUDATrp_transferInitiated( *source )
 #-----------------------------------------------------------------------------
 EUDATrp_transferFinished( *source )
 {
-   EUDATModifyAVU(*source, "ADMIN_Status" , "TransferFinished" ) ;
+   EUDATCreateAVU("ADMIN_Status", "TransferFinished", *source);
    msiGetSystemTime( *TimeNow, "human" );
-   EUDATModifyAVU(*source, "INFO_TimeOfTransfer" , *TimeNow ) ;
+   EUDATCreateAVU("INFO_TimeOfTransfer", *TimeNow, *source);
 }
