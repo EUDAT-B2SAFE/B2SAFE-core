@@ -73,6 +73,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
             if (*ror != "None" && *ror != "") {
                 logInfo("Update Parent PID with field ROR");
                 *extraType = "EUDAT/ROR=*ror";
+                EUDATCreateAVU("EUDAT/ROR", *ror, *path);
             }        
 
             # add ppid as extratype parameter
@@ -82,7 +83,8 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
                       *extraType = "*extraType"++";EUDAT/PPID=*parent_pid";
                 } else {
                       *extraType = "EUDAT/PPID=*parent_pid";
-                } 
+                }
+                EUDATCreateAVU("EUDAT/PPID", *parent_pid, *path);
             }
 
             # create PID
@@ -108,12 +110,17 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
                     EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
                 }
             }
+            # creation of ROR in case it has not been provided as input
+            if (*ror == "None" || *ror == "") {
+                EUDATeRORupdate(*newPID, *newPID);
+                EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
+            }            
             # creation of the file based metadata record
             *checksum = "";
             *modtime = "";
             EUDATStoreJSONMetadata(*path, *newPID, *ror, *checksum, *modtime);
 
-            if (*iCATCache) {
+            if (EUDATtoBoolean(*iCATCache)) {
                 # Add PID into iCAT
                 logInfo("Saving PID into field AVU -PID- of iCAT *path with PID = *newPID");
                 EUDATiPIDcreate(*path, *newPID);
@@ -211,6 +218,27 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     if(*epicDebug > 1) {
     	logDebug("update handle location response = *response");
     }
+}
+
+#-------------------------------------------------------------------------------
+# get the KEY entry for a PID
+#
+# Parameters:
+#   *pid    [IN]     PID that you want to get the ROR for
+#   *key    [IN]     The name of the PID record field to retrieve
+#
+# Author: Claudio Cacciari (CINECA)
+#-------------------------------------------------------------------------------
+EUDATGeteValPid(*pid, *key) {
+    logInfo("[EUDATGeteValPid] get *key from *pid");
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key *key",
+               "null", "null", "null", *outGRP);
+    msiGetStdoutInExecCmdOut(*outGRP, *val);
+    if(*val == "None") {
+        logInfo("[EUDATGeteValPid] no *key for *pid ");
+    }
+    *val
 }
 
 #
@@ -546,7 +574,7 @@ EUDATePIDremove(*path, *force) {
             # The PID record could be associated to a replica.
             # The field 10320/LOC of the parent PID record should be updated
         }
-        else if (*force == bool("true")){
+        else if (EUDATtoBoolean(*force)){
             logInfo("EUDATePIDremove -> The PID record *pid contains pointers to other DO copies");
             logInfo("EUDATePIDremove -> It will be deleted anyway");
             msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
@@ -664,12 +692,12 @@ EUDATPidsForColl(*collPath) {
     # Create PIDs for all subcollections in collection recursively
     foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
         *subCollPath = *RowC.COLL_NAME;
-        EUDATCreatePID("None", *subCollPath, "None", bool("true"), *newPID);
+        EUDATCreatePID("None", *subCollPath, "None", "true", *newPID);
     }
     # Create PIDs for all data objects in collection recursively
     foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-        EUDATCreatePID("None", *objPath, "None", bool("true"), *newPID);
+        EUDATCreatePID("None", *objPath, "None", "true", *newPID);
     }
 }
 
