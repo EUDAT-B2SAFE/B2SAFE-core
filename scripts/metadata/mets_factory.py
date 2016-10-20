@@ -12,6 +12,7 @@ import uuid
 import json
 import fnmatch
 import tempfile
+import re
 
 from manifest import IRODSUtils
 from manifest.libmets import *
@@ -96,16 +97,16 @@ class MetsManifest():
             if not self.conf.abs_path:
                 # the path are absolute
                 parent = root + '/' + coll
-                groupId = coll + '_' + str(uuid.uuid4())
+                groupId = '_' + coll + '_' + str(uuid.uuid4())
             else:
                 # the path are relative
                 parent = coll
-                groupId = coll.rsplit('/', 1)[1] + '_' + str(uuid.uuid4())
+                groupId = '_' + coll.rsplit('/', 1)[1] + '_' + str(uuid.uuid4())
             fgrp = fileGrpType(ID=groupId)
             fgrp_files = fileGrpType(ID=groupId+'__files__')
             for fp in dirs[coll]['__files__']:
                 # loop over the files of the collection
-                fileId = fp + '_' + str(uuid.uuid4())
+                fileId = '_' + fp + '_' + str(uuid.uuid4())
                 ft = fileType(ID=fileId)
                 # create a METS element FLocat
                 loc = CTD_ANON_19(LOCTYPE='URL')
@@ -148,12 +149,13 @@ class MetsManifest():
                               pprint.pformat(entity)))
             normPath = entity['path'][2:]
             self.logger.debug('with path: ' + normPath)
-            pathSubSet = fnmatch.filter(self.fileMap.keys(), normPath)
+            pathSubSet = self.patternMatch(normPath, self.fileMap.keys())
             self.logger.debug('which matches the following patterns: ' 
-                              + pprint.pformat(pathSubSet))
-            processedPaths += pathSubSet
-            for path in pathSubSet:
-                self.entityRelMgmt(path, entity, temp_div, temp_rel, future_rel)
+                              + pprint.pformat(pathSubSet.keys()))
+            processedPaths += pathSubSet.keys()
+            for path in pathSubSet.keys():
+                self.entityRelMgmt(path, entity, pathSubSet[path], temp_div, 
+                                   temp_rel, future_rel)
 
         divMainList = []
         # for each entity 
@@ -192,7 +194,8 @@ class MetsManifest():
         return div
 
 
-    def entityRelMgmt(self, normPath, entity, divDict, relDict, placeHolderDict):
+    def entityRelMgmt(self, normPath, entity, templateDict, divDict, relDict, 
+                      placeHolderDict):
 
         # for each path a mets div is created and stored in a temp list
         div = self.divBuilder(entity['format'], entity['type'], normPath)
@@ -204,22 +207,55 @@ class MetsManifest():
             divRel.append(div)
             for relation in entity['isRelatedTo']:
                 normPathRel = relation['@id'][2:]
-                if normPathRel in divDict.keys():
+                if len(templateDict) > 0:
+                    for tkey in templateDict.keys():
+                        normPathRel = normPathRel.replace('${'+ tkey +'}',
+                                                          templateDict[tkey])
+                print 'normPathRel: ' + normPathRel
+                pathSubSet = fnmatch.filter(self.fileMap.keys(), normPathRel)
+                for path in pathSubSet:
+                    if path in divDict.keys():
                     # if the entity is associated to an already 
                     # defined mets div, then put the div inside 
                     # the same div container
-                    divRel.append(divDict[normPathRel])
-                # anyway store the relation for later checks
-                if normPathRel in placeHolderDict:
-                    placeHolderDict[normPathRel].append(normPath)
-                else:
-                    placeHolderDict[normPathRel] = [normPath]
+                        divRel.append(divDict[path])
+                    # anyway store the relation for later checks
+                    if path in placeHolderDict:
+                        placeHolderDict[path].append(normPath)
+                    else:
+                        placeHolderDict[path] = [normPath]
             relDict[normPath] = divRel
         # if this entity does not provide its own relations, check if 
         # is related to previously defined entities.
         if normPath in placeHolderDict.keys():
             for relatedPath in placeHolderDict[normPath]:
                 relDict[relatedPath].append(div)        
+
+
+    def patternMatch(self, pattern, targets):
+
+        # translate the unix shell like pattern syntax to regular expression
+        transRegex = fnmatch.translate(pattern)
+        # check if there are templates variable in the path: ${varName}
+        templateNames = re.findall(r'\$\{(\w+)\}', pattern)
+        if templateNames:
+            for tNames in templateNames:
+                # for each template var creates a regex group
+                transRegex = transRegex.replace('\$\{'+ tNames +'\}', r'(?P<'+ tNames +'>\w+)')
+        pathRegex = transRegex + '$'
+        template = re.compile(pathRegex)
+        pathSubSet = {}
+        # loop over all the patterns to filter them according to the regex expression
+        for item in targets:
+            m = template.match(item)
+            if m:
+                pathSubSet[item] = {}
+                for tNames in templateNames:
+                    # store in a dictionary the values of the template vars used in a 
+                    # each pattern
+                    pathSubSet[item][tNames] = m.group(tNames)
+
+        return pathSubSet 
 
 
 ################################################################################
@@ -253,8 +289,8 @@ class Configuration():
             loglevel = 'DEBUG'
         logger.setLevel(self.log_level[loglevel])
         rfh = logging.handlers.RotatingFileHandler(logfilepath, \
-                                                   maxBytes=8388608, \
-                                                   backupCount=9)
+                                                   maxBytes=50000000, \
+                                                   backupCount=10)
         formatter = logging.Formatter('%(asctime)s %(levelname)s: '
                                     + '[%(funcName)s] %(message)s')
         rfh.setFormatter(formatter)
@@ -267,7 +303,8 @@ class Configuration():
       
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
-        self.irods_resource = self._getConfOption('iRODS', 'irods_resource')
+#TODO add it to the configuration and exploit when possible in irods command
+#        self.irods_resource = self._getConfOption('iRODS', 'irods_resource')
 
         
     def _getConfOption(self, section, option, boolean=False):
