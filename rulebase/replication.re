@@ -487,7 +487,7 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
     # For each DO in the sorce collection recursively compare checksum amd size
     # with the DO in the destination collection.
     # If they do not match, write an error in the b2safe log
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*sCollPath%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*sCollPath' || like '*sCollPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
         *destination = "*dCollPath/*subCollection";
