@@ -1,0 +1,48 @@
+{
+  "@context": { 
+    "@vocab": "./conf/EudatControlledVocabulary.jsonld",
+    "path": "@id"
+  },
+  "Structure": [
+    {
+      "@type": "Entity",
+      "path": "_:claudio/test.txt",
+      "type": "Data",
+      "format": "miniseed"
+    },
+    {
+      "@type": "Entity",
+      "path": "_:claudio/test2.txt", 
+      "type": "DescriptiveMetaData",
+      "format": "dataless",
+      "isRelatedTo": [ 
+        { "@id": "_:claudio/test.txt" },
+        { "@id": "_:claudio/test3.txt" },
+        { "@id": "_:claudio/collection_A/datum_1.dat" }
+      ]
+    },
+    {
+      "@type": "Entity",
+      "path": "_:claudio/test3.txt", 
+      "type": "Composite",
+      "format": "seed"
+    },
+    {
+      "@type": "Entity",
+      "path": "_:claudio/${dir}/${n}_1.dat",
+      "type": "Data",
+      "format": "miniseed",
+      "isRelatedTo": [
+        { "@id": "_:claudio/test.txt" },
+        { "@id": "_:claudio/test3.txt" },
+        { "@id": "_:claudio/${dir}/meta${n}_1.txt"}
+      ]      
+    },    
+    {
+      "@type": "Entity",
+      "path": "_:*meta*",
+      "type": "DescriptiveMetaData",
+      "format": "dataless"
+    }
+  ]
+}

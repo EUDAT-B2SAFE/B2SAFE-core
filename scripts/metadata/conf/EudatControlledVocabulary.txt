@@ -1,0 +1,9 @@
+EUDAT data model entities
+
+List of allowed types in the METS div element of the METS structMap element:
+
+Descriptive: 'descriptive metadata entity',
+Administrative: 'administrative metadata entity',
+Structural: 'manifest',
+Data: 'data entity',
+Composite: 'mixed entity'

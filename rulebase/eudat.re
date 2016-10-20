@@ -202,16 +202,25 @@ EUDATQueue(*action, *message, *number) {
 # Logging policies
 #
 
-logInfo(*msg) {
-    logWithLevel("info", *msg);
+logDebug(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level == 2) {
+        logWithLevel("debug", *msg);
+    }
 }
 
-logDebug(*msg) {
-    logWithLevel("debug", *msg);
+logInfo(*msg) {
+    getEUDATLoggerLevel(*level);
+    if ((*level == 1) || (*level == 2)) {
+        logWithLevel("info", *msg);
+    }
 }
 
 logError(*msg) {
-    logWithLevel("error", *msg);
+    getEUDATLoggerLevel(*level);
+    if ((*level == 0) || (*level == 1) || (*level == 2)) {
+        logWithLevel("error", *msg);
+    }
 }
 
 logWithLevel(*level, *msg) {
@@ -220,7 +229,21 @@ logWithLevel(*level, *msg) {
     on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
 }
 
-
+#-----------------------------------------------
+# Function: trsnsfrom string to boolean value
+#
+# Author: Claudio Cacciari (Cineca)
+#-----------------------------------------------
+EUDATtoBoolean(*var) {
+    logDebug("[EUDATtoBoolean] converting variable *var to boolean");
+    if (*var == "None" || *var == "" || *var == "False" || *var == "false" || *var == "FALSE") {
+        *status = bool("false");
+    }
+    else {
+        *status = bool("true");
+    }
+    *status
+}
 
 #
 # Function: replace epicclient function
@@ -653,7 +676,7 @@ EUDATrp_ingestObject( *source )
 #       *RorValue = ""
 	EUDATgetLastAVU( *source, "EUDAT/ROR" , *RorValue );
 # Modified end 
-        EUDATCreatePID("None", *source, *RorValue, bool("true"), *PID);
+        EUDATCreatePID("None", *source, *RorValue, "true", *PID);
         # test PID creation
         if((*PID == "empty") || (*PID == "None") || (*PID == "error")) {
             logInfo("ingestObject-> ERROR while creating the PID for *source PID = *PID");

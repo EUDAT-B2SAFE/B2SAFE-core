@@ -118,9 +118,9 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
     } else {
 
         logInfo("[EUDATReplication] *msg");
-        if (*registered) {
+        if (EUDATtoBoolean(*registered)) {
             logDebug("replicating registered data");
-            *status = EUDATRegDataRepl(*source, *destination, *recursive, *response);
+            *status = EUDATRegDataRepl(*source, *destination, EUDATtoBoolean(*recursive), *response);
         } else {
             logDebug("replicating data without PID registration");
             msiGetObjType(*source,*source_type);
@@ -362,7 +362,7 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
         # create a PID for the replica which is done on the remote server
         # using remote execution
         remote(*zoneConn,"null") {
-            EUDATCreatePID(*parentPID,*destination,*parentROR,bool("true"),*childPID);
+            EUDATCreatePID(*parentPID,*destination,*parentROR,"true",*childPID);
         }
         # update parent PID with a child one 
         # if the child exists in ICAT on the remote server
@@ -405,7 +405,7 @@ EUDATSearchAndCreatePID(*path, *pid) {
     logDebug("Retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
-        EUDATCreatePID("None",*path,"None",bool("true"),*pid);
+        EUDATCreatePID("None",*path,"None","true",*pid);
         EUDATiPIDcreate(*path, *pid);
     }
 }
