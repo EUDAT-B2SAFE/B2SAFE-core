@@ -28,6 +28,7 @@ createPID () {
   pid_raw=`irule "${rule}" "${input}" "${output}"`
   pid=`echo ${pid_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
   echo "PID: ${pid}"
+  pid_source=${pid}
 
   echo "        ############ PID record key/value pairs: ############"
   for k in "URL" "CHECKSUM" "EUDAT/CHECKSUM" "EUDAT/CHECKSUM_TIMESTAMP" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/FIXED_CONTENT"
@@ -89,6 +90,10 @@ replication () {
   raw=`irule "{EUDATgetLastAVU(*path, *key, *value)}" "*path=${sourcePath}%*key=EUDAT/REPLICA" "*value"`
   val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
   echo "        EUDAT/REPLICA: ${val}"
+  echo "        ############ PID record Parent replica value ############" 
+  raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid_source}%*key=10320/LOC" "*res"`
+  val=`echo ${raw:7}`
+  echo "        10320/LOC: ${val}"  
 
   irule "{EUDATePIDremove(*path, *force)}" "*path=${destPath}%*force=true" null
   irm ${destPath}
