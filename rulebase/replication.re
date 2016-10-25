@@ -166,8 +166,8 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
     *success_counter = 0;
     *failure_counter = 0;
 #TODO add these parameters to the fail log messages
-    *registered = bool("true");
-    *recursive = bool("true");
+    *registered = "true";
+    *recursive = "true";
  
     # get size of queue-log before transfer.    
     EUDATQueue("queuesize", *l, 0);
