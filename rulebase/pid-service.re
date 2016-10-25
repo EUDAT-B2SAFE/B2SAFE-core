@@ -17,6 +17,7 @@
 # EUDATSearchPID(*path, *existing_pid)
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
+# EUDATGeteValPid(*pid, *key)
 # EUDATGeteRorPid(*pid, *ror)
 # EUDATeiChecksumMgmt(*path, *PID)
 # EUDATiPIDcreate(*path, *PID)

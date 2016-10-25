@@ -15,8 +15,8 @@
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATRegDataRepl(*source, *destination)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
-# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
 # EUDATSearchAndCreatePID(*path, *pid)
+# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
 # EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
 # EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response)
 

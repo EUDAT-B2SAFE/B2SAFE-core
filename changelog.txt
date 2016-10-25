@@ -1,3 +1,11 @@
+B2SAFE package 3.1.2 [2016/10/25]
+It includes:
+- Few new rules implementing minor functions to rerieve PID record key-value
+pair and to convert boolean values.
+- An experimental new feature, which is a proof of concept, so not ready for
+production: the metadata ingestion scripts. It is a set of python script to generate a METS
+manifest file for a collection, parse it and populate a neo4j graphDB.
+
 B2SAFE package 3.2-beta [2016/08/24]
 It includes two main new features:
 1) the monitoring probe for iRODS: a bash script compatible with nagios-like tools to actively monitor the iRODS server
