@@ -334,7 +334,7 @@ class EpicClientAPITestCase(unittest.TestCase):
         mock_http.request.assert_called_once
         uri = self.build_uri(self.cred.prefix, '', '', suffix)
         hdrs = self.build_headers('CREATE')
-        body = self.build_create_body(location, l10320=[extra_location])
+        body = self.build_create_body(location, l10320=extra_location)
         mock_http.request.assert_called_once_with(
             uri, method='PUT', headers=hdrs, body=body)
         self.assertEqual(result, str(self.cred.prefix + '/' + suffix),
@@ -1065,10 +1065,12 @@ class EpicClientAPITestCase(unittest.TestCase):
     
     def build_create_body(self, location, checksum=None, extratype=None, l10320=None):
         """Build mock create request body for given params."""
-        loc10320 = self.build_loc10320(location, l10320)
+        #loc10320 = self.build_loc10320(location, l10320)
  
         handle_array = [{'type': 'URL', 'parsed_data': location}] 
-        handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320}) 
+        if l10320:
+            loc10320 = self.build_loc10320(l10320)
+            handle_array.append({'type': '10320/LOC', 'parsed_data': loc10320}) 
         if checksum: 
             handle_array.append({'type': 'CHECKSUM', 'parsed_data': checksum}) 
         if extratype: 
