@@ -250,8 +250,8 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle_created, imeta_pid_result,
             'The PID is NOT the same')
 
-    def test_70_b2safe_local_for_one_file_non_recursive(self):
-        """Test that it is possible to replicate a registered single file locally using b2safe (non recursive)"""
+    def test_70_b2safe_local_for_one_file_registered_non_recursive(self):
+        """Test that it is possible to replicate a single file locally using b2safe (registered, non recursive)"""
         # create test file
         test_file = 'test_b2safe_data1.txt'
         test_file2 = 'test_b2safe_data2.txt'
@@ -298,8 +298,56 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle_created, imeta_ror_result,
             'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
 
-    def test_70_b2safe_local_for_one_file_recursive(self):
-        """Test that it is possible to replicate a registered single file locally using b2safe (recursive)"""
+    def test_70_b2safe_local_for_one_file_not_registered_non_recursive(self):
+        """Test that it is possible to replicate a single file locally using b2safe (not registered, non recursive)"""
+        # create test file
+        test_file = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_path = '/tmp/'+test_file
+        create_os_file(test_path)
+        # put test file in iRODS
+        put_irods_file(test_path, self.irods_home+'/'+test_file)
+        os.unlink(test_path)
+
+        # replicate the file
+        replica_result = replicate_irods_file(self.irods_home+'/'+test_file, self.irods_home+'/'+test_file2, 'false', 'false')
+
+        # find PID for testfile
+        handle_created = search_handle(self.irods_home+'/'+test_file)
+
+        # find PID in iCAT for testfile2
+        imeta_pid_result = imeta_ls_specific('-d', test_file2, 'PID')
+        # find EUDAT/ROR in iCAT for testfile2
+        imeta_ror_result = imeta_ls_specific('-d', test_file2, 'EUDAT/ROR')
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file, test_file2]:
+            pid_result = search_handle(self.irods_home+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            # delete file from iRODS
+            delete_irods_file(irods_file)
+
+        # check if PID is created for original
+        self.assertNotEqual(
+            handle_created, None,
+            'No PID has been created')
+        # check if replication was succesfull
+        self.assertEqual(
+            replica_result, 'Success!',
+            'The replication was NOT succesful')
+        # check if replica has PID filled in
+        self.assertNotEqual(
+            imeta_pid_result, None,
+            'The PID is NOT filled in in the replica in iCAT')
+        # check if EUDAT/ROR of replica is original PID
+        self.assertEqual(
+            handle_created, imeta_ror_result,
+            'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
+    def test_70_b2safe_local_for_one_file_registered_recursive(self):
+        """Test that it is possible to replicate a single file locally using b2safe (registered, recursive)"""
         # create test file
         test_file = 'test_b2safe_data1.txt'
         test_file2 = 'test_b2safe_data2.txt'
@@ -347,8 +395,53 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle_created, imeta_ror_result,
             'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
 
-    def test_75_b2safe_local_for_one_directory_recursive(self):
-        """Test that it is possible to replicate a single directory locally using b2safe (recursive)"""
+    def test_70_b2safe_local_for_one_file_not_registered_recursive(self):
+        """Test that it is possible to replicate a single file locally using b2safe (not registered, recursive)"""
+        # create test file
+        test_file = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_path = '/tmp/'+test_file
+        create_os_file(test_path)
+
+        # put test file in iRODS
+        put_irods_file(test_path, self.irods_home+'/'+test_file)
+        os.unlink(test_path)
+
+        # replicate the file
+        replica_result = replicate_irods_file(self.irods_home+'/'+test_file, self.irods_home+'/'+test_file2, 'false', 'true')
+
+        # find PID for testfile
+        handle_created = search_handle(self.irods_home+'/'+test_file)
+         
+        # find PID in iCAT for testfile2
+        imeta_pid_result = imeta_ls_specific('-d', test_file2, 'PID')
+        # find EUDAT/ROR in iCAT for testfile2
+        imeta_ror_result = imeta_ls_specific('-d', test_file2, 'EUDAT/ROR')
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file, test_file2]:
+            pid_result = search_handle(self.irods_home+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            # delete file from iRODS
+            delete_irods_file(irods_file)
+
+        # check if replication was succesfull
+        self.assertEqual(
+            replica_result, 'Success!',
+            'The replication was NOT succesful')
+        # check if replica has PID filled in
+        self.assertNotEqual(
+            imeta_pid_result, None,
+            'The PID is NOT filled in in the replica in iCAT')
+        # check if EUDAT/ROR of replica is original PID
+        self.assertEqual(
+            handle_created, imeta_ror_result,
+            'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
+    def test_75_b2safe_local_for_one_directory_registered_recursive(self):
+        """Test that it is possible to replicate a single directory locally using b2safe (registered, recursive)"""
         # create test file
         test_file1 = 'test_b2safe_data1.txt'
         test_file2 = 'test_b2safe_data2.txt'
@@ -400,6 +493,64 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         self.assertNotEqual(
             handle_created, None,
             'No PID has been created')
+        # check if replication was succesfull
+        self.assertEqual(
+            replica_result, 'Success!',
+            'The replication was NOT succesful')
+        # check if replica has PID filled in
+        self.assertNotEqual(
+            imeta_pid_repl_result, None,
+            'The PID is NOT filled in in the replica in iCAT')
+        # check if EUDAT/ROR of replica is original PID
+        self.assertEqual(
+            imeta_pid_org_result, imeta_ror_repl_result,
+            'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
+    def test_75_b2safe_local_for_one_directory_not_registered_recursive(self):
+        """Test that it is possible to replicate a single directory locally using b2safe (not registered, recursive)"""
+        # create test file
+        test_file1 = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_file3 = 'test_b2safe_data3.txt'
+        test_file4 = 'test_b2safe_data4.txt'
+        test_path = '/tmp/'+test_file1
+        create_os_file(test_path)
+        irods_input_test_path = self.irods_home+'/irods_input_dir'
+        irods_output_test_path = self.irods_home+'/irods_output_dir'
+        # create iRODS directory
+        create_irods_directory(irods_input_test_path)
+
+        # put test files in iRODS
+        for irods_file in [test_file1, test_file2, test_file3, test_file4]:
+            put_irods_file(test_path, irods_input_test_path+'/'+irods_file)
+        os.unlink(test_path)
+
+        # replicate the file
+        replica_result = replicate_irods_file(irods_input_test_path, irods_output_test_path, 'false', 'true')
+
+        # find PID in iCAT for testfile2 original
+        imeta_pid_org_result = imeta_ls_specific('-d', irods_input_test_path+'/'+test_file2, 'PID')
+        # find EUDAT/ROR in iCAT for testfile2 original
+        imeta_ror_org_result = imeta_ls_specific('-d', irods_input_test_path+'/'+test_file2, 'EUDAT/ROR')
+
+        # find PID in iCAT for testfile2 replica
+        imeta_pid_repl_result = imeta_ls_specific('-d', irods_output_test_path+'/'+test_file2, 'PID')
+        # find EUDAT/ROR in iCAT for testfile2 replica
+        imeta_ror_repl_result = imeta_ls_specific('-d', irods_output_test_path+'/'+test_file2, 'EUDAT/ROR')
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file1, test_file2, test_file3, test_file4]:
+            pid_result = search_handle(irods_input_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            pid_result = search_handle(irods_output_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        # delete directories from iRODS
+        delete_irods_directory(irods_input_test_path)
+        delete_irods_directory(irods_output_test_path)
+
         # check if replication was succesfull
         self.assertEqual(
             replica_result, 'Success!',
