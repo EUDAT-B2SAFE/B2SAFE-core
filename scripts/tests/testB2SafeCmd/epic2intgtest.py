@@ -50,9 +50,6 @@ class EpicClient2IntegrationTests(unittest.TestCase):
     def setUp(self):
         """Setup testB2SafeCmd environment before the tests have run"""
         jsonfilecontent = json.loads(open(CRED_PATH, 'r').read())
-        self.baseuri = jsonfilecontent.pop('baseuri')
-        #self.username = jsonfilecontent.pop('username')
-        #self.password = jsonfilecontent.pop('password')
         self.prefix = jsonfilecontent.pop('prefix')
 
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, "search", "URL", "http://www.testB2SafeCmd.com/1"]
