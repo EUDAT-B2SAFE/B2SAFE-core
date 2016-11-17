@@ -339,7 +339,7 @@ update_credentials() {
         fi
     fi
 
-    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_example
+    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_epicclient_example
     cat $CRED_FILE_PATH_EXAMPLE | \
         awk -v BASE_URI=$BASE_URI -v USERNAME=$USERNAME -v PREFIX=$PREFIX -v PASSWORD=$PASSWORD '{
             if ( $1 ~ /baseuri/ ) {
