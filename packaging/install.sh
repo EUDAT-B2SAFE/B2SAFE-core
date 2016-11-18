@@ -13,6 +13,7 @@
 INSTALL_CONFIG=./install.conf
 STATUS=0
 EUDAT_RULEFILES=''
+EPICCLIENT2=true
 
 # start default parameters for setup
 #===================================
@@ -28,20 +29,29 @@ DEFAULT_RESOURCE=eudat
 # credentials type and location
 CRED_STORE_TYPE=os
 CRED_FILE_PATH=$B2SAFE_PACKAGE_DIR/conf
-#
-# credentials for server id
 SERVER_ID=
+#
+# credentials for epicclient
 BASE_URI=
 USERNAME=
 PREFIX=
 #
+# credentials for epicclient2
+HANDLE_SERVER_URL=
+PRIVATE_KEY=
+CERTIFICATE_ONLY=
+PREFIX=
+HANDLEOWNER=
+REVERSELOOKUP_USERNAME=
+HTTPS_VERIFY=
 #
 USERS=
 LOG_LEVEL=
 LOG_DIR=
 SHARED_SPACE=
+#
 # EUDAT iRODS rules behavioral parameters. Because these are later added
-# sensible defaults are chosen.a they can be overridden by adding them to
+# sensible defaults are chosen. They can be overridden by adding them to
 # the configuration in install.conf
 AUTHZ_ENABLED=true
 MSIFREE_ENABLED=false
@@ -103,6 +113,55 @@ check_username() {
     fi
 
     return $STATUS
+}
+
+check_epicclient2_config() {
+
+    COUNTER=0
+    PARAMETERS_PRESENT=0
+
+    # check which of the epicclient2 parameters are set
+    for parameter in HANDLE_SERVER_URL PRIVATE_KEY CERTIFICATE_ONLY PREFIX HANDLEOWNER REVERSELOOKUP_USERNAME HTTPS_VERIFY 
+    do
+        let COUNTER=COUNTER+1
+        eval processed_parameter=\$$parameter
+        if ! [ "${processed_parameter}X" == "X"  ]
+        then
+           let PARAMETERS_PRESENT=PARAMETERS_PRESENT+1
+        fi
+    done
+
+    if [ "$COUNTER" -eq "$PARAMETERS_PRESENT" ]
+    then
+        echo "epicclient2 parameters set. We will use epicclient2"
+    else
+        ANSWER_STRING="YES, I am really really really sure I want to use the old epicclient!"
+        echo ""
+        echo "epicclient2 parameters are NOT set"
+        echo ""
+        echo -n "If you want to use the old epicclient answer \"${ANSWER_STRING}\" :"
+        read ANSWER
+        echo ""
+        if [ "$ANSWER_STRING" == "$ANSWER" ]
+        then
+            echo "we will use the old epicclient"
+            EPICCLIENT2=false
+        else
+            echo "please add the following parameters to the file: ${INSTALL_CONFIG} and rerun the procedure\""
+            echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
+            echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
+            echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""
+            echo "PREFIX=\"ZZZ\""
+            echo "HANDLEOWNER=\"0.NA/ZZZ\""
+            echo "REVERSELOOKUP_USERNAME=\"ZZZ\""
+            echo "HTTPS_VERIFY=\"True\""
+            echo ""
+            STATUS=1
+        fi
+    fi
+
+    return $STATUS
+
 }
 
 create_links() {
@@ -266,7 +325,8 @@ update_irods_core_resource() {
 
 install_python_scripts() {
 
-    for file in `find $B2SAFE_PACKAGE_DIR/cmd/* | egrep -v ".new|.org|.~" | sort `
+    # link all files except epicclient*.py
+    for file in `find $B2SAFE_PACKAGE_DIR/cmd/* | egrep -v ".new|.org|.~|epicclient" | sort `
     do
         SHORTFILE="${file##*/}"
         EXTENSION="${file##*.}"
@@ -284,8 +344,26 @@ install_python_scripts() {
         then
             chmod u+x $file
         fi
-
     done
+
+    # link the correct epicclient
+    SHORTFILE=epicclient.py
+    PYTHON_LINKFILE=$IRODS_DIR/server/bin/cmd/$SHORTFILE
+    file=`find $B2SAFE_PACKAGE_DIR/cmd/epicclient2.py` 
+    if [ -e $PYTHON_LINKFILE ]
+    then
+        echo "rm $PYTHON_LINKFILE"
+        rm $PYTHON_LINKFILE
+    fi
+    if ! [ "${EPICCLIENT2}" == "true" ]
+    then
+        file=`find $B2SAFE_PACKAGE_DIR/cmd/${SHORTFILE}` 
+    fi
+    # link the correct file
+    echo "ln -sf $file $PYTHON_LINKFILE"
+    ln -sf $file $PYTHON_LINKFILE
+    # make the file executable
+    chmod u+x $file
 
     return $STATUS
 }
@@ -323,7 +401,7 @@ update_get_epic_api_parameters() {
     return $STATUS
 }
 
-update_credentials() {
+update_epicclient_credentials() {
 
     echo -n "enter the password belonging to the credentals of username: $USERNAME for prefix: $PREFIX :"
     read -s PASSWORD
@@ -353,6 +431,64 @@ update_credentials() {
             }
             if ( $1 ~ /password/ ) {
                 $0="    \"password\": \""PASSWORD"\","
+            } print $0
+        }' >  $CRED_FILE_PATH.new
+    if [ $? -eq 0 ]
+    then
+        mv $CRED_FILE_PATH.new   $CRED_FILE_PATH
+    else
+        echo "ERROR: updating $CRED_FILE_PATH failed!"
+        STATUS=1
+    fi
+
+    # set access mode to file
+    chmod 600 $CRED_FILE_PATH
+
+    return $STATUS
+}
+
+update_epicclient2_credentials() {
+
+    echo -n "enter the password belonging to the credentals of reverse lookup username: $REVERSELOOKUP_USERNAME for prefix: $PREFIX :"
+    read -s REVERSELOOKUP_PASSWORD
+    echo ""
+
+    if [ ! -e ${CRED_FILE_PATH}.org.${DATE_TODAY} ]
+    then
+        if [ -e $CRED_FILE_PATH ]
+        then
+           cp $CRED_FILE_PATH ${CRED_FILE_PATH}.org.${DATE_TODAY} 
+           # set access mode to file
+           chmod 600 ${CRED_FILE_PATH}.org.${DATE_TODAY}
+        fi
+    fi
+
+    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_epicclient2_example
+    cat $CRED_FILE_PATH_EXAMPLE | \
+        awk -v HANDLE_SERVER_URL=$HANDLE_SERVER_URL -v PRIVATE_KEY=$PRIVATE_KEY -v CERTIFICATE_ONLY=$CERTIFICATE_ONLY -v PREFIX=$PREFIX -v HANDLEOWNER=$HANDLEOWNER -v REVERSELOOKUP_USERNAME=$REVERSELOOKUP_USERNAME -v REVERSELOOKUP_PASSWORD=$REVERSELOOKUP_PASSWORD  -v HTTPS_VERIFY=$HTTPS_VERIFY '{
+            if ( $1 ~ /handle_server_url/ ) {
+                $0="    \"handle_server_url\": \""HANDLE_SERVER_URL"\","
+            }
+            if ( $1 ~ /private_key/ ) {
+                $0="    \"private_key\": \""PRIVATE_KEY"\","
+            }
+            if ( $1 ~ /certificate_only/ ) {
+                $0="    \"certificate_only\": \""CERTIFICATE_ONLY"\","
+            }
+            if ( $1 ~ /prefix/ ) {
+                $0="    \"prefix\": \""PREFIX"\","
+            }
+            if ( $1 ~ /handleowner/ ) {
+                $0="    \"handleowner\": \""HANDLEOWNER"\","
+            }
+            if ( $1 ~ /"reverselookup_username/ ) {
+                $0="    \"reverselookup_username\": \""REVERSELOOKUP_USERNAME"\","
+            }
+            if ( $1 ~ /reverselookup_password/ ) {
+                $0="    \"reverselookup_password\": \""REVERSELOOKUP_PASSWORD"\","
+            }
+            if ( $1 ~ /HTTPS_verify/ ) {
+                $0="    \"HTTPS_verify\": \""HTTPS_VERIFY"\""
             } print $0
         }' >  $CRED_FILE_PATH.new
     if [ $? -eq 0 ]
@@ -601,6 +737,17 @@ then
 fi
 
 #
+# check if credentials for epicclient2 are set. Default we want to use epicclient2
+# if they are NOT set ask if the user is really sure to use the old epicclient 
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "check epicclient2 config in install.conf"
+    check_epicclient2_config
+    STATUS=$?
+fi
+
+#
 # create symbolic links to the eudat rulebase
 #
 if [ $STATUS -eq 0 ]
@@ -664,9 +811,16 @@ fi
 #
 if [ $STATUS -eq 0 ]
 then
-    echo "update_credentials"
-    update_credentials
-    STATUS=$?
+    if [ "${EPICCLIENT2}" == "true" ]
+    then
+        echo "update_epicclient2_credentials"
+        update_epicclient2_credentials
+        STATUS=$?
+    else
+        echo "update_epicclient_credentials"
+        update_epicclient_credentials
+        STATUS=$?
+    fi
 fi
 
 #
