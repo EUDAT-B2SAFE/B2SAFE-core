@@ -47,12 +47,19 @@ sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/pa
 
 
 
-NOTE: following need to be updated in "/opt/eudat/b2safe/packaging/install.conf":
+NOTE: following need to be updated/added in "/opt/eudat/b2safe/packaging/install.conf":
    - DEFAULT_RESOURCE
    - SERVER_ID
-   - BASE_URI
-   - USERNAME
-   - PREFIX
+   - BASE_URI (needed for epicclient)
+   - USERNAME (needed for epicclient)
+   - PREFIX   (needed for epicclient)
+   - HANDLE_SERVER_URL      (needed for epicclient2)
+   - PRIVATE_KEY            (needed for epicclient2)
+   - CERTIFICATE_ONLY       (needed for epicclient2)
+   - PREFIX                 (needed for epicclient2)
+   - HANDLEOWNER            (needed for epicclient2)
+   - REVERSELOOKUP_USERNAME (needed for epicclient2)
+   - HTTPS_VERIFY           (needed for epicclient2)
    - AUTHZ_ENABLED (default=true)
    - MSIFREE_ENABLED (default=true for fresh installation, =false for update)
    - MSICURL_ENABLED (default=false)

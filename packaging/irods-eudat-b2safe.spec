@@ -120,15 +120,27 @@ B2SAFE_PACKAGE_DIR=%{_irodsPackage}
 # the default iRODS resource to use. Will be set in core.re
 DEFAULT_RESOURCE=demoResc
 #
-# credentials type and location
+# epic credentials type and location
 CRED_STORE_TYPE=os
 CRED_FILE_PATH=\$B2SAFE_PACKAGE_DIR/conf/credentials
 SERVER_ID="irods://<fully_qualified_hostname>:1247"
 #
-# epic usage parameters
-BASE_URI="https://<fully_qualified_hostname_epic_server>/<instance>/handles/"
-USERNAME=<username_for_prefix>
-PREFIX=<prefix>
+# epic credentials file usage parameters
+#
+# old epicclient parameters
+#BASE_URI="https://<fully_qualified_hostname_epic_server>/<instance>/handles/"
+#USERNAME=<username_for_prefix>
+#PREFIX=<prefix>
+#
+# new epicclient2 parameters
+HANDLE_SERVER_URL=<https://epic3.storage.surfsara.nl:8001>
+PRIVATE_KEY=</path/prefix_suffix_index_privkey.pem>
+CERTIFICATE_ONLY=</path/prefix_suffix_index_certificate_only.pem>
+PREFIX=<ZZZ>
+HANDLEOWNER="200:0.NA/\$PREFIX"
+REVERSELOOKUP_USERNAME=<ZZZ>
+#REVERSELOOKUP_PASSWORD=<Password>
+HTTPS_VERIFY="True"
 #
 # users for msiexec command
 USERS="user0#Zone0 user1#Zone1"

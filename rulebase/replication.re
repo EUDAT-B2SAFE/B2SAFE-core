@@ -15,8 +15,8 @@
 # EUDATTransferUsingFailLog(*buffer_length)
 # EUDATRegDataRepl(*source, *destination)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
-# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
 # EUDATSearchAndCreatePID(*path, *pid)
+# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
 # EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
 # EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response)
 
@@ -166,8 +166,8 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
     *success_counter = 0;
     *failure_counter = 0;
 #TODO add these parameters to the fail log messages
-    *registered = bool("true");
-    *recursive = bool("true");
+    *registered = "true";
+    *recursive = "true";
  
     # get size of queue-log before transfer.    
     EUDATQueue("queuesize", *l, 0);

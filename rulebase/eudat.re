@@ -13,10 +13,13 @@
 # EUDATMessage(*queue, *message)
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
+# ---- logging ---
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
+# ---- core ---
+# EUDATtoBoolean(*var)
 # EUDATReplaceHash(*path, *out)
 # EUDATGetZoneNameFromPath(*path, *out)
 # EUDATGetZoneHostFromZoneName(*zoneName, *conn)
