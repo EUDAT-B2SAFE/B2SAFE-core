@@ -1,10 +1,14 @@
 defusedxml==0.4.1
 funcsigs==0.4
 httplib2==0.9.2
+json
 lxml==3.4.4
 mock==1.0.1
 pbr==1.8.1
 queuelib==1.4.2
+re
 simplejson==3.8.1
 six==1.10.0
+string
+subprocess
 wheel==0.24.0
