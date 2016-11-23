@@ -117,7 +117,7 @@ class EpicClientIntegrationTests(unittest.TestCase):
             create_result, str(self.cred.prefix + "/TEST_CR1"),
             "create handle with checksum returns unexpected response")
         search_result = self.client.searchHandle(
-            self.cred.prefix, 'checksum', checksum)
+            self.cred.prefix, 'CHECKSUM', checksum)
         self.assertEqual(search_result, create_result,
                          'create handle with checksum should add new handle')
         
