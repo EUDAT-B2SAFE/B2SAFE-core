@@ -27,16 +27,27 @@ import json
 def search(args):
     """perform search action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     kvpairs = dict([(args.key, str(''.join(args.value)))])
 
@@ -59,16 +70,27 @@ def search(args):
 def read(args):
     """perform read action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     # set default return value
     json_result = "None"
@@ -101,8 +123,15 @@ def read(args):
 def create(args):
     """perform create action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
@@ -113,10 +142,14 @@ def create(args):
     suffix = str(uid)
     handle = prefix+"/"+suffix
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     # pre-process the input parameters for the handle api
     extype = {}
@@ -154,16 +187,27 @@ def create(args):
 def modify(args):
     """perform modify action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     kvpairs = dict([(args.key, args.value)])
 
@@ -189,16 +233,27 @@ def modify(args):
 def delete(args):
     """perform delete action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     result = 'True'
 
@@ -229,16 +284,27 @@ def delete(args):
 def relation(args):
     """perform the relation action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     result = 'None'
 
