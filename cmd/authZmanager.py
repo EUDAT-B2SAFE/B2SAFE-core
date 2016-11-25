@@ -7,7 +7,7 @@
 #   * use pylint
 #
 
-"""EUDAT authorization client API. 
+"""EUDAT authorization client API.
 
 simplejson
 download from http://pypi.python.org/pypi/simplejson/
@@ -21,6 +21,8 @@ import argparse
 import sys
 import simplejson
 import fnmatch
+import logging
+
 
 ###############################################################################
 # AuthZ Client Class #
@@ -29,18 +31,16 @@ import fnmatch
 class AuthZClient(object):
     """Class implementing an EPIC client."""
 
-    def __init__(self, mapFilePath, debug):
+    def __init__(self, mapFilePath):
         """Initialize object with connection parameters."""
-        
+
         self.mapfile  = mapFilePath
-        self.debug = debug
 
     def _debugMsg(self, method, msg):
         """Internal: Print a debug message if debug is enabled."""
 
-        if self.debug:
-            print "[", method, "]", msg
-            
+        logging.debug("[%s] %s" % (method, msg))
+
     def parse(self):
         """parse authorization assertions from json file.
 
@@ -51,16 +51,15 @@ class AuthZClient(object):
         try:
             filehandle = open(self.mapfile, "r")
         except IOError as err:
-            print "error: failed to open %s: %s" % (self.mapfile,
-                                                        err.strerror)
+            logging.error("error: failed to open %s: %s" % (self.mapfile,
+                                                            err.strerror))
             sys.exit(-1)
 
         with filehandle:
             self.map = simplejson.loads(filehandle.read())
 
-        if self.debug:
-            print "authZ assertions from %s" % (self.mapfile)
-            
+        logging.debug("authZ assertions from %s" % (self.mapfile))
+
     def checkRequest(self, username, action, target):
         """check the request against the list of assertions."""
 
@@ -70,25 +69,21 @@ class AuthZClient(object):
                 if subjectMatch: break
             for actionVal in self.map[assertion]['action']:
                 actionMatch = fnmatch.fnmatch(action, actionVal)
-                if actionMatch: break                
+                if actionMatch: break
             for targetVal in self.map[assertion]['target']:
                 targetMatch = fnmatch.fnmatch(target, targetVal)
                 if targetMatch: break
             if subjectMatch and actionMatch and targetMatch:
-                if self.debug:
-                    print "matched authZ assertion (%s %s %s)" % (username,
-                                                                    action,
-                                                                    target)
+                logging.debug("matched authZ assertion (%s %s %s)"
+                              % (username, action, target))
                 return True
-        
-        if self.debug:
-            print "failed to match authZ assertion (%s %s %s)" % (username,
-                                                                    action,
-                                                                    target)            
-            
+
+        logging.debug("failed to match authZ assertion (%s %s %s)"
+                      % (username, action, target))
+
         return False
-        
-        
+
+
 ###############################################################################
 # EUDAT AuthZ Client Command Line Interface #
 ###############################################################################
@@ -96,54 +91,54 @@ class AuthZClient(object):
 def check(args):
     '''perform check action'''
 
-    authZclient = AuthZClient(args.mapfilepath, args.debug)
+    authZclient = AuthZClient(args.mapfilepath)
     authZclient.parse()
 
     result = authZclient.checkRequest(args.username, args.action, args.target)
 
     sys.stdout.write(str(result))
-    
+
 def test(args):
     '''do a series of tests'''
 
     def test_result(result, testval):
         '''local helper func: print OK/FAIL for test result
         Returns 0 on OK, 1 on failure'''
-        
+
         if type(result) != type(testval):
-            print "FAIL (wrong type; test is bad)"
+            logging.warning("FAIL (wrong type; test is bad)")
             return 1
-            
+
         if result == testval:
-            print "OK"
+            logging.info("OK")
             return 0
         else:
-            print "FAIL"
+            logging.info("FAIL")
             return 1
-            
-    authZclient = AuthZClient(args.mapfilepath, args.debug)
+
+    authZclient = AuthZClient(args.mapfilepath)
     authZclient.parse()
-    
+
     fail = 0
-    
-    print
-    print ("Checking request (testuser, read, path/to/creds) against "
-           "assertions contained in " + args.mapfilepath)
-    fail += test_result(authZclient.checkRequest('testuser#testzone', 'read', 
-                                                 'path/to/creds'),True)
-    
-    print
+
+    logging.info('\n')
+    logging.info("Checking request (testuser, read, path/to/creds) against "
+                 "assertions contained in " + args.mapfilepath)
+    fail += test_result(authZclient.checkRequest('testuser#testzone', 'read',
+                                                 'path/to/creds'), True)
+
+    logging.info('')
     if fail == 0:
-        print "All tests passed OK"
+        logging.info("All tests passed OK")
     else:
-        print "%d tests failed" % fail
+        logging.info("%d tests failed" % fail)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='EUDAT AuthZ client API. ')
     parser.add_argument("mapfilepath", default="NULL",
                         help="path to the authorization map file")
-    parser.add_argument("-d", "--debug", help="Show debug output", 
+    parser.add_argument("-d", "--debug", help="Show debug output",
                         action="store_true")
 
     subparsers = parser.add_subparsers(title='Actions',
@@ -162,4 +157,10 @@ if __name__ == "__main__":
     parser_test.set_defaults(func=test)
 
     _args = parser.parse_args()
-    _args.func(_args)            
+
+    if _args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    _args.func(_args)
