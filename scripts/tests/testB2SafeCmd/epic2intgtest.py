@@ -98,6 +98,58 @@ class EpicClient2IntegrationTests(unittest.TestCase):
                         delete_result = subprocess.call([EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', handle])
 
 
+    def test_search_handle_by_key_value(self):
+        """Test that search by key-value returns matching handle."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'URL', 'http://www.testB2SafeCmd.com/1']
+        search_result = subprocess_popen(command)
+        search_result_json = json.loads(search_result[0])
+        self.assertEqual(
+            create_result[0], search_result_json[0],
+            'search existing handle by key returns unexpected response')
+
+ 
+    def test_search_handle_by_non_existing_key_value(self):
+        """Test that search handle by non existing key-value returns 'empty'."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'CHECKSUM', '123456789012345678901234567890']
+        search_result = subprocess_popen(command)
+        self.assertEqual(
+            search_result[0], 'empty',
+            'search handle by non existing key-value should return \"empty\"')
+        
+        
+    def test_retrieve_non_existing_handle(self):
+        """Test that retrieve non existing handle returns None."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', self.prefix+'/1234567890a']
+        read_result = subprocess_popen(command)
+        self.assertEqual(
+          read_result[0], 'None',
+          "retrieve non existing handle should return None")
+
+
+    def test_get_value_from_handle(self):
+        """Test that get value by key returns stored handle value."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', 'URL']
+        read_result = subprocess_popen(command)
+        self.assertEqual(
+            read_result[0], 'http://www.testB2SafeCmd.com/1',
+            'get existing value from handle returns unexpected response')
+    
+    
+    def test_get_non_existing_value_from_handle(self):
+        """Test that get value by non existing key returns None."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', 'FOO_KEY']
+        read_result = subprocess_popen(command)
+        self.assertEqual(
+            read_result[0], 'None',
+            'get value by non existing key should return None')
+ 
+ 
     def test_create_handle(self):
         """Test that create handle returns expected response and adds
         new handle.
@@ -109,7 +161,6 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         search_result_json = json.loads(search_result[0])
         self.assertEqual(create_result[0], search_result_json[0],
                          'create handle should add new handle')
-        
         
         
     def test_create_handle_with_checksum(self):
@@ -151,63 +202,8 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         read_result = subprocess_popen(command)
         self.assertIn(extra_location, read_result[0],
                          'create handle with extra location should add new handle')
-     
-    def test_search_handle_by_key_value(self):
-        """Test that search by key-value returns matching handle."""
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
-        create_result = subprocess_popen(command)
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'URL', 'http://www.testB2SafeCmd.com/1']
-        search_result = subprocess_popen(command)
-        search_result_json = json.loads(search_result[0])
-        self.assertEqual(
-            create_result[0], search_result_json[0],
-            'search existing handle by key returns unexpected response')
-        
-        
-    def test_search_handle_by_non_existing_key_value(self):
-        """Test that search handle by non existing key-value returns
-        'empty'.
-        """
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'CHECKSUM', '123456789012345678901234567890']
-        search_result = subprocess_popen(command)
-        self.assertEqual(
-            search_result[0], 'empty',
-            'search handle by non existing key-value should return \"empty\"')
-        
-        
-    def test_retrieve_non_existing_handle(self):
-        """Test that retrieve non existing handle returns None."""
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', self.prefix+'/1234567890a']
-        read_result = subprocess_popen(command)
-        self.assertEqual(
-          read_result[0], 'None',
-          "retrieve non existing handle should return None")
-        
-    
-    def test_get_value_from_handle(self):
-        """Test that get value by key returns stored handle value."""
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
-        create_result = subprocess_popen(command)
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', 'URL']
-        read_result = subprocess_popen(command)
-        self.assertEqual(
-            read_result[0], 'http://www.testB2SafeCmd.com/1',
-            'get existing value from handle returns unexpected response')
-    
-    
-    def test_get_non_existing_value_from_handle(self):
-        """Test that get value by non existing key returns None."""
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
-        create_result = subprocess_popen(command)
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', 'FOO_KEY']
-        read_result = subprocess_popen(command)
-        self.assertEqual(
-            read_result[0], 'None',
-            'get value by non existing key should return None')
-        
-    
-  
-   
+
+
     def test_modify_handle_key_value(self):
         """Test that modify handle value returns True and updates 
         stored value.
@@ -265,52 +261,52 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         
         
     def test_modify_non_existing_handle(self):
-        """Test that modify value of non existing handle returns Nothing."""
+        """Test that modify value of non existing handle returns False."""
         key = "FOO_KEY"
         value = "FOO_VALUE"
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'modify', self.prefix+"/1234567890a", key, value]
         modify_result = subprocess_popen(command)
-        self.assertEqual(modify_result[0], '',
-                         'modify non existing handle should return Nothing')
+        self.assertEqual(modify_result[0], 'False',
+                         'modify non existing handle should return False')
         
         
     def test_delete_handle(self):
-        """Test that delete existing handle returns None."""
+        """Test that delete existing handle returns True."""
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1']
         create_result = subprocess_popen(command)
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', create_result[0]]
         delete_result = subprocess_popen(command)
-        self.assertEqual(delete_result[0], 'None',
-                        'delete existing handle should return None')
+        self.assertEqual(delete_result[0], 'True',
+                        'delete existing handle should return True')
         
     
     def test_delete_non_existing_handle(self):
-        """Test that delete non existing handle returns None."""
-        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', self.prefix+"/1234567890a"]
+        """Test that delete non existing handle returns False."""
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', self.prefix+"/1234567890ahabbiebabbie"]
         delete_result = subprocess_popen(command)
-        self.assertEqual(delete_result[0], 'None',
-                        'delete non existing handle should return None')
+        self.assertEqual(delete_result[0], 'False',
+                        'delete non existing handle should return False')
    
     
     def test_delete_key_from_handle(self):
-        """Test that delete key from handle returns None."""
+        """Test that delete key from handle returns True."""
         key = 'EMAIL'
         value = 'user@testB2SafeCmd.com'
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1', '--extratype', key+"="+value]
         create_result = subprocess_popen(command)
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', create_result[0], '--key', key ]
         delete_result = subprocess_popen(command)
-        self.assertEqual(delete_result[0], 'None',
-                        'delete existing handle value should return None')
+        self.assertEqual(delete_result[0], 'True',
+                        'delete existing handle value should return True')
         
         
     def test_delete_non_existing_key_from_handle(self):
-        """Test that delete non existing key from handle returns Nothing."""
+        """Test that delete non existing key from handle returns False."""
         key = 'FOO_KEY'
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'delete', self.prefix+"/1234567890a", '--key', key]
         delete_result = subprocess_popen(command)
-        self.assertEqual(delete_result[0], '',
-                         'delete key from non existing handle should return Nothing')
+        self.assertEqual(delete_result[0], 'False',
+                         'delete key from non existing handle should return False')
 
    
     def test_update_handle_with_location(self):
@@ -332,25 +328,21 @@ class EpicClient2IntegrationTests(unittest.TestCase):
 
 
     def test_modify_existing_handle_with_same_location(self):
-        """Test that update handle with same location value returns 
-        None.
-        """
+        """Test that update handle with same location value returns None."""
         extra_location = '846/157c344a-0179-11e2-9511-00215ec779a8'
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', 'http://www.testB2SafeCmd.com/1', '--loc10320', extra_location ]
         create_result = subprocess_popen(command)
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'relation', create_result[0], extra_location]
         relation_result = subprocess_popen(command)
         self.assertEqual(relation_result[0], 'None',
-                         'modify existing handle with same location value should return None')
+                         'modify existing handle with same location value should return False')
         
         
     def test_update_non_existing_handle_with_location(self):
-        """Test that update non existing handle with location returns
-        Nothing.
-        """
+        """Test that update non existing handle with location returns False."""
         extra_location = '846/157c344a-0179-11e2-9511-00215ec779a8'
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'relation', self.prefix+"/1234567890a", extra_location]
         relation_result = subprocess_popen(command)
-        self.assertEqual(relation_result[0], '',
-                         'modify non existing handle with location should return Nothing')
+        self.assertEqual(relation_result[0], 'False',
+                         'modify non existing handle with location should return False')
 

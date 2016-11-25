@@ -14,6 +14,7 @@ deleting handle records.
 """
 from b2handle.handleclient import EUDATHandleClient
 from b2handle.clientcredentials import PIDClientCredentials
+from b2handle.handleexceptions import *
 import uuid
 import argparse
 import sys
@@ -39,12 +40,18 @@ def search(args):
 
     kvpairs = dict([(args.key, str(''.join(args.value)))])
 
-    # search for handle
-    result = client.search_handle(**kvpairs)
+    try:
+        # search for handle
+        result = client.search_handle(**kvpairs)
+    except ReverseLookupException:
+        result = '{error}'
+
     json_result = str(json.dumps(result))
 
     if json_result == '[]':
         json_result = 'empty'
+    elif json_result == '{error}':
+        json_result = 'error'
 
     sys.stdout.write(json_result)
 
@@ -67,13 +74,21 @@ def read(args):
     json_result = "None"
 
     if args.key is None:
-        # retrieve whole handle
-        result = client.retrieve_handle_record_json(args.handle)
+        try:
+            # retrieve whole handle
+            result = client.retrieve_handle_record_json(args.handle)
+        except HandleSyntaxError:
+            json_result = 'error'
+
         if result is not None:
-            json_result = json.dumps(result["values"])
+           json_result = json.dumps(result["values"])
     else:
-        # retrieve single value from a handle
-        result = client.get_value_from_handle(args.handle, args.key)
+        try:
+            # retrieve single value from a handle
+            result = client.get_value_from_handle(args.handle, args.key)
+        except HandleSyntaxError:
+            json_result = 'error'
+
         if result is not None:
             json_result = json.dumps(result)
             # remove starting and finishing quotes.
@@ -115,19 +130,25 @@ def create(args):
     else:
         l10320 = None
 
-    # create the new handle
-    result = client.register_handle(
-        handle,
-        location=args.location,
-        checksum=args.checksum,
-        additional_URLs=l10320,
-        overwrite=False,
-        **extype)
+    result = ''
 
-    if result is None:
-        sys.stdout.write("error")
-    else:
-        sys.stdout.write(result)
+    try:
+        # create the new handle
+        result = client.register_handle(
+            handle,
+            location=args.location,
+            checksum=args.checksum,
+            additional_URLs=l10320,
+            overwrite=False,
+            **extype)
+    except HandleAlreadyExistsException:
+        result = 'False'
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleSyntaxError:
+        result = 'error'
+
+    sys.stdout.write(result)
 
 
 def modify(args):
@@ -146,19 +167,23 @@ def modify(args):
 
     kvpairs = dict([(args.key, args.value)])
 
-    # modify key/value pairs
-    result = client.modify_handle_value(
-        args.handle,
-        ttl=None,
-        add_if_not_exist=True,
-        **kvpairs)
+    result = 'True'
 
-    output_result = str(result)
+    try:
+        # modify key/value pairs
+        client.modify_handle_value(
+            args.handle,
+            ttl=None,
+            add_if_not_exist=True,
+            **kvpairs)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
 
-    if output_result == 'None':
-        output_result = 'True'
-
-    sys.stdout.write(output_result)
+    sys.stdout.write(result)
 
 
 def delete(args):
@@ -175,14 +200,30 @@ def delete(args):
         credentials,
         **extra_config)
 
+    result = 'True'
+
     if args.key is None:
         # delete whole handle
-        result = client.delete_handle(args.handle)
+	try:
+            client.delete_handle(args.handle)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
     else:
         # delete value
-        result = client.delete_handle_value(args.handle, args.key)
+        try:
+            client.delete_handle_value(args.handle, args.key)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
 
-    sys.stdout.write(str(result))
+    sys.stdout.write(result)
 
 
 def relation(args):
@@ -199,9 +240,19 @@ def relation(args):
         credentials,
         **extra_config)
 
+    result = 'None'
+
     # add relation to 10320/LOC
-    result = client.add_additional_URL(args.ppid, args.cpid)
-    sys.stdout.write(str(result))
+    try:
+        client.add_additional_URL(args.ppid, args.cpid)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
+
+    sys.stdout.write(result)
 
 
 ###############################################################################
