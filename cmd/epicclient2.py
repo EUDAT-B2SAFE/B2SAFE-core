@@ -103,7 +103,7 @@ def read(args):
             json_result = 'error'
 
         if result is not None:
-           json_result = json.dumps(result["values"])
+            json_result = json.dumps(result["values"])
     else:
         try:
             # retrieve single value from a handle
@@ -259,7 +259,7 @@ def delete(args):
 
     if args.key is None:
         # delete whole handle
-	try:
+        try:
             client.delete_handle(args.handle)
         except HandleAuthenticationError:
             result = 'error'
