@@ -87,7 +87,7 @@ def put_irods_file(input_file, output_file):
     return put_result
 
 def replicate_irods_file(source, destination, registered, recursive):
-    '''procedure to replicate a file with EUDAT rulesin iRODS'''
+    '''procedure to replicate a file with EUDAT rules in iRODS'''
     # create test rule to replicate file
     irule_rule = "{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); if (*status) { writeLine('stdout', 'Success!'); } else { writeLine('stdout', 'Failed: *response'); }}"
     irule_input = '*source='+source+'%*destination='+destination+'%*registered='+registered+'+%*recursive='+recursive
