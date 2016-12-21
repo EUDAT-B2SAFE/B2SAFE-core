@@ -156,8 +156,58 @@ class EpicClientIntegrationTests(unittest.TestCase):
             self.cred.prefix, location_key, 'TEST_CR1')
         self.assertIn(extra_location, retrieve_result,
                          'create handle with extra location should add new handle')
-   
-   
+
+    def test_create_handle_with_extra_key_ROR_real_pid(self):
+        """Test that create handle with extra key EUDAT/ROR returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = '841/totally_nonsen_suffix'
+        create_result = self.client.createHandle(
+            self.cred.prefix, 'http://www.testB2SafeCmd.com/1', None, 
+            [str(extra_key+'='+extra_value)], None, 'TEST_CR1')
+        self.assertEqual(
+            create_result, str(self.cred.prefix + "/TEST_CR1"),
+            "create handle with extra key returns unexpected response")
+        retrieve_result = self.client.getValueFromHandle(
+            self.cred.prefix, extra_key, 'TEST_CR1')
+        self.assertEqual(extra_value, retrieve_result,
+                         'create handle with extra key EUDAT/ROR should add new handle')
+
+    def test_create_handle_with_extra_key_ROR_pid(self):
+        """Test that create handle with extra key EUDAT/ROR and value 'pid' returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = 'pid'
+        create_result = self.client.createHandle(
+            self.cred.prefix, 'http://www.testB2SafeCmd.com/1', None, 
+            [str(extra_key+'='+extra_value)], None, 'TEST_CR1')
+        self.assertEqual(
+            create_result, str(self.cred.prefix + "/TEST_CR1"),
+            "create handle with extra location returns unexpected response")
+        retrieve_result = self.client.getValueFromHandle(
+            self.cred.prefix, extra_key, 'TEST_CR1')
+        self.assertEqual(create_result, retrieve_result,
+                         'create handle with extra key EUDAT/ROR and value pid should add new handle')
+
+    def test_create_handle_with_extra_key_ROR_PID(self):
+        """Test that create handle with extra key EUDAT/ROR and value 'PID' returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = 'PID'
+        create_result = self.client.createHandle(
+            self.cred.prefix, 'http://www.testB2SafeCmd.com/1', None, 
+            [str(extra_key+'='+extra_value)], None, 'TEST_CR1')
+        self.assertEqual(
+            create_result, str(self.cred.prefix + "/TEST_CR1"),
+            "create handle with extra location returns unexpected response")
+        retrieve_result = self.client.getValueFromHandle(
+            self.cred.prefix, extra_key, 'TEST_CR1')
+        self.assertEqual(create_result, retrieve_result,
+                         'create handle with extra key EUDAT/ROR and value pid should add new handle')
+
     def test_create_existing_handle(self):
         """Test that create existing handle returns None."""
         self.client.createHandle(self.cred.prefix, 
