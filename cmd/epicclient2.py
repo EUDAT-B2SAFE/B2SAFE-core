@@ -157,11 +157,19 @@ def create(args):
         exlist = args.extratype.split(';')
         for item in exlist:
             key = item.split('=')[0]
-            extype[key] = item.split('=')[1]
+            value = item.split('=')[1]
+            extype[key] = value
     if args.loc10320 is not None:
         l10320 = args.loc10320.split(';')
     else:
         l10320 = None
+
+
+    # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
+    key = 'EUDAT/ROR'
+    if key in extype:
+        if extype[key].lower() == 'pid':
+            extype[key] = handle
 
     result = ''
 

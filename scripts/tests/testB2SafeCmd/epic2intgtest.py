@@ -203,7 +203,45 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         self.assertIn(extra_location, read_result[0],
                          'create handle with extra location should add new handle')
 
+    def test_create_handle_with_extra_key_ROR_real_pid(self):
+        """Test that create handle with extra key EUDAT/ROR returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = '841/totally_nonsen_suffix'
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', '--extratype', extra_key+'='+extra_value, 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', extra_key]
+        read_result = subprocess_popen(command)
+        self.assertEqual(extra_value, read_result[0],
+                         'create handle with extra key EUDAT/ROR should add new handle')
 
+    def test_create_handle_with_extra_key_ROR_pid(self):
+        """Test that create handle with extra key EUDAT/ROR and value 'pid' returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = 'pid'
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', '--extratype', extra_key+'='+extra_value, 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', extra_key]
+        read_result = subprocess_popen(command)
+        self.assertEqual(create_result[0], read_result[0],
+                         'create handle with extra key EUDAT/ROR an value pid should add new handle')
+
+    def test_create_handle_with_extra_key_ROR_PID(self):
+        """Test that create handle with extra key EUDAT/ROR and value 'PID' returns expected 
+        response and adds new handle with supplied key value.
+        """
+        extra_key = 'EUDAT/ROR'
+        extra_value = 'PID'
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'create', '--extratype', extra_key+'='+extra_value, 'http://www.testB2SafeCmd.com/1']
+        create_result = subprocess_popen(command)
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'read', create_result[0], '--key', extra_key]
+        read_result = subprocess_popen(command)
+        self.assertEqual(create_result[0], read_result[0],
+                         'create handle with extra key EUDAT/ROR an value pid should add new handle')
+  
     def test_modify_handle_key_value(self):
         """Test that modify handle value returns True and updates 
         stored value.
