@@ -19,6 +19,6 @@ class LogManagerTestCase(unittest.TestCase):
     def test_case(self):
         
         args = argparse.Namespace()
-        args.conffilepath = '../../conf/log.manager.conf'
+        args.conffilepath = 'resources/log.manager.conf'
         args.debug = False
         logmanager.test(args)

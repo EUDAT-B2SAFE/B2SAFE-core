@@ -91,6 +91,10 @@ if __name__ == '__main__':
         all_suite.addTest(create_epic_test_suite())
         all_suite.addTest(LogManagerTestCase("test_case"))
         all_suite.addTest(AuthzManagerTestCase("test_case"))
+        all_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            IrodsIntegrationTests))
+        all_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            IrodsB2safeIntegrationTests))
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(all_suite)
 
     else:
