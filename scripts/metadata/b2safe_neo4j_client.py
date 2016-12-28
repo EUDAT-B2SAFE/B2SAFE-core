@@ -1,5 +1,5 @@
-#!/usr/bin/env python 
-# -*- coding: utf-8 -*- 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import argparse
 import logging
@@ -26,12 +26,12 @@ logger = logging.getLogger('GraphDBClient')
 # DigitalEntity - [:UNIQUELY_IDENTIFIED_BY] -> PID{EudatChecksum:'xyz'}
 
 class GraphDBClient():
-    
+
     def __init__(self, conf, rootPath):
         """
         Graph initialization
         """
-    
+
         self.conf = conf
         self.root = rootPath.rsplit('/',1)[0]
         self.collPath = rootPath
@@ -41,12 +41,12 @@ class GraphDBClient():
                                           self.conf.irods_debug)
         # authentication
         logger.info("Connecting to " + self.conf.graphdb_addr
-                    + " with user " + self.conf.graphdb_user)    
+                    + " with user " + self.conf.graphdb_user)
 
-        authenticate(self.conf.graphdb_addr, self.conf.graphdb_user, 
+        authenticate(self.conf.graphdb_addr, self.conf.graphdb_user,
                      self.conf.graphdb_passwd)
         logger.debug("Authenticated, now connecting ...")
-        self.graph = Graph( self.conf.graphdb_scheme + "://" 
+        self.graph = Graph( self.conf.graphdb_scheme + "://"
                           + self.conf.graphdb_addr + self.conf.graphdb_path)
         # set up of the nodes related to the local B2SAFE service
         logger.debug("Searching if the initial nodes have been already created")
@@ -55,7 +55,7 @@ class GraphDBClient():
             logger.info('Node "Zone" ' + self.conf.irods_zone_name
                       + ' not found, so it will be created')
             try:
-                self.graph.schema.create_uniqueness_constraint("DigitalEntity", 
+                self.graph.schema.create_uniqueness_constraint("DigitalEntity",
                                                                "name")
                 self.graph.schema.create_uniqueness_constraint("Aggregation",
                                                                "name")
@@ -63,15 +63,15 @@ class GraphDBClient():
                 self.graph.schema.create_uniqueness_constraint("Resource", "name")
             except GraphError as ge:
                 logger.warning('Graph error: %s', ge)
-            self.zone = Node("Zone", name=self.conf.irods_zone_name, 
+            self.zone = Node("Zone", name=self.conf.irods_zone_name,
                                      endpoint=self.conf.irods_zone_ep)
             self.graph.create(self.zone)
             resources = self.conf.irods_res.split(',')
             for res in resources:
                 res_name,res_path = res.split(':')
                 self.resNode = Node("Resource", name=res_name, path=res_path)
-                res_is_located_in_zone = Relationship(self.resNode, 
-                                                      "IS_AVAILABLE_IN", 
+                res_is_located_in_zone = Relationship(self.resNode,
+                                                      "IS_AVAILABLE_IN",
                                                       self.zone)
                 try:
                     self.graph.create_unique(res_is_located_in_zone)
@@ -84,10 +84,10 @@ class GraphDBClient():
 # dynamic data ###################################
 
 #TODO this function is just a placeholder for further development.
-#     The real function should be able to find the differences 
+#     The real function should be able to find the differences
 #     and add/remove nodes to/from the graph according to them.
     def analyze(self, structuralMap):
-        """It performs a comparison between the existing graph 
+        """It performs a comparison between the existing graph
            and the input mnifest doc.
         """
         logger.info('Compare the manifest with the DB graph')
@@ -109,10 +109,10 @@ class GraphDBClient():
                    'checksum':'', 'nodetype':struct['type']}
             graphAgg = self.graph.find_one('Aggregation', 'name', struct['name'])
             if not graphAgg:
-                print 'Node Aggregation [{}] is missing'.format(struct['name'])
+                logger.info('Node Aggregation [{}] is missing'.format(struct['name']))
                 return [None]
             else:
-                print 'Node Aggregation [{}] found'.format(struct['name'])
+                logger.info('Node Aggregation [{}] found'.format(struct['name']))
             # if the aggregation has a file path, it means that it is a package
             if len(struct['filePaths']) > 0:
                 if len(struct['filePaths']) == 1:
@@ -126,7 +126,7 @@ class GraphDBClient():
                     self._analyzeResourceRel(absolutePath, graphAgg)
                     self._analyzeMasterRel(absolutePath, graphAgg)
                     self._analyzeReplicaRel(absolutePath, graphAgg)
-                # the manifest supports multiple file paths, 
+                # the manifest supports multiple file paths,
                 # but they are not yet supported by this script
                 else:
                     logger.warning('multiple file paths not allowed')
@@ -134,9 +134,9 @@ class GraphDBClient():
             for elem in struct['nestedObjects']:
                 nodes = self._analyzeStructuralMap(elem)
                 for n in nodes:
-                    self._searchRelationship(n, 'BELONGS_TO', graphAgg,       
+                    self._searchRelationship(n, 'BELONGS_TO', graphAgg,
                                              graphAgg.properties['name'])
-                        
+
             return [graphAgg]
         # if nested objects are not present, then this is a leaf in the tree
         else:
@@ -146,14 +146,14 @@ class GraphDBClient():
                 for fp in struct['filePaths']:
                     absolutePath = self.root + '/' + fp[7:]
                     sumValue = self.irodsu.getChecksum(absolutePath)
-                    de = {'location':fp[7:], 'name':struct['name'], 
+                    de = {'location':fp[7:], 'name':struct['name'],
                           'checksum':sumValue, 'nodetype':struct['type']}
-                    graphEnt = self.graph.find_one('DigitalEntity', 'location', 
+                    graphEnt = self.graph.find_one('DigitalEntity', 'location',
                                                                     fp[7:])
                     if not graphEnt:
-                        print 'Node Digital Entity [{}] is missing'.format(fp[7:])
+                        logger.info('Node Digital Entity [{}] is missing'.format(fp[7:]))
                     else:
-                        print 'Node Digital Entity [{}] found'.format(fp[7:])
+                        logger.info('Node Digital Entity [{}] found'.format(fp[7:]))
                         self._analyzeOwnershipRel(absolutePath, graphEnt)
                         self._analyzePIDRel(absolutePath, graphEnt)
                         self._analyzeResourceRel(absolutePath, graphEnt)
@@ -166,24 +166,24 @@ class GraphDBClient():
                       'nodetype':struct['type']}
                 graphAgg = self.graph.find_one('Aggregation', 'name', struct['name'])
                 if not graphAgg:
-                    print 'Node Aggregation [{}] is missing'.format(struct['name'])
+                    logger.info('Node Aggregation [{}] is missing'.format(struct['name']))
                 else:
-                    print 'Node Aggregation [{}] found'.format(struct['name'])                
+                    logger.info('Node Aggregation [{}] found'.format(struct['name']))
                 leafs.append(graphAgg)
 
             return leafs
-        
-     
+
+
     def _searchRelationship(self, start, rel, end, endProp):
 
-        graphRel = self.graph.match_one(start_node=start, rel_type=rel, 
+        graphRel = self.graph.match_one(start_node=start, rel_type=rel,
                                         end_node=end)
-        message = 'Relationship [({},{}) {} {}]'.format(start.properties['name'], 
+        message = 'Relationship [({},{}) {} {}]'.format(start.properties['name'],
                    start.properties['location'], rel, endProp)
         if not graphRel:
-            print message + ' is missing'
+            logger.info(message + ' is missing')
         else:
-            print message + ' found'
+            logger.info(message + ' found')
 
 
     def _analyzeOwnershipRel(self, absolutePath, de):
@@ -193,11 +193,11 @@ class GraphDBClient():
             for owner in owners:
                 graphPers = self.graph.find_one('Person', 'name', owner)
                 if not graphPers:
-                    print 'Node Person [{}] is missing'.format(owner)
+                    logger.info('Node Person [{}] is missing'.format(owner))
                 else:
-                    print 'Node Person [{}] found'.format(owner)
+                    logger.info('Node Person [{}] found'.format(owner))
 
-                    self._searchRelationship(de, 'IS_OWNED_BY', graphPers, 
+                    self._searchRelationship(de, 'IS_OWNED_BY', graphPers,
                                              graphPers.properties['name'])
 
 
@@ -207,9 +207,9 @@ class GraphDBClient():
         if pids and len(pids) > 0:
             graphPid = self.graph.find_one('PersistentIdentifier', 'value', pids[0])
             if not graphPid:
-                print 'Node PersistentIdentifier [{}] is missing'.format(pids[0])
+                logger.info('Node PersistentIdentifier [{}] is missing'.format(pids[0]))
             else:
-                print 'Node PersistentIdentifier [{}] found'.format(pids[0])
+                logger.info('Node PersistentIdentifier [{}] found'.format(pids[0]))
 
                 self._searchRelationship(de, 'UNIQUELY_IDENTIFIED_BY', graphPid,
                                          graphPid.properties['value'])
@@ -221,9 +221,9 @@ class GraphDBClient():
         for rpointer in replicas:
             graphPo = self.graph.find_one('Pointer', 'value', rpointer)
             if not graphPo:
-                print 'Node Pointer [{}] is missing'.format(rpointer)
+                logger.info('Node Pointer [{}] is missing'.format(rpointer))
             else:
-                print 'Node Pointer [{}] found'.format(rpointer)
+                logger.info('Node Pointer [{}] found'.format(rpointer))
                 self._searchRelationship(de, 'IS_MASTER_OF', graphPo,
                                          graphPo.properties['value'])
 
@@ -242,17 +242,17 @@ class GraphDBClient():
 
         graphMas = self.graph.find_one('Pointer', 'value', master)
         if not graphMas:
-            print 'Node Pointer [{}] is missing'.format(master)
+            logger.info('Node Pointer [{}] is missing'.format(master))
         else:
-            print 'Node Pointer [{}] found'.format(master)
+            logger.info('Node Pointer [{}] found'.format(master))
             self._searchRelationship(de, 'IS_REPLICA_OF', graphMas,
                                      graphMas.properties['value'])
         if parent:
             graphPar = self.graph.find_one('Pointer', 'value', parent)
             if not graphMas:
-                print 'Node Pointer [{}] is missing'.format(parent)
+                logger.info('Node Pointer [{}] is missing'.format(parent))
             else:
-                print 'Node Pointer [{}] found'.format(parent)
+                logger.info('Node Pointer [{}] found'.format(parent))
                 self._searchRelationship(de, 'IS_REPLICA_OF', graphPar,
                                          graphPar.properties['value'])
 
@@ -274,7 +274,7 @@ class GraphDBClient():
         # start to look if the node has nested objects
         if len(d['nestedObjects']) > 0:
 
-            # add the root path of the collection. 
+            # add the root path of the collection.
             # It should happen just once, for the root collection,
             # the only one of the type 'digitalCollection'
             if (d['type'] == 'digitalCollection'):
@@ -288,42 +288,41 @@ class GraphDBClient():
                                                         d['type'])
             # if the aggregation has a file path, it means that it is a package
             if len(d['filePaths']) > 0:
-                if (len(d['filePaths']) == 1 
+                if (len(d['filePaths']) == 1
                     and len(d['filePaths'][d['filePaths'].keys()[0]]) == 1):
                     pathId = d['filePaths'].keys()[0]
                     path = d['filePaths'][pathId][0]
-                    if self.conf.dryrun: 
-                        print "get the checksum based on path: " + str(path)
+                    if self.conf.dryrun:
+                        logger.info("get the checksum based on path: " + str(path))
                     else:
                         agg.properties['location'] = path[7:]
                         agg.push()
                         logger.debug('Updated location of entity: ' + str(agg))
-                        agg = self._defineDigitalEntity(None, path[7:], 
+                        agg = self._defineDigitalEntity(None, path[7:],
                                                         d['type'], d['name'], agg)
-                # the manifest supports multiple file paths, 
-                # but they are not yet supported by this script                
-                else:                
+                # the manifest supports multiple file paths,
+                # but they are not yet supported by this script
+                else:
                     logger.warning('multiple file paths not allowed')
             # check the nested objects in a recursive way
             for elem in d['nestedObjects']:
                 nodes = self._structRecursion(elem)
                 for n in nodes:
                     if self.conf.dryrun:
-                        print ("create the graph relation ["+str(n)+","
-                               "BELONGS_TO,"+str(agg)+"]")
+                        logger.info("create the graph relation [" + str(n) + "," + "BELONGS_TO," + str(agg) + "]")
                     else:
                         de_belongs_to_agg = Relationship(n, "BELONGS_TO", agg)
                         self.graph.create_unique(de_belongs_to_agg)
                         logger.debug('Created relation: ' + str(de_belongs_to_agg))
 
-            return [agg]               
+            return [agg]
         # if nested objects are not present, then this is a leaf in the tree
         else:
             leafs = []
             if len(d['filePaths']) > 0:
                 for fid in d['filePaths']:
                     for fp in d['filePaths'][fid]:
-                        de = self._defineDigitalEntity(d['name'], fp[7:], 
+                        de = self._defineDigitalEntity(d['name'], fp[7:],
                                                        d['type'], fid)
                         leafs.append(de)
             # if there is not a path, the leaf is an aggregation, even if an empty one.
@@ -337,17 +336,17 @@ class GraphDBClient():
                 leafs.append(agg)
 
             return leafs
-     
- 
+
+
     def _defineDigitalEntity(self, fmt, path, dtype, name, de=None, absolute=False):
- 
+
         absolutePath = path
         # if the path of the files in the manifest a relative,
         # then the absolute path has to be built to get the file properties.
         if not absolute:
             absolutePath = self.root + '/' + path
         # calculate the checksum
-        if self.conf.dryrun: 
+        if self.conf.dryrun:
             sumValue = ''
         else:
             sumValue = self.irodsu.getChecksum(absolutePath)
@@ -377,8 +376,8 @@ class GraphDBClient():
     def _definePIDRelation(self, de, absolutePath):
 
         if self.conf.dryrun:
-            print ("create the graph relation ["+str(de)+","
-                   "UNIQUELY_IDENTIFIED_BY,persistent_identifier]")
+            logger.info("create the graph relation [" + str(de) + ","
+                        "UNIQUELY_IDENTIFIED_BY,persistent_identifier]")
             return True
 
         path = de.properties["location"]
@@ -393,19 +392,18 @@ class GraphDBClient():
             self.graph.create_unique(de_is_uniquely_identified_by_pid)
             logger.debug('Created relation: ' + str(de_is_uniquely_identified_by_pid))
             return True
-    
+
         return False
 
 
     def _defineMasterRelation(self, de, absolutePath):
 
         if self.conf.dryrun:
-            print ("create the graph relation ["+str(de)+","
-                   "IS_MASTER_OF,replica]")
+            logger.info("create the graph relation [" + str(de) + "," + "IS_MASTER_OF,replica]")
             return True
 
-        replicas = self.irodsu.getMetadata(absolutePath, 'Replica')       
-        for rpointer in replicas: 
+        replicas = self.irodsu.getMetadata(absolutePath, 'Replica')
+        for rpointer in replicas:
             po = self._createPointer('iRODS', rpointer)
             de_is_master_of_po = Relationship(de, "IS_MASTER_OF", po)
             self.graph.create_unique(de_is_master_of_po)
@@ -418,8 +416,7 @@ class GraphDBClient():
     def _defineReplicaRelation(self, re, absolutePath):
 
         if self.conf.dryrun:
-            print ("create the graph relation ["+str(re)+","
-                   "IS_REPLICA_OF,replica]")
+            logger.info("create the graph relation [" + str(re) + "," + "IS_REPLICA_OF,replica]")
             return True
 
         parent = None
@@ -449,12 +446,12 @@ class GraphDBClient():
 
 
     def _defineOwnershipRelation(self, de, absolutePath):
-      
+
         if self.conf.dryrun:
-            print ("create the graph relation ["+str(de)+",IS_OWNED_BY,"
-                                               "b2safe_owner_name]")
+            logger.info("create the graph relation [" + str(de) + ",IS_OWNED_BY," +
+                        "b2safe_owner_name]")
             return True
- 
+
         owners = self.irodsu.getOwners(absolutePath)
         logger.debug('Got the list of owners: ' + str(owners))
         if owners:
@@ -475,8 +472,8 @@ class GraphDBClient():
     def _defineResourceRelation(self, de, absolutePath):
 
         if self.conf.dryrun:
-            print ("create the graph relation ["+str(de)+",IS_STORED_IN,"
-                                               "b2safe_resource_name]")
+            logger.info("create the graph relation ["+str(de)+",IS_STORED_IN,"
+                        "b2safe_resource_name]")
             return True
 
         resources = self.irodsu.getResources(absolutePath)
@@ -492,20 +489,20 @@ class GraphDBClient():
 
 
     def _createUniqueNode(self, eudat_type, name, path, checksum, d_type):
-   
+
         entityNew = Node(eudat_type, location = path,
                                      name = name,
                                      checksum = checksum,
                                      nodetype = d_type)
-        if self.conf.dryrun: 
-            print ("create the graph node ["+str(entityNew)+"]")
+        if self.conf.dryrun:
+            logger.info("create the graph node ["+str(entityNew)+"]")
             return entityNew
         else:
             # check if the node is already stored in the graph DB
             # basing the search on the property which is unique: the name
             entity = self.graph.find_one(eudat_type, "name", name)
             if entity is None:
-                entity = entityNew  
+                entity = entityNew
             self.graph.create(entity)
             logger.debug('Entity created: ' + str(entity))
             return entity
@@ -518,7 +515,7 @@ class GraphDBClient():
                                      value = value,
                                      name = hashVal)
         if self.conf.dryrun:
-            print ("create the graph node ["+str(pointer)+"]")
+            logger.info("create the graph node ["+str(pointer)+"]")
         else:
             pointer = self.graph.find_one('Pointer', "name", hashVal)
             if pointer is None:
@@ -532,14 +529,14 @@ class GraphDBClient():
 ################################################################################
 # Configuration Class #
 ################################################################################
- 
+
 class Configuration():
-    """ 
+    """
     Get properties from filesystem
     """
 
     def __init__(self, conffile, debug, dryrun, logger):
-   
+
         self.conffile = conffile
         self.debug = debug
         self.dryrun = dryrun
@@ -553,7 +550,7 @@ class Configuration():
 
         self.config = ConfigParser.RawConfigParser()
         self.config.readfp(open(self.conffile))
-        
+
         logfilepath = self._getConfOption('Logging', 'log_file')
         loglevel = self._getConfOption('Logging', 'log_level')
         if self.debug:
@@ -566,7 +563,7 @@ class Configuration():
                                     + '[%(funcName)s] %(message)s')
         rfh.setFormatter(formatter)
         logger.addHandler(rfh)
-        
+
         self.graphdb_scheme = self._getConfOption('GraphDB', 'scheme')
         self.graphdb_addr = self._getConfOption('GraphDB', 'address')
         self.graphdb_user = self._getConfOption('GraphDB', 'username')
@@ -579,7 +576,7 @@ class Configuration():
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
 
-        
+
     def _getConfOption(self, section, option, boolean=False):
         """
         get the options from the configuration file
@@ -605,7 +602,7 @@ def sync(args):
     configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
     configuration.parseConf();
     gdbc = GraphDBClient(configuration, args.path)
-     
+
     logger.info("Sync starting ...")
     mp = manifest.MetsParser(configuration, logger)
     logger.info("Reading METS manifest ...")
@@ -619,13 +616,13 @@ def sync(args):
         else:
             gdbc.push(smap)
     logger.info("Sync completed")
-    
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='B2SAFE graphDB client')
     parser.add_argument("confpath", help="path to the configuration file")
-    parser.add_argument("-dbg", "--debug", action="store_true", 
+    parser.add_argument("-dbg", "--debug", action="store_true",
                         help="enable debug")
     parser.add_argument("-d", "--dryrun", action="store_true",
                         help="run without performing any real change")
@@ -633,7 +630,7 @@ if __name__ == "__main__":
                         help="compare the manifest with the DB graph")
     parser.add_argument("path", help="irods path to the data")
 
-    parser.set_defaults(func=sync) 
+    parser.set_defaults(func=sync)
 
     args = parser.parse_args()
     args.func(args)

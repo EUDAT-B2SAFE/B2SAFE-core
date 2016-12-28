@@ -17,7 +17,7 @@ logger = logging.getLogger('UserSync')
 ################################################################################
 # User Accounts Synchronization Class #
 ################################################################################
- 
+
 class UserSync():
     """Class implementing a user synchronization."""
 
@@ -25,23 +25,23 @@ class UserSync():
     def __init__(self, conf):
         """Initialize object with configuration parameters."""
         self.conf = conf
-        self.irodsu = IRODSUtils(conf.irods_home_dir, 'UserSync', 
+        self.irodsu = IRODSUtils(conf.irods_home_dir, 'UserSync',
                                  conf.irods_debug)
 
 
     def _parseDNMap(self):
         """Internal: Parse the distinguished name map file."""
-        
+
         try:
             filehandle = open(self.conf.dn_map_file, "r")
             dns_map = json.load(filehandle)
             filehandle.close()
         except Exception, e:
-            logger.warning("problem while reading dn map file %s", 
+            logger.warning("problem while reading dn map file %s",
                            self.conf.dn_map_file)
             logger.warning("Error: %s", e)
             dns_map = None
-            
+
         return dns_map
 
 
@@ -64,7 +64,7 @@ class UserSync():
         """Internal: Parse the projects irods info."""
 
         irods_zones = self.irodsu.getIrodsZones()
-        out = self.irodsu.listIrodsGroups() 
+        out = self.irodsu.listIrodsGroups()
         groups = {}
         for line in out.splitlines():
             group = {}
@@ -74,7 +74,7 @@ class UserSync():
             for row in out2.splitlines()[1:]:
                 if row.find('#')>0:
                     [member,zone] = row.split('#')
-                    if (irods_zones 
+                    if (irods_zones
                         and irods_zones[zone]['zone_type'] == 'local'):
                         group['members'].append(member)
                     else:
@@ -99,10 +99,10 @@ class UserSync():
                 else:
                     key = line
                 users[key] = user
- 
+
         return users
 
-    
+
     def _merge_dicts(self, *dicts):
         """merges dictionaries"""
 
@@ -136,15 +136,15 @@ class UserSync():
                     raise KeyError
 
         return reduce(lambda x, y: dict(merge(x, y)), dicts[1:], dicts[0])
- 
+
     # Public methods
- 
+
     def synchronize(self, dryrun):
         """Synchronize user/project accounts.
-        
+
         Parameters:
         Returns True if successful.
-        
+
         """
         irods_users = self._parseIrodsUser()
         irods_projects = self._parseIrodsProj()
@@ -153,19 +153,18 @@ class UserSync():
         dn_map = self._parseDNMap()
 
         # if log level is equal to DEBUG (level 10)
-        if (logger.getEffectiveLevel() == 10):
-            pp = pprint.PrettyPrinter(indent=4)
-            print("###### irods users ######")
-            pp.pprint(irods_users)
-            print("###### irods groups ######")
-            pp.pprint(irods_projects)
-            print("### groups/projects imported from a local source ###")
-            pp.pprint(local_projects)
-            print("### groups/projects imported from a remote source ###")
-            pp.pprint(remote_projects)
-            print("### DNs imported from a remote source ###")
-            pp.pprint(dn_map)
-            
+        pp = pprint.PrettyPrinter(indent=4)
+        logger.debug("###### irods users ######")
+        logger.debug(pp.pformat(irods_users))
+        logger.debug("###### irods groups ######")
+        logger.debug(pp.pformat(irods_projects))
+        logger.debug("### groups/projects imported from a local source ###")
+        logger.debug(pp.pformat(local_projects))
+        logger.debug("### groups/projects imported from a remote source ###")
+        logger.debug(pp.pformat(remote_projects))
+        logger.debug("### DNs imported from a remote source ###")
+        logger.debug(pp.pformat(dn_map))
+
         if not self.conf.local_authoritative:
             logger.debug("local source is not authoritative")
             if local_projects is None:
@@ -179,10 +178,10 @@ class UserSync():
         else:
             logger.debug("local source is authoritative")
             if local_projects is None: projects = {}
-            else: 
-                merged_projects = self._merge_dicts(local_projects, 
+            else:
+                merged_projects = self._merge_dicts(local_projects,
                                                    remote_projects)
-                projects = {key: merged_projects[key] 
+                projects = {key: merged_projects[key]
                             for key in local_projects.keys()}
 
         sync_task = SynchronizationTask( irods_users, irods_projects, projects,
@@ -200,14 +199,14 @@ class UserSync():
 ################################################################################
 # Configuration Class #
 ################################################################################
- 
+
 class Configuration():
-    """ 
+    """
     Get properties from filesystem
     """
 
     def __init__(self, file, logger):
-   
+
         self.file = file
         self.logger = logger
         self.log_level = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
@@ -219,7 +218,7 @@ class Configuration():
 
         self.config = ConfigParser.RawConfigParser()
         self.config.readfp(open(self.file))
-        
+
         logfilepath = self._getConfOption('Logging', 'log_file')
         loglevel = self._getConfOption('Logging', 'log_level')
         logger.setLevel(self.log_level[loglevel])
@@ -230,19 +229,19 @@ class Configuration():
                                     + '[%(funcName)s] %(message)s')
         rfh.setFormatter(formatter)
         logger.addHandler(rfh)
-        
-        self.notification_active = self._getConfOption('Notification', 
+
+        self.notification_active = self._getConfOption('Notification',
                                                        'notification_active',
                                                        True)
-        self.notification_sender = self._getConfOption('Notification', 
+        self.notification_sender = self._getConfOption('Notification',
                                                        'notification_sender')
-        self.notification_receiver = self._getConfOption('Notification', 
+        self.notification_receiver = self._getConfOption('Notification',
                                                          'notification_receiver')
 
         self.project_file = self._getConfOption('Sources', 'project_file')
         self.external_file = self._getConfOption('Sources', 'external_file')
         self.dn_map_file = self._getConfOption('Sources', 'dn_map_file')
-        self.local_authoritative = self._getConfOption('Sources', 
+        self.local_authoritative = self._getConfOption('Sources',
                                                        'local_authoritative',
                                                        True)
         self.condition = self._getConfOption('Sources', 'condition')
@@ -263,7 +262,7 @@ class Configuration():
         self.irods_group_home = self._getConfOption('iRODS', 'irods_group_home', True)
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
 
-        
+
     def _getConfOption(self, section, option, boolean=False):
         """
         get the options from the configuration file
@@ -276,7 +275,7 @@ class Configuration():
                 else: return False
             return opt
         else:
-            self.logger.warning('missing parameter %s:%s' % (section,option))
+            self.logger.warning('missing parameter %s:%s' % (section, option))
             return None
 
 
@@ -289,12 +288,12 @@ def sync(args):
     configuration = Configuration(args.confpath, logger)
     configuration.parseConf();
     us = UserSync(configuration)
-     
+
     logger.info("Users/projects sync starting ...")
     us.synchronize(args.dryrun)
     logger.info("Users/projects sync completed")
 
-    
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='B2SAFE user sinchronization tool')
@@ -306,7 +305,7 @@ if __name__ == "__main__":
         help='additional help')
 
     parser_sync = subparsers.add_parser('sync', help='synchronize file based user info with iRODS')
-    parser_sync.set_defaults(func=sync) 
+    parser_sync.set_defaults(func=sync)
 
     args = parser.parse_args()
     args.func(args)
