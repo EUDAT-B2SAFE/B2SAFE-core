@@ -160,7 +160,7 @@ class IRODSUtils():
             for row in out1.splitlines():
                 triplet = row.split(':')
                 duplet = (triplet[1].strip()).split('=')
-                if (duplet[0] == 'irodsUserName'):
+                if (duplet[0] == 'irods_user_name'):
                     irods_admin_user = duplet[1]
 
         (rc, out) = self.execute_icommand(["ichmod", "-Mr", "own", 
@@ -180,14 +180,15 @@ class IRODSUtils():
     
         (rc, output) = self._shell_command(command)
         if rc != 0:
-            self.logger.error('Error running %s, rc = %d' % (' '.join(command),
-                                                             rc))
+            self.logger.error('Error running {}, rc = {}'.format(' '.join(command),
+                                                                 str(rc)))
             self.logger.error("output: %s", output[1])
             if output[0] is not None and len(output[0].strip()) > 0:
                 self.logger.error("error message: %s", output[0])
             return (rc, None)
         
-        self.logger.debug('executed %s, rc = %d' % (' '.join(command), rc))
+        self.logger.debug('executed {}, rc = {}'.format(' '.join(command).encode('utf-8'),
+                                                        str(rc)))
         self.logger.debug('output: %s', output[1])
         return (rc, output[1])
 
