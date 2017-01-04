@@ -153,18 +153,18 @@ class UserSync():
         dn_map = self._parseDNMap()
 
         # if log level is equal to DEBUG (level 10)
-        if (logger.getEffectiveLevel() == 10):
-            pp = pprint.PrettyPrinter(indent=4)
-            print("###### irods users ######")
-            pp.pprint(irods_users)
-            print("###### irods groups ######")
-            pp.pprint(irods_projects)
-            print("### groups/projects imported from a local source ###")
-            pp.pprint(local_projects)
-            print("### groups/projects imported from a remote source ###")
-            pp.pprint(remote_projects)
-            print("### DNs imported from a remote source ###")
-            pp.pprint(dn_map)
+#        if (logger.getEffectiveLevel() == 10):
+#            pp = pprint.PrettyPrinter(indent=4)
+#            print("###### irods users ######")
+#            pp.pprint(irods_users)
+#            print("###### irods groups ######")
+#            pp.pprint(irods_projects)
+#            print("### groups/projects imported from a local source ###")
+#            pp.pprint(local_projects)
+#            print("### groups/projects imported from a remote source ###")
+#            pp.pprint(remote_projects)
+#            print("### DNs imported from a remote source ###")
+#            pp.pprint(dn_map)
             
         if not self.conf.local_authoritative:
             logger.debug("local source is not authoritative")

@@ -14,6 +14,7 @@ deleting handle records.
 """
 from b2handle.handleclient import EUDATHandleClient
 from b2handle.clientcredentials import PIDClientCredentials
+from b2handle.handleexceptions import *
 import uuid
 import argparse
 import sys
@@ -26,25 +27,42 @@ import json
 def search(args):
     """perform search action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     kvpairs = dict([(args.key, str(''.join(args.value)))])
 
-    # search for handle
-    result = client.search_handle(**kvpairs)
+    try:
+        # search for handle
+        result = client.search_handle(**kvpairs)
+    except ReverseLookupException:
+        result = '{error}'
+
     json_result = str(json.dumps(result))
 
     if json_result == '[]':
         json_result = 'empty'
+    elif json_result == '{error}':
+        json_result = 'error'
 
     sys.stdout.write(json_result)
 
@@ -52,28 +70,47 @@ def search(args):
 def read(args):
     """perform read action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     # set default return value
     json_result = "None"
 
     if args.key is None:
-        # retrieve whole handle
-        result = client.retrieve_handle_record_json(args.handle)
+        try:
+            # retrieve whole handle
+            result = client.retrieve_handle_record_json(args.handle)
+        except HandleSyntaxError:
+            json_result = 'error'
+
         if result is not None:
             json_result = json.dumps(result["values"])
     else:
-        # retrieve single value from a handle
-        result = client.get_value_from_handle(args.handle, args.key)
+        try:
+            # retrieve single value from a handle
+            result = client.get_value_from_handle(args.handle, args.key)
+        except HandleSyntaxError:
+            json_result = 'error'
+
         if result is not None:
             json_result = json.dumps(result)
             # remove starting and finishing quotes.
@@ -86,8 +123,15 @@ def read(args):
 def create(args):
     """perform create action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
@@ -98,10 +142,14 @@ def create(args):
     suffix = str(uid)
     handle = prefix+"/"+suffix
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     # pre-process the input parameters for the handle api
     extype = {}
@@ -109,99 +157,176 @@ def create(args):
         exlist = args.extratype.split(';')
         for item in exlist:
             key = item.split('=')[0]
-            extype[key] = item.split('=')[1]
+            value = item.split('=')[1]
+            extype[key] = value
     if args.loc10320 is not None:
         l10320 = args.loc10320.split(';')
     else:
         l10320 = None
 
-    # create the new handle
-    result = client.register_handle(
-        handle,
-        location=args.location,
-        checksum=args.checksum,
-        additional_URLs=l10320,
-        overwrite=False,
-        **extype)
 
-    if result is None:
-        sys.stdout.write("error")
-    else:
-        sys.stdout.write(result)
+    # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
+    key = 'EUDAT/ROR'
+    if key in extype:
+        if extype[key].lower() == 'pid':
+            extype[key] = handle
+
+    result = ''
+
+    try:
+        # create the new handle
+        result = client.register_handle(
+            handle,
+            location=args.location,
+            checksum=args.checksum,
+            additional_URLs=l10320,
+            overwrite=False,
+            **extype)
+    except HandleAlreadyExistsException:
+        result = 'False'
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleSyntaxError:
+        result = 'error'
+
+    sys.stdout.write(result)
 
 
 def modify(args):
     """perform modify action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
 
     kvpairs = dict([(args.key, args.value)])
 
-    # modify key/value pairs
-    result = client.modify_handle_value(
-        args.handle,
-        ttl=None,
-        add_if_not_exist=True,
-        **kvpairs)
+    result = 'True'
 
-    output_result = str(result)
+    try:
+        # modify key/value pairs
+        client.modify_handle_value(
+            args.handle,
+            ttl=None,
+            add_if_not_exist=True,
+            **kvpairs)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
 
-    if output_result == 'None':
-        output_result = 'True'
-
-    sys.stdout.write(output_result)
+    sys.stdout.write(result)
 
 
 def delete(args):
     """perform delete action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
+
+    result = 'True'
 
     if args.key is None:
         # delete whole handle
-        result = client.delete_handle(args.handle)
+        try:
+            client.delete_handle(args.handle)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
     else:
         # delete value
-        result = client.delete_handle_value(args.handle, args.key)
+        try:
+            client.delete_handle_value(args.handle, args.key)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
 
-    sys.stdout.write(str(result))
+    sys.stdout.write(result)
 
 
 def relation(args):
     """perform the relation action"""
 
-    # load credentials
-    credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
 
     # retrieve and set extra values
     extra_config = {}
 
-    # setup connection to handle server
-    client = EUDATHandleClient.instantiate_with_credentials(
-        credentials,
-        **extra_config)
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
+
+    result = 'None'
 
     # add relation to 10320/LOC
-    result = client.add_additional_URL(args.ppid, args.cpid)
-    sys.stdout.write(str(result))
+    try:
+        client.add_additional_URL(args.ppid, args.cpid)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
+
+    sys.stdout.write(result)
 
 
 ###############################################################################
