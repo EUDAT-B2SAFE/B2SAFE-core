@@ -74,7 +74,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
             if (*ror != "None" && *ror != "") {
                 logInfo("Update Parent PID with field ROR");
                 *extraType = "EUDAT/ROR=*ror";
-                EUDATCreateAVU("EUDAT/ROR", *ror, *path);
+                if (EUDATtoBoolean(*iCATCache)) {
+                    EUDATCreateAVU("EUDAT/ROR", *ror, *path);
+                }
             }        
 
             # add ppid as extratype parameter
@@ -85,7 +87,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
                 } else {
                       *extraType = "EUDAT/PPID=*parent_pid";
                 }
-                EUDATCreateAVU("EUDAT/PPID", *parent_pid, *path);
+                if (EUDATtoBoolean(*iCATCache)) {
+                    EUDATCreateAVU("EUDAT/PPID", *parent_pid, *path);
+                }
             }
 
             # create PID
@@ -114,7 +118,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
             # creation of ROR in case it has not been provided as input
             if (*ror == "None" || *ror == "") {
                 EUDATeRORupdate(*newPID, *newPID);
-                EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
+                if (EUDATtoBoolean(*iCATCache)) {
+                    EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
+                }
             }            
             # creation of the file based metadata record
             *checksum = "";
