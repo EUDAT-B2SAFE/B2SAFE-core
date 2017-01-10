@@ -15,6 +15,7 @@ eudatRepl{
     msiDataObjClose(*fd, *status1);
     writeLine("stdout", "Object *tdata written with success!");
     writeLine("stdout", "Its content is: Hello World!");
+    writeLine("stdout", "The data *tcoll/test_data.txt has no PID yet.");
 
     # PID creation
     # with PID registration in iCAT (4th argument "true")
@@ -36,7 +37,8 @@ eudatRepl{
         writeBytesBuf("stdout", *R_BUF);
         msiDataObjClose(*S_FD, *status2);
         writeLine("stdout", "");
-
+        EUDATiFieldVALUEretrieve("*tcoll/test_data.txt", "PID", *value);
+        writeLine("stdout", "The original data *tcoll/test_data.txt has PID = *value");
         EUDATiFieldVALUEretrieve("*tcoll2/test_data.txt", "PID", *value);
         writeLine("stdout", "The Replica *tcoll2/test_data.txt has PID = *value");
         EUDATePIDremove("*tcoll2/test_data.txt", "true");
