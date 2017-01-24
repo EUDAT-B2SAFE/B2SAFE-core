@@ -92,6 +92,10 @@ class SynchronizationTask():
 
              #### erastova: added creation of the irods user
 
+#TODO How to mange group creation for iRODS namespace based on projects?
+#TODO The following code do this, but it needs to be reviewed to be compatible
+#TODO with role based approach.
+ 
 #        if 'groups' in project.keys():
 #            for sg in project['groups'].keys():
 #                newGroupFlag = False
@@ -312,11 +316,6 @@ class SynchronizationTask():
                     user_list = set(user_list)
 ##TODO here should be managed user attributes
 
-#### erastova: since now we have one irods user with many dns
-#### I have changed futher on string dn to list dn
-#### for example, self.irodsu.addDNToUser(user,dn[0])
-#### instead of self.irodsu.addDNToUser(user,dn)
-
             # managing the dn of a user
             self.logger.debug("Updating the dn mapping for user: " + user)
             out = self.irodsu.getUserDN(user)
@@ -328,21 +327,24 @@ class SynchronizationTask():
             # the user is in the map file, but not in irods
             if (self.dn_map is not None and user in self.dn_map.keys()):
                 for dn in self.dn_map[user]:
-                    if not(dn[0] in dn_list):
+                    if not(dn in dn_list):
                         self.logger.debug("the dn %s is not in irods for user "
-                                          + "%s, so it will be added", dn[0], user)
+                                          + "%s, so it will be added", dn, user)
                         if not(self.dryrun):
-                            self.irodsu.addDNToUser(user,dn[0])
+                            self.irodsu.addDNToUser(user,dn)
                             self.logger.info("the dn %s has been added for user "
-                                             + "%s", dn[0], user)
+                                             + "%s", dn, user)
                         else:
+<<<<<<< HEAD
                             self.logger.info("the dn " + dn[0] + " has been added for user " + user)
 
+=======
+                            print "the dn {} has been added for user {}".format(
+                                                                        dn,user)
+>>>>>>> master
             # the user is in irods, but not in the map file
             if (self.dn_map is not None):
-                for dn0 in dn_list:
-                    dn = []
-                    dn.append(dn0)
+                for dn in dn_list:
                     if not(user in self.dn_map.keys()) \
                         or not(dn in self.dn_map[user]):
                         if not(self.dryrun):

@@ -2,22 +2,23 @@
 
 import sys
 import json
-import urllib2
 import base64
 from pprint import pformat
 import requests
-import simplejson
 import fnmatch
 import logging
 
 class EudatRemoteSource:
 
+<<<<<<< HEAD
     def _debugMsg(self, method, msg):
         """Internal: Print a debug message if debug is enabled.
 
         """
         logging.debug("[%s] %s" % (method, msg))
 
+=======
+>>>>>>> master
     def __init__(self, main_project, subgroups, conf, role_map, parent_logger=None):
         """initialize the object"""
 
@@ -34,35 +35,46 @@ class EudatRemoteSource:
         if len(missingp) > 0:
             self.logger.warning('missing parameters: ' + pformat(missingp))
         self.conf = conf
+<<<<<<< HEAD
 
         self.role_map = role_map
 
         self.remote_users_list = self.getRemoteUsers()
 #        print(pformat(remote_users_list))
 
+=======
+        self.remote_users_list = self.getRemoteUsers()
+        self.roles = self.readRoleMapFile(role_map)
+
+
+    def readRoleMapFile(self, path):
+
+        try:
+            filehandle = open(path, "r")
+        except IOError as err:
+            print "error: failed to open %s: %s" % (path, err.strerror)
+            sys.exit(-1)
+
+        with filehandle:
+            return json.loads(filehandle.read())        
+            
+>>>>>>> master
 
     def queryUnity(self, sublink):
         """
         :param argument: url to unitydb with entity (entityID) or group (groupName)
         :return:
         """
-#        auth = base64.encodestring('%s:%s' % (self.conf['username'], self.conf['password']))[:-1]
-#        header = "Basic %s" % auth
         url = self.conf['host'] + sublink
-#        request = urllib2.Request(url)
-#        request.add_header("Authorization",header)
         try:
-#            response = urllib2.urlopen(request)
+            self.logger.debug("Querying the URL: {}".format(url))
             response = requests.get(url, verify=False, auth=(self.conf['username'], self.conf['password']))
         except IOError, e:
-#            print "Wrong username or password"
             self.logger.error("Wrong username or password", exc_info=True)
             sys.exit(1)
-
-#        assert response.code == 200
         assert response.status_code == 200
-#        json_data = response.read()
-        json_data = response.text
+        json_data = (response.text).encode('utf-8')
+        self.logger.debug("Response:{}".format(json_data))
         response_dict = json.loads(json_data)
 
         return response_dict
@@ -72,7 +84,6 @@ class EudatRemoteSource:
         """
         Get the remote users' list
         """
-
         self.logger.info("Getting list of users from eudat db...")
         # get list of all groups in Unity
         group_list = self.queryUnity("group/%2F")
@@ -82,16 +93,28 @@ class EudatRemoteSource:
         users_map = {}
         attribs_map = {}
         for member_id in group_list['members']:
-            user_record = self.queryUnity("entity/"+str(member_id))
             attr_list = {}
+<<<<<<< HEAD
             self.logger.debug("Query: entity/" + str(member_id) +
                               ", user record: " + pformat(user_record))
+=======
+            user_record = self.queryUnity("entity/"+str(member_id))
+>>>>>>> master
             identity_types = {}
             for identity in user_record['identities']:
                 self.logger.debug("identity['typeId'] = " + identity['typeId'])
                 self.logger.debug("identity['value'] = " + identity['value'])
                 identity_types[identity['typeId']] = identity['value']
+<<<<<<< HEAD
 
+=======
+            user_attrs = self.queryUnity("entity/"+str(member_id)+"/attributes")
+            user_cn = None
+            for user_attr in user_attrs:
+                if user_attr['name'] == 'cn':
+                    user_cn = user_attr['values'][0]
+                             
+>>>>>>> master
             if "userName" in identity_types.keys():
                 list_member.append(identity_types['userName'])
                 users_map[member_id] = identity_types['userName']
@@ -102,11 +125,20 @@ class EudatRemoteSource:
                 list_member.append(str(member_id))
                 users_map[member_id] = str(member_id)
 
+            if user_cn is None:
+                user_cn = users_map[member_id]
             if "persistent" in identity_types.keys():
                 # Here we build the DN: the way to build it could change
                 # in the future.
+#TODO catch unicode error and filter out strange CN, logging the errors
                 userDN = self.conf['carootdn'] + '/CN=' + identity['value'] \
+<<<<<<< HEAD
                        + '/CN=' + users_map[member_id]
+=======
+                       + '/CN=' + user_cn.encode('ascii', 'replace')
+                # Here the DN attribute is considered a list because, 
+                # in principle, multiple DNs could be associated to a user
+>>>>>>> master
                 attr_list['DN'] = [userDN]
 
             attribs_map[users_map[member_id]] = attr_list
@@ -139,6 +171,7 @@ class EudatRemoteSource:
                              if org in self.subgroups}
         else:
             filtered_list = self.remote_users_list['groups']
+<<<<<<< HEAD
 
         #### erastova: open role map file
 
@@ -154,6 +187,9 @@ class EudatRemoteSource:
 
         #### erastova: end of: open role map file
 
+=======
+
+>>>>>>> master
         for org,members in filtered_list.iteritems():
 
             self.logger.info('Adding users belonging to ' + org + ' ...')
@@ -162,27 +198,50 @@ class EudatRemoteSource:
             #### erastova: get unity group and find it in role map for irods users
             #### if it exists, add its members to irods.remote.users under
             #### irods user name
+<<<<<<< HEAD
 
             for userbs in map:
                 subjectMatch = False
                 for groupVal in map[userbs]['organization']:
                     subjectMatch = fnmatch.fnmatch(org, groupVal)
+=======
+                     
+            for userbs in self.roles:               
+                subjectMatch = False
+                for groupVal in self.roles[userbs]['organization']:
+                    subjectMatch = fnmatch.fnmatch(org, groupVal)        
+>>>>>>> master
                     if subjectMatch:
                         data[self.main_project]["groups"][userbs] = []
                         for member in members:
                             member = self.conf['ns_prefix'] + member
+<<<<<<< HEAD
 
                             for userb in map:
+=======
+                    
+                            for userb in self.roles:
+>>>>>>> master
                                 userMatch = False
-                                for userVal in map[userb]['user']:
+                                for userVal in self.roles[userb]['user']:
                                     userMatch = fnmatch.fnmatch(member, userVal)
                                     if userMatch:
+<<<<<<< HEAD
                                         data[self.main_project]["groups"][userb] = []
                                         data[self.main_project]["groups"][userb].append(member)
                                     else:
 									    data[self.main_project]["groups"][userbs].append(member)
                                     self.logger.debug('\tadded user %s' % (member,))
 
+=======
+                                        data[self.main_project]["groups"][userb] = [member]
+                                        self.logger.debug('\tadded user %s' % (member,))
+                                    elif (member not in 
+                                          data[self.main_project]["groups"][userbs]):
+					data[self.main_project]["groups"][userbs].append(member)          
+                                        self.logger.debug('\tadded user %s' % (member,))
+           
+>>>>>>> master
             #### erastova: end of: get unity group
 
         return data
@@ -193,6 +252,7 @@ class EudatRemoteSource:
         Synchronize the remote users' attributes with a local json file
         for the time beeing just the DNs are considered
         """
+<<<<<<< HEAD
 
         #### erastova: open role map file
 
@@ -208,6 +268,8 @@ class EudatRemoteSource:
 
         #### erastova: end of: open role map file
 
+=======
+>>>>>>> master
         self.logger.info('Checking user attributes ...')
 
         if self.subgroups is not None:
@@ -228,30 +290,38 @@ class EudatRemoteSource:
             filtered_list = self.remote_users_list['attributes']
 
         #### erastova: create mapping unity user - irods user
+<<<<<<< HEAD
 
+=======
+       
+>>>>>>> master
         userdict = {}
-
         for org,members in self.remote_users_list['groups'].iteritems():
             org = self.conf['ns_prefix'] + org
 
             subjectMatch = False
+<<<<<<< HEAD
 
             for iuser in map:
+=======
+            
+            for iuser in self.roles:
+>>>>>>> master
                 subjectMatch = False
-                for groupVal in map[iuser]['organization']:
+                for groupVal in self.roles[iuser]['organization']:
                     subjectMatch = fnmatch.fnmatch(org, groupVal)
                     if subjectMatch:
                         data[iuser] = [];
                         for member in members:
                             member = self.conf['ns_prefix'] + member
-                            for userb in map:
+                            for userb in self.roles:
                                 userMatch = False
-                                for userVal in map[userb]['user']:
+                                for userVal in self.roles[userb]['user']:
                                     userMatch = fnmatch.fnmatch(member, userVal)
                                     if userMatch:
                                         userdict[member] = userb
                                         data[userb] = [];
-                                    else:
+                                    elif (member not in userdict.keys()):
                                         userdict[member] = iuser
 
         #### erastova: end of create mapping
@@ -262,11 +332,18 @@ class EudatRemoteSource:
 
             #### erastova: check if unity user belongs to b2safe and
             #### add its DN to the irods user
+<<<<<<< HEAD
 
             if(user in userdict.keys()):
                 user = userdict[user]
                 data[user].append(attrs['DN'])
                 self.logger.debug('\tadded user ' + user + '\' DNs: '
+=======
+            if (user in userdict.keys()):
+                user = userdict[user]
+                data[user] = list(set(data[user] + attrs['DN']))
+                self.logger.debug('\tadded user ' + user + '\' DNs: ' 
+>>>>>>> master
                               + pformat(attrs['DN']))
 
             #### erastova: end of check
