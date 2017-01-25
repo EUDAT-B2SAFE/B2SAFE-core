@@ -16,7 +16,7 @@ httplib2
 download from http://code.google.com/p/httplib2
 python setup.py install
 
-simplejson
+simplejson is needed only if your python stdlib does not include json
 download from http://pypi.python.org/pypi/simplejson/
 python setup.py install
 
@@ -33,7 +33,6 @@ redhat: yum install python-httplib2 python-lxml python-simplejson
 """
 
 import httplib2
-import simplejson
 from defusedxml import minidom
 from lxml import etree
 from lxml.etree import tostring
@@ -42,6 +41,10 @@ import uuid
 import argparse
 import sys
 import logging
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 
 # ##############################################################################
@@ -180,7 +183,7 @@ class EpicClient(object):
             # if not content:
             return None
         else:
-            handle = simplejson.loads(content)
+            handle = json.loads(content)
             if not handle:
                 return 'empty'
 
@@ -228,7 +231,7 @@ class EpicClient(object):
         jsonhandle = self.retrieveHandle(prefix, suffix)
         if not jsonhandle:
             return None
-        handle = simplejson.loads(jsonhandle)
+        handle = json.loads(jsonhandle)
         for item in handle:
             if 'type' in item and item['type'] == key:
                 logging.debug('[getValueFromHandle] Found key %s value=%s'
@@ -285,7 +288,7 @@ class EpicClient(object):
                          None) is None):
                     handle_array.append({'type': key, 'parsed_data': value})
 
-        new_handle_json = simplejson.dumps(handle_array)
+        new_handle_json = json.dumps(handle_array)
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
@@ -334,7 +337,7 @@ class EpicClient(object):
                           % uri)
             return False
 
-        handle = simplejson.loads(handle_json)
+        handle = json.loads(handle_json)
 
         keyfound = False
 
@@ -363,7 +366,7 @@ class EpicClient(object):
                 handleitem = {'type': key, 'parsed_data': value}
                 handle[len(handle):] = [handleitem]
 
-        handle_json = simplejson.dumps(handle)
+        handle_json = json.dumps(handle)
         logging.debug('[modifyHandle] JSON: %s' % str(handle_json))
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
@@ -400,7 +403,7 @@ class EpicClient(object):
                               'handle: %s' % uri)
                 return False
             keyfound = False
-            handle = simplejson.loads(handle_json)
+            handle = json.loads(handle_json)
 
             for item in handle:
                 if 'type' in item and item['type'] == key:
@@ -417,7 +420,7 @@ class EpicClient(object):
                 return False
             else:
                 hdrs = self._getheader("UPDATE")
-                handle_json = simplejson.dumps(handle)
+                handle_json = json.dumps(handle)
                 logging.debug('[deleteHandle] JSON: %s' % str(handle_json))
                 response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                                 body=handle_json)
@@ -738,7 +741,7 @@ class Credentials(object):
                 sys.exit(-1)
 
             with filehandle:
-                tmp = simplejson.loads(filehandle.read())
+                tmp = json.loads(filehandle.read())
 
             try:
                 self.baseuri = tmp['baseuri']
