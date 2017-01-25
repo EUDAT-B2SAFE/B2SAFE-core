@@ -9,7 +9,7 @@
 
 """EUDAT authorization client API.
 
-simplejson
+simplejson is needed only if your python stdlib does not include json
 download from http://pypi.python.org/pypi/simplejson/
 python setup.py install
 
@@ -19,10 +19,12 @@ apt-get install pylint
 
 import argparse
 import sys
-import simplejson
 import fnmatch
 import logging
-
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 ###############################################################################
 # AuthZ Client Class #
@@ -56,7 +58,7 @@ class AuthZClient(object):
             sys.exit(-1)
 
         with filehandle:
-            self.map = simplejson.loads(filehandle.read())
+            self.map = json.loads(filehandle.read())
 
         logging.debug("authZ assertions from %s" % (self.mapfile))
 
