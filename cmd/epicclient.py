@@ -895,6 +895,8 @@ if __name__ == "__main__":
                              "(os=filespace, irods=iRODS storage)")
     parser.add_argument("credpath", default="NULL",
                         help="path to the credentials")
+    parser.add_argument("-d", "--debug", default=False, action="store_true",
+                        help="Display debug messages")
 
     subparsers = parser.add_subparsers(title='Actions',
                                        description='Handle record management'
