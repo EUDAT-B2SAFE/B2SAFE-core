@@ -116,6 +116,17 @@ def create_handle(irods_test_file_path, icat_cache):
         create_result = irule_result[0].split('=')[1].lstrip(' ')
     return create_result
 
+def create_handles_for_collection(irods_test_file_path):
+    '''procedure to create all handles in a collection'''
+    # create test rule
+    irule_rule = '{EUDATPidsForColl( *path)}'
+    irule_input = '*path='+irods_test_file_path
+    irule_output = '*out'
+    command = ["irule", irule_rule, irule_input, irule_output]
+    # execute test rule
+    irule_result = subprocess_popen(command)
+    return irule_result
+
 def delete_handle(pid):
     '''procedure to delete a pid'''
     # create iRODS rule to delete created pid
@@ -216,7 +227,6 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle_created, None,
             'No PID has been created')
 
-
     def test_50_b2safe_create_pid_with_pid_in_icat(self):
         """Test that it is possible to create a PID using b2safe and put pid in icat database"""
         # create test file
@@ -249,6 +259,118 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         self.assertEqual(
             handle_created, imeta_pid_result,
             'The PID is NOT the same')
+
+    def test_60_b2safe_create_pid_in_one_directory(self):
+        """Test that it is possible to create PIDs in a directory using b2safe"""
+
+        # create test file
+        test_file1 = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_file3 = 'test_b2safe_data3.txt'
+        test_file4 = 'test_b2safe_data4.txt'
+        test_path = '/tmp/'+test_file1
+        create_os_file(test_path)
+        irods_input_test_path = self.irods_home+'/irods_input_dir'
+        # create iRODS directory
+        create_irods_directory(irods_input_test_path)
+
+        # put test files in iRODS
+        for irods_file in [test_file1, test_file2, test_file3, test_file4]:
+            put_irods_file(test_path, irods_input_test_path+'/'+irods_file)
+        os.unlink(test_path)
+
+        # create test handles
+        handles_created = create_handles_for_collection(irods_input_test_path)
+
+        # find PID for a testfile
+        handle1_created = search_handle(irods_input_test_path+'/'+test_file1)
+        handle2_created = search_handle(irods_input_test_path+'/'+test_file2)
+        handle3_created = search_handle(irods_input_test_path+'/'+test_file3)
+        handle4_created = search_handle(irods_input_test_path+'/'+test_file4)
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file1, test_file2, test_file3, test_file4]:
+            pid_result = search_handle(irods_input_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        # delete directories from iRODS
+        delete_irods_directory(irods_input_test_path)
+
+        # check if PID is created
+        self.assertNotEqual(
+            handle1_created, None,
+            'No PID has been created')
+        self.assertNotEqual(
+            handle2_created, None,
+            'No PID has been created')
+        self.assertNotEqual(
+            handle3_created, None,
+            'No PID has been created')
+        self.assertNotEqual(
+            handle4_created, None,
+            'No PID has been created')
+
+    def test_60_b2safe_create_pid_in_one_directory_only(self):
+        """Test that it is possible to create PIDs in a directory when using similar directory names using b2safe"""
+
+        # create test file
+        test_file1 = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_file3 = 'test_b2safe_data3.txt'
+        test_file4 = 'test_b2safe_data4.txt'
+        test_path = '/tmp/'+test_file1
+        create_os_file(test_path)
+        irods_input_test_path  = self.irods_home+'/irods_input_dir'
+        irods_input_test_path2 = self.irods_home+'/irods_input_dir2'
+        # create iRODS directory
+        create_irods_directory(irods_input_test_path)
+        create_irods_directory(irods_input_test_path2)
+
+        # put test files in iRODS
+        for irods_file in [test_file1, test_file2]:
+            put_irods_file(test_path, irods_input_test_path+'/'+irods_file)
+        for irods_file in [test_file3, test_file4]:
+            put_irods_file(test_path, irods_input_test_path2+'/'+irods_file)
+        os.unlink(test_path)
+
+        # create test handles
+        handles_created = create_handles_for_collection(irods_input_test_path)
+
+        # find PIDs for testfiles
+        handle1_created = search_handle(irods_input_test_path+'/'+test_file1)
+        handle2_created = search_handle(irods_input_test_path+'/'+test_file2)
+        handle3_created = search_handle(irods_input_test_path2+'/'+test_file3)
+        handle4_created = search_handle(irods_input_test_path2+'/'+test_file4)
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file1, test_file2]:
+            pid_result = search_handle(irods_input_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        for irods_file in [test_file3, test_file4]:
+            pid_result = search_handle(irods_input_test_path2+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        # delete directories from iRODS
+        delete_irods_directory(irods_input_test_path)
+        delete_irods_directory(irods_input_test_path2)
+
+        # check if PID is created
+        self.assertNotEqual(
+            handle1_created, None,
+            'No PID has been created')
+        self.assertNotEqual(
+            handle2_created, None,
+            'No PID has been created')
+        self.assertEqual(
+            handle3_created, None,
+            'A PID has been created, this should NOT happen')
+        self.assertEqual(
+            handle4_created, None,
+            'A PID has been created, this should NOT happen')
+
 
     def test_70_b2safe_local_for_one_file_registered_non_recursive(self):
         """Test that it is possible to replicate a single file locally using b2safe (registered, non recursive)"""
@@ -563,4 +685,159 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         self.assertEqual(
             imeta_pid_org_result, imeta_ror_repl_result,
             'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
+    def test_80_b2safe_local_for_multiple_directories_registered_recursive(self):
+        """Test that it is possible to replicate multiple directories locally using b2safe (registered, recursive)"""
+        # create test file
+        test_file1 = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_file3 = 'test_b2safe_data3.txt'
+        test_file4 = 'test_b2safe_data4.txt'
+        test_path = '/tmp/'+test_file1
+        create_os_file(test_path)
+        irods_input_test_path   = self.irods_home+'/irods_input_dir'
+        irods_input_test_path2  = self.irods_home+'/irods_input_dir/irods_subdir'
+        irods_output_test_path  = self.irods_home+'/irods_output_dir'
+        irods_output_test_path2 = self.irods_home+'/irods_output_dir/irods_subdir'
+        # create iRODS directory
+        create_irods_directory(irods_input_test_path)
+        create_irods_directory(irods_input_test_path2)
+
+        # put test files in iRODS
+        for irods_file in [test_file1, test_file2]:
+            put_irods_file(test_path, irods_input_test_path+'/'+irods_file)
+        for irods_file in [test_file3, test_file4]:
+            put_irods_file(test_path, irods_input_test_path2+'/'+irods_file)
+        os.unlink(test_path)
+
+        # create test handle
+        for irods_file in [test_file1, test_file2]:
+            handle_created = create_handle(irods_input_test_path+'/'+irods_file, 'false')
+        for irods_file in [test_file3, test_file4]:
+            handle_created = create_handle(irods_input_test_path2+'/'+irods_file, 'false')
+
+        # replicate the file
+        replica_result = replicate_irods_file(irods_input_test_path, irods_output_test_path, 'true', 'true')
+
+        # find PID in iCAT for testfile4 original
+        imeta_pid_org_result = imeta_ls_specific('-d', irods_input_test_path2+'/'+test_file4, 'PID')
+        # find EUDAT/ROR in iCAT for testfile4 original
+        imeta_ror_org_result = imeta_ls_specific('-d', irods_input_test_path2+'/'+test_file4, 'EUDAT/ROR')
+
+        # find PID in iCAT for testfile4 replica
+        imeta_pid_repl_result = imeta_ls_specific('-d', irods_output_test_path2+'/'+test_file4, 'PID')
+        # find EUDAT/ROR in iCAT for testfile4 replica
+        imeta_ror_repl_result = imeta_ls_specific('-d', irods_output_test_path2+'/'+test_file4, 'EUDAT/ROR')
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file1, test_file2]:
+            pid_result = search_handle(irods_input_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            pid_result = search_handle(irods_output_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        for irods_file in [test_file3, test_file4]:
+            pid_result = search_handle(irods_input_test_path2+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            pid_result = search_handle(irods_output_test_path2+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        # delete directories from iRODS
+        delete_irods_directory(irods_input_test_path2)
+        delete_irods_directory(irods_input_test_path)
+        delete_irods_directory(irods_output_test_path2)
+        delete_irods_directory(irods_output_test_path)
+
+        # check if PID is created for original
+        self.assertNotEqual(
+            handle_created, None,
+            'No PID has been created')
+        # check if replication was succesfull
+        self.assertEqual(
+            replica_result, 'Success!',
+            'The replication was NOT succesful')
+        # check if replica has PID filled in
+        self.assertNotEqual(
+            imeta_pid_repl_result, None,
+            'The PID is NOT filled in in the replica in iCAT')
+        # check if EUDAT/ROR of replica is original PID
+        self.assertEqual(
+            imeta_pid_org_result, imeta_ror_repl_result,
+            'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
+    def test_80_b2safe_local_for_multiple_directories_not_registered_recursive(self):
+        """Test that it is possible to replicate multiple directories locally using b2safe (not registered, recursive)"""
+        # create test file
+        test_file1 = 'test_b2safe_data1.txt'
+        test_file2 = 'test_b2safe_data2.txt'
+        test_file3 = 'test_b2safe_data3.txt'
+        test_file4 = 'test_b2safe_data4.txt'
+        test_path = '/tmp/'+test_file1
+        create_os_file(test_path)
+        irods_input_test_path   = self.irods_home+'/irods_input_dir'
+        irods_input_test_path2  = self.irods_home+'/irods_input_dir/irods_subdir'
+        irods_output_test_path  = self.irods_home+'/irods_output_dir'
+        irods_output_test_path2 = self.irods_home+'/irods_output_dir/irods_subdir'
+        # create iRODS directory
+        create_irods_directory(irods_input_test_path)
+        create_irods_directory(irods_input_test_path2)
+
+        # put test files in iRODS
+        for irods_file in [test_file1, test_file2]:
+            put_irods_file(test_path, irods_input_test_path+'/'+irods_file)
+        for irods_file in [test_file3, test_file4]:
+            put_irods_file(test_path, irods_input_test_path2+'/'+irods_file)
+        os.unlink(test_path)
+
+        # replicate the file
+        replica_result = replicate_irods_file(irods_input_test_path, irods_output_test_path, 'false', 'true')
+
+        # find PID in iCAT for testfile4 original
+        imeta_pid_org_result = imeta_ls_specific('-d', irods_input_test_path2+'/'+test_file4, 'PID')
+        # find EUDAT/ROR in iCAT for testfile4 original
+        imeta_ror_org_result = imeta_ls_specific('-d', irods_input_test_path2+'/'+test_file4, 'EUDAT/ROR')
+
+        # find PID in iCAT for testfile4 replica
+        imeta_pid_repl_result = imeta_ls_specific('-d', irods_output_test_path2+'/'+test_file4, 'PID')
+        # find EUDAT/ROR in iCAT for testfile4 replica
+        imeta_ror_repl_result = imeta_ls_specific('-d', irods_output_test_path2+'/'+test_file4, 'EUDAT/ROR')
+
+        # cleanup before checks
+        # find and delete handle entries, iRODS files
+        for irods_file in [test_file1, test_file2]:
+            pid_result = search_handle(irods_input_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            pid_result = search_handle(irods_output_test_path+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        for irods_file in [test_file3, test_file4]:
+            pid_result = search_handle(irods_input_test_path2+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+            pid_result = search_handle(irods_output_test_path2+'/'+irods_file)
+            if pid_result != None:
+                delete_handle(pid_result)
+        # delete directories from iRODS
+        delete_irods_directory(irods_input_test_path2)
+        delete_irods_directory(irods_input_test_path)
+        delete_irods_directory(irods_output_test_path2)
+        delete_irods_directory(irods_output_test_path)
+
+        # check if replication was succesfull
+        self.assertEqual(
+            replica_result, 'Success!',
+            'The replication was NOT succesful')
+        # check if replica has PID filled in
+        self.assertNotEqual(
+            imeta_pid_repl_result, None,
+            'The PID is NOT filled in in the replica in iCAT')
+        # check if EUDAT/ROR of replica is original PID
+        self.assertEqual(
+            imeta_pid_org_result, imeta_ror_repl_result,
+            'The PID of the original file is NOT the EUDAT/ROR value in the iCAT')
+
 
