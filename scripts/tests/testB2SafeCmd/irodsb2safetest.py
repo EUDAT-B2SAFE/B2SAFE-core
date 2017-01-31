@@ -260,8 +260,8 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle_created, imeta_pid_result,
             'The PID is NOT the same')
 
-    def test_60_b2safe_create_pid_in_one_directory(self):
-        """Test that it is possible to create PIDs in a directory using b2safe"""
+    def test_60_b2safe_create_pid_in_one_collection(self):
+        """Test that it is possible to create PIDs for a collection and files using b2safe"""
 
         # create test file
         test_file1 = 'test_b2safe_data1.txt'
@@ -299,20 +299,20 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
 
         # check if PID is created
         self.assertNotEqual(
-            handle1_created, None,
+            handle1_created, 'empty',
             'No PID has been created')
         self.assertNotEqual(
-            handle2_created, None,
+            handle2_created, 'empty',
             'No PID has been created')
         self.assertNotEqual(
-            handle3_created, None,
+            handle3_created, 'empty',
             'No PID has been created')
         self.assertNotEqual(
-            handle4_created, None,
+            handle4_created, 'empty',
             'No PID has been created')
 
-    def test_60_b2safe_create_pid_in_one_directory_only(self):
-        """Test that it is possible to create PIDs in a directory when using similar directory names using b2safe"""
+    def test_60_b2safe_create_pid_in_one_collection_only(self):
+        """Test that it is possible to create PIDs for a collection and files when using similar directory names using b2safe"""
 
         # create test file
         test_file1 = 'test_b2safe_data1.txt'
@@ -365,10 +365,10 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             handle2_created, None,
             'No PID has been created')
         self.assertEqual(
-            handle3_created, None,
+            handle3_created, 'empty',
             'A PID has been created, this should NOT happen')
         self.assertEqual(
-            handle4_created, None,
+            handle4_created, 'empty',
             'A PID has been created, this should NOT happen')
 
 
