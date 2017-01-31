@@ -697,12 +697,12 @@ EUDATPidsForColl(*collPath) {
         fail;
     }
     # Create PIDs for all subcollections in collection recursively
-    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *subCollPath = *RowC.COLL_NAME;
         EUDATCreatePID("None", *subCollPath, "None", "true", *newPID);
     }
     # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         EUDATCreatePID("None", *objPath, "None", "true", *newPID);
     }
