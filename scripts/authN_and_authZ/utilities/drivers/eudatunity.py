@@ -132,7 +132,7 @@ class EudatRemoteSource:
         """
         Synchronize the remote users' list with a local json file (user db)
         """
-        
+        # build the remote users list, filtering selected groups, if any
         if self.subgroups is not None:
             filtered_list = {org:members for (org,members)
                              in self.remote_users_list['groups'].iteritems()
@@ -140,37 +140,7 @@ class EudatRemoteSource:
         else:
             filtered_list = self.remote_users_list['groups']
 
-        for org,members in filtered_list.iteritems():
-
-            self.logger.info('Adding users belonging to ' + org + ' ...')
-            org = self.conf['ns_prefix'] + org
-                     
-            #### erastova: get unity group and find it in role map for irods users
-            #### if it exists, add its members to irods.remote.users under
-            #### irods user name
-                     
-            for userbs in self.roles:               
-                subjectMatch = False
-                for groupVal in self.roles[userbs]['organization']:
-                    subjectMatch = fnmatch.fnmatch(org, groupVal)        
-                    if subjectMatch:
-                        data[self.main_project]["groups"][userbs] = []
-                        for member in members:
-                            member = self.conf['ns_prefix'] + member
-                    
-                            for userb in self.roles:
-                                userMatch = False
-                                for userVal in self.roles[userb]['user']:
-                                    userMatch = fnmatch.fnmatch(member, userVal)
-                                    if userMatch:
-                                        data[self.main_project]["groups"][userb] = [member]
-                                        self.logger.debug('\tadded user %s' % (member,))
-                                    elif (member not in 
-                                          data[self.main_project]["groups"][userbs]):
-					data[self.main_project]["groups"][userbs].append(member)          
-                                        self.logger.debug('\tadded user %s' % (member,))
-           
-            #### erastova: end of: get unity group
+        data = self._userMapper(filtered_list, data, False)
             
         return data
 
@@ -183,62 +153,77 @@ class EudatRemoteSource:
         self.logger.info('Checking user attributes ...')
         
         if self.subgroups is not None:
+            filtered_group_list = {org:members for (org,members)
+                             in self.remote_users_list['groups'].iteritems()
+                             if org in self.subgroups}
             users = []
-            for group in self.subgroups:
-                self.logger.info('looking at group ' + group)
-                
-                if(subjectMatch):
-                    for user in self.remote_users_list['groups'][group]:
-                        self.logger.debug('looking at user ' + user)
-                        users.append(user)
-                        self.logger.debug('added user to the list ' + str(users))
+            for group in filtered_group_list.keys():
+                for user in self.remote_users_list['groups'][group]:
+                    self.logger.debug('looking at user ' + user)
+                    users.append(user)
+                    self.logger.debug('added user to the list ' + str(users))
                         
             filtered_list = {user:attrs for (user,attrs)
                              in self.remote_users_list['attributes'].iteritems()
                              if user in users}
         else:
             filtered_list = self.remote_users_list['attributes']
+            filtered_group_list = self.remote_users_list['groups']
+
+        userdict = self._userMapper(filtered_group_list)
             
-        #### erastova: create mapping unity user - irods user
-       
-        userdict = {}
-        for org,members in self.remote_users_list['groups'].iteritems():
-            org = self.conf['ns_prefix'] + org
-            
+        for user,attrs in filtered_list.iteritems():
+            self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
+            #### add its DN to the irods user
+            if (user in userdict.keys()):
+                u = userdict[user]
+                if u not in data.keys():
+                    data[u] = []
+                data[u] = list(set(data[u] + attrs['DN']))
+                self.logger.debug('\tadded user ' + u + '\' DNs: ' 
+                              + pformat(attrs['DN']))
+
+        return data
+
+
+    def _userMapper(self, mainDict, data=None, directMap=True):
+        """
+        Check which of the remote users should be associated to a local user
+        according to the local user map
+        """
+        userdict = None
+        if directMap:
+            userdict = {}
+        else:
+            userdict = data[self.main_project]["groups"]
+        for org,members in mainDict.iteritems():
             subjectMatch = False
-            
             for iuser in self.roles:
+                if not directMap:
+                    if iuser not in userdict:
+                        userdict[iuser] = []
                 subjectMatch = False
                 for groupVal in self.roles[iuser]['organization']:
                     subjectMatch = fnmatch.fnmatch(org, groupVal)
                     if subjectMatch:
-                        data[iuser] = [];
-                        for member in members:
-                            member = self.conf['ns_prefix'] + member
-                            for userb in self.roles:
-                                userMatch = False
-                                for userVal in self.roles[userb]['user']:
-                                    userMatch = fnmatch.fnmatch(member, userVal)
-                                    if userMatch:
-                                        userdict[member] = userb
-                                        data[userb] = [];
-                                    elif (member not in userdict.keys()):
-                                        userdict[member] = iuser
-                    
-        #### erastova: end of create mapping  
-       
-        for user,attrs in filtered_list.iteritems():
-            self.logger.info('Adding DNs belonging to the user ' + user + ' ...')
-            user = self.conf['ns_prefix'] + user
-            
-            #### erastova: check if unity user belongs to b2safe and
-            #### add its DN to the irods user
-            if (user in userdict.keys()):
-                user = userdict[user]
-                data[user] = list(set(data[user] + attrs['DN']))
-                self.logger.debug('\tadded user ' + user + '\' DNs: ' 
-                              + pformat(attrs['DN']))
-                              
-            #### erastova: end of check
+                        if 'exclude' in self.roles[iuser].keys():
+                            remoteUsers = set(members) - set(self.roles[iuser]['exclude'])
+                        for member in remoteUsers:
+                            if directMap:
+                                userdict[member] = iuser
+                            else:
+                                userdict[iuser].append(member)
+                                userdict[iuser] = list(set(userdict[iuser]))
+                userMatch = False
+                for userVal in self.roles[iuser]['user']:
+                    for member in members:
+                        userMatch = fnmatch.fnmatch(member, userVal)
+                        if userMatch:
+                            if directMap:
+                                userdict[member] = iuser
+                            else:
+                                userdict[iuser].append(member)
+                                userdict[iuser] = list(set(userdict[iuser]))
 
-        return data
+        return userdict
+
