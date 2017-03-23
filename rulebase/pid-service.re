@@ -53,6 +53,11 @@
 EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
 
     logInfo("[EUDATCreatePID] create pid for *path");
+    # extra debug info
+    logInfo("ror=*ror");
+    logInfo("fio=*fio");
+    logInfo("fixed=*fixed");
+    # end extra debug info
     logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror,"
              ++ "fio=*fio, fixed=*fixed");
     if (!EUDATisMetadata(*path)) {
@@ -226,7 +231,7 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
 EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     logInfo("[EUDATUpdatePIDWithNewChild] update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    *replica = EUDATGeteValPid(*pid, "EUDAT/REPLICA");
+    *replica = EUDATGeteValPid(*parentPID, "EUDAT/REPLICA");
     if ((*replica == "") || (*replica == "None")) {
         *replicaNew = *childPID;
     }
@@ -347,7 +352,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
         foreach(*c in *d) {
             *FVALUE = *c.META_COLL_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -356,7 +361,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
         foreach(*c in *d) {
             *FVALUE = *c.META_DATA_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -381,9 +386,7 @@ EUDATePIDcreate(*path, *extraType, *PID) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     
     EUDATiCHECKSUMget(*path, *checksum, *modtime);
-    *extChksum="";
     if (*checksum != "") {
-        *extChksum=" --checksum *checksum";
         *url="*serverID"++"/dataObject"++"*path";
         if (*extraType != "empty") {
             *extraType = "*extraType"++";EUDAT/CHECKSUM=*checksum";
@@ -396,14 +399,12 @@ EUDATePIDcreate(*path, *extraType, *PID) {
         *url="*serverID"++"/collection"++"*path";
     }
     logInfo("[EUDATePIDcreate] Create PID (CHECKSUM:*checksum, OBJPATH:*path) as user: $userNameClient");
-    *execCmd="*credStoreType *credStorePath create '*url'"++"*extChksum";       
+    *execCmd="*credStoreType *credStorePath create '*url'";       
     
     if (*extraType != "empty") {
         logInfo("[EUDATePIDcreate] Create PID with extratype parameter: *extraType");
         *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
-    # add the default 10320/LOC to each created PID
-#    *execCmd="*execCmd"++" --loc10320 '*url'";
 
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *outGRP2);
     msiGetStdoutInExecCmdOut(*outGRP2, *PID);
@@ -705,12 +706,12 @@ EUDATPidsForColl(*collPath, *fixed) {
         fail;
     }
     # Create PIDs for all subcollections in collection recursively
-    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *subCollPath = *RowC.COLL_NAME;
         EUDATCreatePID("None", *subCollPath, "None", "None", *fixed, *newPID);
     }
     # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         EUDATCreatePID("None", *objPath, "None", "None", *fixed, *newPID);
     }
