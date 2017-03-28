@@ -53,6 +53,12 @@
 EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
 
     logInfo("[EUDATCreatePID] create pid for *path");
+    *version = "1";
+    # extra debug info
+    logInfo("ror=*ror");
+    logInfo("fio=*fio");
+    logInfo("fixed=*fixed");
+    # end extra debug info
     logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror,"
              ++ "fio=*fio, fixed=*fixed");
     if (!EUDATisMetadata(*path)) {
@@ -62,8 +68,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
         #check if PID already exists
         if (*msiCurlEnabled) {
             EUDATSearchPIDCurl(*path, *existing_pid);
-        }
-        else {
+        } else {
             EUDATSearchPID(*path, *existing_pid);
         }
    
@@ -74,8 +79,10 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
             # add ror as extratype parameter
             if (*ror != "None" && *ror != "") {
                 *extraType = "EUDAT/ROR=*ror";
-                EUDATCreateAVU("EUDAT/ROR", *ror, *path);
-            }        
+                if (*ror != "pid") {
+                      EUDATCreateAVU("EUDAT/ROR", *ror, *path);
+                }
+            }
 
             # add ppid as extratype parameter
             if (*parent_pid != "None" && *parent_pid != "") {
@@ -93,7 +100,9 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
                 } else {
                       *extraType = "EUDAT/FIO=*fio";
                 }
-                EUDATCreateAVU("EUDAT/FIO", *fio, *path);
+                if (*fio != "pid") {
+                      EUDATCreateAVU("EUDAT/FIO", *fio, *path);
+                }            
             }            
             # add fixed_content as extratype parameter
             if (EUDATtoBoolean(*fixed)) {
@@ -112,6 +121,14 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
                 }
                 EUDATCreateAVU("EUDAT/FIXED_CONTENT", "False", *path);                
             }
+
+            # add version as extratype parameter
+            if (*extraType != "empty") {
+                  *extraType = "*extraType"++";EUDAT/PROFILE_VERSION=*version";
+            } else {
+                  *extraType = "EUDAT/PROFILE_VERSION=*version";
+            }
+            
 
             # Verify the type of the input path (collection / data object)
             msiGetObjType(*path, *type);
@@ -132,16 +149,14 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
                     EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("true"));
                 }
             }
-            # creation of ROR in case it has not been provided as input
-            if (*ror == "None" || *ror == "") {
-                EUDATeRORupdate(*newPID, *newPID);
+            # creation of ROR in icat in case it has been set to pid
+            if (*ror == "pid") {
                 EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
             }
-            # creation of FIO in case it has not been provided as input
-            if (*fio == "None" || *fio == "") {
-                EUDATeFIOupdate(*newPID, *newPID);
+            # creation of FIO in icat in case it has been set to pid
+            if (*fio == "pid") {
                 EUDATCreateAVU("EUDAT/FIO", *newPID, *path);
-            }            
+            }
 
             # creation of the file based metadata record
             *checksum = "";
@@ -171,7 +186,7 @@ EUDATSearchPID(*path, *existing_pid) {
     logInfo("[EUDATSearchPID] search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     EUDATReplaceHash(*path, *path1);
-    *status = EUDATePIDsearch("URL", "*serverID"++"*"++"*path1", *existing_pid);
+    *status = EUDATePIDsearch("URL", "*serverID*path1", *existing_pid);
     *status;
 }
 
@@ -226,7 +241,7 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
 EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     logInfo("[EUDATUpdatePIDWithNewChild] update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    *replica = EUDATGeteValPid(*pid, "EUDAT/REPLICA");
+    *replica = EUDATGeteValPid(*parentPID, "EUDAT/REPLICA");
     if ((*replica == "") || (*replica == "None")) {
         *replicaNew = *childPID;
     }
@@ -347,7 +362,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
         foreach(*c in *d) {
             *FVALUE = *c.META_COLL_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -356,7 +371,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
         foreach(*c in *d) {
             *FVALUE = *c.META_DATA_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -380,11 +395,10 @@ EUDATePIDcreate(*path, *extraType, *PID) {
 
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     
+    *url="*serverID*path";
+
     EUDATiCHECKSUMget(*path, *checksum, *modtime);
-    *extChksum="";
     if (*checksum != "") {
-        *extChksum=" --checksum *checksum";
-        *url="*serverID"++"/dataObject"++"*path";
         if (*extraType != "empty") {
             *extraType = "*extraType"++";EUDAT/CHECKSUM=*checksum";
         } else {
@@ -392,18 +406,14 @@ EUDATePIDcreate(*path, *extraType, *PID) {
         }
         *extraType = "*extraType"++";EUDAT/CHECKSUM_TIMESTAMP=*modtime";
     }
-    else {
-        *url="*serverID"++"/collection"++"*path";
-    }
+
     logInfo("[EUDATePIDcreate] Create PID (CHECKSUM:*checksum, OBJPATH:*path) as user: $userNameClient");
-    *execCmd="*credStoreType *credStorePath create '*url'"++"*extChksum";       
+    *execCmd="*credStoreType *credStorePath create '*url'";       
     
     if (*extraType != "empty") {
         logInfo("[EUDATePIDcreate] Create PID with extratype parameter: *extraType");
         *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
-    # add the default 10320/LOC to each created PID
-#    *execCmd="*execCmd"++" --loc10320 '*url'";
 
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *outGRP2);
     msiGetStdoutInExecCmdOut(*outGRP2, *PID);
@@ -705,12 +715,12 @@ EUDATPidsForColl(*collPath, *fixed) {
         fail;
     }
     # Create PIDs for all subcollections in collection recursively
-    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *subCollPath = *RowC.COLL_NAME;
         EUDATCreatePID("None", *subCollPath, "None", "None", *fixed, *newPID);
     }
     # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         EUDATCreatePID("None", *objPath, "None", "None", *fixed, *newPID);
     }
