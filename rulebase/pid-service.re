@@ -404,7 +404,14 @@ EUDATePIDcreate(*path, *extraType, *PID) {
         } else {
             *extraType = "EUDAT/CHECKSUM=*checksum";
         }
-        *extraType = "*extraType"++";EUDAT/CHECKSUM_TIMESTAMP=*modtime";
+        *execCmd = "epoch_to_iso8601  *modtime";
+        msiExecCmd("timeconvert.py","*execCmd","null", "null", "null", *outGRP9);
+        msiGetStdoutInExecCmdOut(*outGRP9, *modtime_iso8601);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outGRP9);
+        }
+         *extraType = "*extraType"++";EUDAT/CHECKSUM_TIMESTAMP=*modtime_iso8601";
     }
 
     logInfo("[EUDATePIDcreate] Create PID (CHECKSUM:*checksum, OBJPATH:*path) as user: $userNameClient");
