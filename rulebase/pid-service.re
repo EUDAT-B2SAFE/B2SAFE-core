@@ -54,13 +54,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
 
     logInfo("[EUDATCreatePID] create pid for *path");
     *version = "1";
-    # extra debug info
-    logInfo("ror=*ror");
-    logInfo("fio=*fio");
-    logInfo("fixed=*fixed");
-    # end extra debug info
-    logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror,"
-             ++ "fio=*fio, fixed=*fixed");
+    logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror, fio=*fio, fixed=*fixed");
     if (!EUDATisMetadata(*path)) {
         getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
@@ -404,7 +398,7 @@ EUDATePIDcreate(*path, *extraType, *PID) {
         } else {
             *extraType = "EUDAT/CHECKSUM=*checksum";
         }
-        *execCmd = "epoch_to_iso8601  *modtime";
+        *execCmd=" epoch_to_iso8601  *modtime";
         msiExecCmd("timeconvert.py","*execCmd","null", "null", "null", *outGRP9);
         msiGetStdoutInExecCmdOut(*outGRP9, *modtime_iso8601);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
