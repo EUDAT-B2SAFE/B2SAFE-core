@@ -358,7 +358,15 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
     }
     else {
         *parentROR = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/ROR");
+        if (*parentROR == "None") {
+            logDebug("EUDAT/ROR was empty, using parent PID");
+            *parentROR = *parentPID;
+        }
         *fio = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIO");
+        if (*fio == "None") {
+            logDebug("EUDAT/FIO was empty, using parent PID");
+            *fio = *parentPID;
+        }
         *fixed = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIXED_CONTENT");
         logDebug("[EUDATPIDRegistration] the path *destination has EUDAT/PARENT=*parentPID, "
                  ++ "EUDAT/ROR=*parentROR, EUDAT/FIO=*fio, EUDAT/FIXED_CONTENT=*fixed");
