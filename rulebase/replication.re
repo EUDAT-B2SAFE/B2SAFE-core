@@ -344,6 +344,8 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
     *parentPID = "None";
     *parentROR = "None";
     *childPID = "None";
+    *fio = "None";
+    *fixed = "False";
 
     EUDATGetZoneNameFromPath(*destination, *zoneName);
     EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
