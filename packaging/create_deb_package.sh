@@ -72,7 +72,7 @@ Version: ${VERSION}-${RELEASE}
 Section: unknown
 Priority: optional
 Architecture: all
-Depends: irods-icat (>= 4.0.0)
+Depends: irods-icat (>= 4.0.0) | irods-server (>= 4.2.0)
 Maintainer: Robert Verkerk <robert.verkerk@surfsara.nl>
 Description: B2SAFE for iRODS package
  B2SAFE is a robust, safe, and highly available service which allows
@@ -109,7 +109,7 @@ cat > \$INSTALL_CONF << EOF2
 IRODS_CONF_DIR=/etc/irods
 #
 # the absolute directory where irods is installed
-IRODS_DIR=/var/lib/irods/iRODS
+IRODS_DIR=/var/lib/irods
 #
 # the directory where B2SAFE is installed as a package
 B2SAFE_PACKAGE_DIR=${IRODS_PACKAGE_DIR}
@@ -136,7 +136,6 @@ CERTIFICATE_ONLY=</path/prefix_suffix_index_certificate_only.pem>
 PREFIX=<ZZZ>
 HANDLEOWNER="200:0.NA/\\\$PREFIX"
 REVERSELOOKUP_USERNAME=<ZZZ>
-#REVERSELOOKUP_PASSWORD=<Password>
 HTTPS_VERIFY="True"
 #
 # users for msiexec command

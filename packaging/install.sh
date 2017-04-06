@@ -14,12 +14,16 @@ INSTALL_CONFIG=./install.conf
 STATUS=0
 EUDAT_RULEFILES=''
 EPICCLIENT2=true
+JSON_CONFIG="false"
+DATE_TODAY=`date +%Y%m%d`
+#
+# end set default parameters for installation
 
 # start default parameters for setup
 #===================================
 IRODS_CONF_DIR=/etc/irods
 #
-IRODS_DIR=/var/lib/irods/iRODS
+IRODS_DIR=/var/lib/irods
 #
 B2SAFE_PACKAGE_DIR=/opt/eudat/b2safe
 #
@@ -57,13 +61,12 @@ AUTHZ_ENABLED=true
 MSIFREE_ENABLED=false
 MSICURL_ENABLED=false
 #
-#============================================
-# end set default parameters for installation
 #
-DATE_TODAY=`date +%Y%m%d`
-JSON_CONFIG="false"
+#============================================
 # end default parameters for setup
-
+#
+#
+IRODS_LINK_DIR="${IRODS_DIR}/iRODS/server/bin/cmd"
 
 
 ########################
@@ -325,12 +328,12 @@ update_irods_core_resource() {
 
 install_python_scripts() {
 
-    # link all files except epicclient*.py
+   # link all files except epicclient*.py
     for file in `find $B2SAFE_PACKAGE_DIR/cmd/* | egrep -v ".new|.org|.~|epicclient" | sort `
     do
         SHORTFILE="${file##*/}"
         EXTENSION="${file##*.}"
-        PYTHON_LINKFILE=$IRODS_DIR/server/bin/cmd/$SHORTFILE
+        PYTHON_LINKFILE=$IRODS_LINK_DIR/$SHORTFILE
         if [ -e $PYTHON_LINKFILE ]
         then
             echo "rm $PYTHON_LINKFILE"
@@ -348,7 +351,7 @@ install_python_scripts() {
 
     # link the correct epicclient
     SHORTFILE=epicclient.py
-    PYTHON_LINKFILE=$IRODS_DIR/server/bin/cmd/$SHORTFILE
+    PYTHON_LINKFILE=$IRODS_LINK_DIR/$SHORTFILE
     file=`find $B2SAFE_PACKAGE_DIR/cmd/epicclient2.py` 
     if [ -e $PYTHON_LINKFILE ]
     then
@@ -560,7 +563,7 @@ update_authz_map_json() {
 	  "action":
 		[ "read" ],
 	  "target":
-		[ "${IRODS_DIR}/server/bin/cmd/*","${B2SAFE_PACKAGE_DIR}/conf/*" ]
+		[ "${IRODS_LINK_DIR}/*","${B2SAFE_PACKAGE_DIR}/conf/*" ]
 	}
 }
 
@@ -729,11 +732,22 @@ fi
 if [ $STATUS -eq 0 ]
 then
     echo "check iRODS config files"
-    if [ -e "${IRODS_DIR}/../VERSION.json" ]
+    if [ "${IRODS_DIR}" == "/var/lib/irods/iRODS" ]
+    then
+        IRODS_DIR="/var/lib/irods"
+    fi
+    if [ -e "${IRODS_DIR}/VERSION.json" ]
     then
         JSON_CONFIG="true"
         echo "We have iRODS 4.1 or higher. The config files are in json format"
     fi
+    if [ -e "${IRODS_DIR}/msiExecCmd_bin" ]
+    then
+        IRODS_LINK_DIR=${IRODS_DIR}/msiExecCmd_bin
+        echo "We have iRODS 4.2 or higher. The \"msiExecCmd_bin\" is present"
+    else
+        IRODS_LINK_DIR="${IRODS_DIR}/iRODS/server/bin/cmd"
+    fi 
 fi
 
 #
