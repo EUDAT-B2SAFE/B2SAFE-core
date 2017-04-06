@@ -328,7 +328,7 @@ update_irods_core_resource() {
 
 install_python_scripts() {
 
-   # link all files except epicclient*.py
+    # link all files except epicclient*.py
     for file in `find $B2SAFE_PACKAGE_DIR/cmd/* | egrep -v ".new|.org|.~|epicclient" | sort `
     do
         SHORTFILE="${file##*/}"
