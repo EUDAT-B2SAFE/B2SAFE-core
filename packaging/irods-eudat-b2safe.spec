@@ -12,7 +12,7 @@ BuildArch:	noarch
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires:	
-Requires:	irods-icat
+Requires:	irods-icat or irods-server
 
 %define _whoami %(whoami)
 %define _b2safehomepackaging %(pwd)
