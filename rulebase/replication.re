@@ -380,8 +380,15 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
         # update parent PID with a child one 
         # if the child exists in ICAT on the remote server
         if (*childPID != "None") {
-            EUDATUpdatePIDWithNewChild(*parentPID, *childPID);
-#TODO log the failure of the child update: define function to search *childPID in *parentPID
+            *replica = EUDATUpdatePIDWithNewChild(*parentPID, *childPID);
+            if (*replica != "None") {
+                EUDATCreateAVU("EUDAT/REPLICA", *replica, *source);
+            }
+            else {
+                *registration_response = "REPLICA attribute of source *source is None";
+                logDebug(*registration_response);
+                EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
+            }
         }
         else {
             *registration_response = "PID of destination *destination is None";

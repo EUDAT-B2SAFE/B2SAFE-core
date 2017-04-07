@@ -146,8 +146,8 @@ getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
 # 
 getB2SAFEVersion(*version) {
     *major_version = "3";
-    *minor_version = "1";
-    *sub_version = "3";
+    *minor_version = "9";
+    *sub_version = "1";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 

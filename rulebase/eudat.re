@@ -109,6 +109,26 @@ EUDATisMetadata(*path) {
     *isMeta;
 }
 
+# Push system level metadata to the messaging system
+# 
+# Parameters:
+#   *path     [IN]    the  path of the object/collection
+# 
+# Author: Claudio Cacciari, Cineca
+# 
+EUDATPushMetadata(*path, *queue) {
+
+    logInfo("[EUDATPushMetadata] pushing metadata of object *path to topic *queue")
+    # loop over the sub-collections of the collection
+    foreach (*Row in SELECT COLL_NAME WHERE COLL_NAME = '*path' || like '*path/%') {
+        *msg = '{ ' ++ *Row.COLL_NAME ++ ':';
+        EUDATgetCollAVU(*Row.COLL_NAME, *res_coll);
+        EUDATgetBulkMetadata(*Row.COLL_NAME, *res_objs);
+        *message = *msg ++ '{ *res_coll, objects: [*res_objs] } }';
+        logDebug("[EUDATPushMetadata] message: *message");
+        EUDATMessage(*queue, *message);        
+    }
+}
 
 # It manages the writing and reading of log messages to/from external log services.
 # The current implementation writes the logs to specific log file.
@@ -123,10 +143,12 @@ EUDATisMetadata(*path) {
 # Author: Claudio Cacciari, Cineca
 #
 EUDATMessage(*queue, *message) {
+
+    logInfo("[EUDATMessage] pushing the message to topic *queue");
     getMessageParameters(*msgLogPath, *enabled);
     if (*enabled) {
-        logInfo("sending message '*message' to the queue '*queue'");
-        msiExecCmd("messageManager.py", "-l *msgLogPath send *queue *message",
+        logInfo("[EUDATMessage] sending message '*message' to the topic '*queue'");
+        msiExecCmd("argotest.py", "-l *msgLogPath publish *queue *message",
                    "null", "null", "null", *outMessage);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
         if (*msiFreeEnabled) {
@@ -524,6 +546,56 @@ EUDATgetLastAVU(*Path, *Key, *Value)
     foreach ( *B in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
         *Value = *B.META_DATA_ATTR_VALUE;
     }
+}
+
+#-----------------------------------------------------------------------------
+# Get all the AVUs of a collection
+#
+# Parameters:
+# *path  [IN]  target collection
+# *res   [OUT] the AVUs
+#
+# Author: Claudio Cacciari, Cineca
+#-----------------------------------------------------------------------------
+EUDATgetCollAVU(*path, *res)
+{
+    logInfo("[EUDATgetCollAVU] getting AVU for collection *path");
+    *res = '';
+    foreach ( *R in SELECT META_COLL_ATTR_NAME,META_COLL_ATTR_VALUE,COLL_OWNER_NAME WHERE COLL_NAME = '*path' ) {
+        *owner = *R.COLL_OWNER_NAME
+        *res = *res ++ *R.META_COLL_ATTR_NAME ++ ":" ++*R.META_COLL_ATTR_VALUE ++ ",";
+    }
+    *res = *res ++ "owner:" ++ *owner;
+    logDebug("[EUDATgetCollAVU] AVUs: *res");
+}
+
+#-----------------------------------------------------------------------------
+# Get all the AVUs of the objects under a collection
+#
+# Parameters:
+# *path  [IN]  target collection
+# *res   [OUT] the AVUs
+#
+# Author: Claudio Cacciari, Cineca
+#-----------------------------------------------------------------------------
+EUDATgetBulkMetadata(*path, *res)
+{
+    logInfo("[EUDATgetBulkMetadata] getting objects'metadata for collection *path");
+    *res = '';
+    *name_old = '';
+    foreach ( *R in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE, DATA_CHECKSUM, 
+                           DATA_NAME, DATA_OWNER_NAME, DATA_RESC_NAME WHERE COLL_NAME = '*path' ) {
+        *name = *R.DATA_NAME
+        if (*name_old != *R.DATA_NAME) {
+            *res = *res ++ *R.DATA_NAME ++ "=:=resource=:=" ++ *R.DATA_RESC_NAME ++ ",";           
+            *res = *res ++ *R.DATA_NAME ++ "=:=owner=:=" ++ *R.DATA_OWNER_NAME ++ ",";
+            *res = *res ++ *R.DATA_NAME ++ "=:=checksum=:=" ++ *R.DATA_CHECKSUM ++ ",";
+        }
+        *res = *res ++ *R.DATA_NAME ++ "=:=" ++ *R.META_DATA_ATTR_NAME ++ "=:=" ++ *R.META_DATA_ATTR_VALUE ++ ",";
+        *name_old = *R.DATA_NAME
+    }
+    *res = trimr(*res, ',');
+    logDebug("[EUDATgetBulkMetadata] metadata: *res");
 }
 
 #-----------------------------------------------------------------------------

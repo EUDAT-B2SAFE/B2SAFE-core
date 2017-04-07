@@ -235,6 +235,7 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
 # Modified by: Claudio Cacciari, CINECA
 #
 EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
+    *replicaNew = "None"
     logInfo("[EUDATUpdatePIDWithNewChild] update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     *replica = EUDATGeteValPid(*parentPID, "EUDAT/REPLICA");
@@ -244,7 +245,7 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     else {
         *replicaNew = *replica ++ "," ++ *childPID;
     }
-    logDebug("epicclient.py *credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew");
+    logDebug("[EUDATUpdatePIDWithNewChild] epicclient.py *credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew");
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew",
                "null", "null", "null", *outUPwNC);
     msiGetStdoutInExecCmdOut(*outUPwNC, *response);
@@ -252,7 +253,9 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outUPwNC);
     }
-    logDebug("update handle location response = *response");
+    logDebug("[EUDATUpdatePIDWithNewChild] update handle replica response = *response");
+    if (*response != "True") { *replicaNew = "None" }
+    *replicaNew
 }
 
 #-------------------------------------------------------------------------------
@@ -403,6 +406,7 @@ EUDATePIDcreate(*path, *extraType, *PID) {
         *execCmd=" epoch_to_iso8601  *modtime";
         msiExecCmd("timeconvert.py","*execCmd","null", "null", "null", *outGRP9);
         msiGetStdoutInExecCmdOut(*outGRP9, *modtime_iso8601);
+        *modtime_iso8601 = trimr(*modtime_iso8601, "\n");
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
         if (*msiFreeEnabled) {
             msifree_microservice_out(*outGRP9);
