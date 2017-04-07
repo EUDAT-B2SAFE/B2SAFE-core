@@ -1,5 +1,5 @@
-#!/usr/bin/env python 
-# -*- coding: utf-8 -*- 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import argparse
 import logging
@@ -26,11 +26,11 @@ class Collection():
 
         self.conf = config
         self.logger = logger
-       
-   
+
+
     def traverse(self, rootdir, absolute=True):
         """
-        Creates a nested dictionary that represents the folder structure of 
+        Creates a nested dictionary that represents the folder structure of
         rootdir
         """
         self.logger.info('Traversing the path: ' + rootdir)
@@ -61,9 +61,9 @@ class MetsManifest():
     def __init__(self, ftree, config, logger):
 
         self.conf = config
-        self.logger = logger 
+        self.logger = logger
 
-        mf = mets(ID="_EUDATMETS_" + str(uuid.uuid4()), 
+        mf = mets(ID="_EUDATMETS_" + str(uuid.uuid4()),
                   LABEL="EUDAT METS document")
         self.logger.debug('Building the METS file section')
         mf.fileSec = CTD_ANON_3()
@@ -80,11 +80,11 @@ class MetsManifest():
         mf.structMap.append(smap)
         self.manifest = mf
 
-   
+
     def getManifest(self):
-        
+
         return self.manifest
- 
+
 
     def buildGroupType(self, dirs, fileGrp, root):
         """Builds the METS section fileSec and return the mapping between
@@ -133,7 +133,7 @@ class MetsManifest():
     def buildStructMap(self, rootName, collStruct):
         """Builds the METS section structMap and return it
         """
-        self.logger.debug('Building the METS structMapType')  
+        self.logger.debug('Building the METS structMapType')
         # initialize the structural map section
         smap = structMapType(TYPE="Relational")
         divMain = divType(LABEL=rootName, TYPE="digitalCollection")
@@ -141,7 +141,7 @@ class MetsManifest():
         temp_rel = {}
         future_rel = {}
         processedPaths = []
-        # loop over the metadata description of the collection provided 
+        # loop over the metadata description of the collection provided
         # as a jsonld doc
         for entity in collStruct['Structure']:
 
@@ -150,22 +150,22 @@ class MetsManifest():
             normPath = entity['path'][2:]
             self.logger.debug('with path: ' + normPath)
             pathSubSet = self.patternMatch(normPath, self.fileMap.keys())
-            self.logger.debug('which matches the following patterns: ' 
+            self.logger.debug('which matches the following patterns: '
                               + pprint.pformat(pathSubSet.keys()))
             processedPaths += pathSubSet.keys()
             for path in pathSubSet.keys():
-                self.entityRelMgmt(path, entity, pathSubSet[path], temp_div, 
+                self.entityRelMgmt(path, entity, pathSubSet[path], temp_div,
                                    temp_rel, future_rel)
 
         divMainList = []
-        # for each entity 
+        # for each entity
         for p in temp_div:
             # check if it is involved in relations
             if p in future_rel:
                 # and with which other entities
                 for relPath in future_rel[p]:
                     # find the related mets div and avoid to add it multiple times.
-                    if (relPath in temp_rel 
+                    if (relPath in temp_rel
                         and temp_rel[relPath] not in divMainList):
                         divMain.append(temp_rel[relPath])
                         divMainList.append(temp_rel[relPath])
@@ -178,15 +178,15 @@ class MetsManifest():
         pp = set(processedPaths)
         leftPaths = [x for x in self.fileMap.keys() if x not in pp]
         for path in leftPaths:
-            divMain.append(self.divBuilder(self.conf.format_default, 
+            divMain.append(self.divBuilder(self.conf.format_default,
                                            self.conf.type_default, path))
-    
+
         smap.append(divMain)
         return smap
 
 
     def divBuilder(self, label, etype, path):
- 
+
         self.logger.debug('divBuilder for path: {}'.format(path))
         div = divType(LABEL=label, TYPE=etype)
         fptr = CTD_ANON_13(FILEID=self.fileMap[path])
@@ -194,7 +194,7 @@ class MetsManifest():
         return div
 
 
-    def entityRelMgmt(self, normPath, entity, templateDict, divDict, relDict, 
+    def entityRelMgmt(self, normPath, entity, templateDict, divDict, relDict,
                       placeHolderDict):
 
         # for each path a mets div is created and stored in a temp list
@@ -211,12 +211,12 @@ class MetsManifest():
                     for tkey in templateDict.keys():
                         normPathRel = normPathRel.replace('${'+ tkey +'}',
                                                           templateDict[tkey])
-                print 'normPathRel: ' + normPathRel
+                self.logger.info('normPathRel: ' + normPathRel)
                 pathSubSet = fnmatch.filter(self.fileMap.keys(), normPathRel)
                 for path in pathSubSet:
                     if path in divDict.keys():
-                    # if the entity is associated to an already 
-                    # defined mets div, then put the div inside 
+                    # if the entity is associated to an already
+                    # defined mets div, then put the div inside
                     # the same div container
                         divRel.append(divDict[path])
                     # anyway store the relation for later checks
@@ -225,11 +225,11 @@ class MetsManifest():
                     else:
                         placeHolderDict[path] = [normPath]
             relDict[normPath] = divRel
-        # if this entity does not provide its own relations, check if 
+        # if this entity does not provide its own relations, check if
         # is related to previously defined entities.
         if normPath in placeHolderDict.keys():
             for relatedPath in placeHolderDict[normPath]:
-                relDict[relatedPath].append(div)        
+                relDict[relatedPath].append(div)
 
 
     def patternMatch(self, pattern, targets):
@@ -251,24 +251,24 @@ class MetsManifest():
             if m:
                 pathSubSet[item] = {}
                 for tNames in templateNames:
-                    # store in a dictionary the values of the template vars used in a 
+                    # store in a dictionary the values of the template vars used in a
                     # each pattern
                     pathSubSet[item][tNames] = m.group(tNames)
 
-        return pathSubSet 
+        return pathSubSet
 
 
 ################################################################################
 # Configuration Class #
 ################################################################################
- 
+
 class Configuration():
-    """ 
+    """
     Get properties from filesystem
     """
 
     def __init__(self, conffile, debug, dryrun, logger):
-   
+
         self.conffile = conffile
         self.debug = debug
         self.dryrun = dryrun
@@ -282,7 +282,7 @@ class Configuration():
 
         self.config = ConfigParser.RawConfigParser()
         self.config.readfp(open(self.conffile))
-        
+
         logfilepath = self._getConfOption('Logging', 'log_file')
         loglevel = self._getConfOption('Logging', 'log_level')
         if self.debug:
@@ -295,18 +295,18 @@ class Configuration():
                                     + '[%(funcName)s] %(message)s')
         rfh.setFormatter(formatter)
         logger.addHandler(rfh)
-       
+
         self.abs_path = self._getConfOption('METS', 'abs_path', True)
         self.md_jsonld_file = self._getConfOption('METS', 'md_jsonld_file')
         self.format_default = self._getConfOption('METS', 'format_default')
         self.type_default = self._getConfOption('METS', 'type_default')
-      
+
         self.irods_home_dir = self._getConfOption('iRODS', 'irods_home_dir')
         self.irods_debug = self._getConfOption('iRODS', 'irods_debug', True)
 #TODO add it to the configuration and exploit when possible in irods command
 #        self.irods_resource = self._getConfOption('iRODS', 'irods_resource')
 
-        
+
     def _getConfOption(self, section, option, boolean=False):
         """
         get the options from the configuration file
@@ -329,7 +329,7 @@ class Configuration():
 
 def writeMets(args):
 
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, 
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
                                   logger)
     configuration.parseConf();
     logger.info("Starting ...")
@@ -353,7 +353,7 @@ def writeMets(args):
     manifestXML = dom.toprettyxml(indent="  ", encoding="utf-8")
 
     if args.dryrun:
-        print manifestXML
+        logger.info(manifestXML)
     else:
         logger.info('Writing the manifest to a file')
         if args.filesystem:
@@ -372,13 +372,13 @@ def writeMets(args):
                 temp.close()
 
     logger.info("Completed")
-    
+
 
 if __name__ == "__main__":
 
     mfact = argparse.ArgumentParser(description='METS factory')
     mfact.add_argument("confpath", help="path to the configuration file")
-    mfact.add_argument("-dbg", "--debug", action="store_true", 
+    mfact.add_argument("-dbg", "--debug", action="store_true",
                        help="enable debug")
     mfact.add_argument("-d", "--dryrun", action="store_true",
                        help="run without performing any real change")
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     input_group.add_argument("-i", "--irods", nargs=1, help="irods path")
     input_group.add_argument("-f", "--filesystem", nargs=1, help="fs path")
 
-    mfact.set_defaults(func=writeMets) 
+    mfact.set_defaults(func=writeMets)
 
     args = mfact.parse_args()
     args.func(args)

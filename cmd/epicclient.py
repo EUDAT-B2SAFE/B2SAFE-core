@@ -16,7 +16,7 @@ httplib2
 download from http://code.google.com/p/httplib2
 python setup.py install
 
-simplejson
+simplejson is needed only if your python stdlib does not include json
 download from http://pypi.python.org/pypi/simplejson/
 python setup.py install
 
@@ -33,7 +33,6 @@ redhat: yum install python-httplib2 python-lxml python-simplejson
 """
 
 import httplib2
-import simplejson
 from defusedxml import minidom
 from lxml import etree
 from lxml.etree import tostring
@@ -41,6 +40,11 @@ import base64
 import uuid
 import argparse
 import sys
+import logging
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 
 # ##############################################################################
@@ -61,11 +65,11 @@ class EpicClient(object):
         # do not throw exceptions for connection errors
         self.http.force_exception_to_status_code = True
 
-    def _debugmsg(self, method, msg):
-        """Internal: Print a debug message if debug is enabled."""
+    # def _debugmsg(self, method, msg):
+    #    """Internal: Print a debug message if debug is enabled."""
 
-        if self.debug:
-            print "[", method, "]", msg
+    #    if self.debug:
+    #        print "[", method, "]", msg
 
     def _geturi(self, prefix, key, value, suffix=''):
         """
@@ -106,7 +110,7 @@ class EpicClient(object):
         elif action is "DELETE":
             hdrs = {'Authorization': 'Basic ' + auth}
         else:
-            self._debugmsg(str(action), "ACTION is unknown")
+            logging.debug('[_getheader] %s ACTION is unknown' % str(action))
 
         return hdrs
 
@@ -141,8 +145,9 @@ class EpicClient(object):
                      "output": "None"}]
         for item in codelist:
             if item["statuscode"] == str(statuscode):
-                self._debugmsg("checkresponsecode", ".....")
-                self._debugmsg(str(method), item["info"]+" "+str(statuscode))
+                logging.debug('[checkresponsecode] .....')
+                logging.debug('[%s] %s %s' % (str(method), item["info"],
+                                              str(statuscode)))
                 output = item["output"]
                 if output is "None":
                     return None
@@ -150,7 +155,7 @@ class EpicClient(object):
                     return False
                 else:
                     return True
-        print "Processing fails with statuscode = " + str(statuscode)
+        logging.error('Processing fails with statuscode = %s' % str(statuscode))
         return None
 
 
@@ -169,7 +174,7 @@ class EpicClient(object):
         """
 
         uri = self._geturi(prefix, key, value, '')
-        self._debugmsg('searchHandle', "URI " + uri)
+        logging.debug('[searchHandle] URI %s' % uri)
         hdrs = self._getheader("SEARCH")
         response, content = self.http.request(uri, method='GET', headers=hdrs)
         output = True
@@ -178,7 +183,7 @@ class EpicClient(object):
             # if not content:
             return None
         else:
-            handle = simplejson.loads(content)
+            handle = json.loads(content)
             if not handle:
                 return 'empty'
 
@@ -203,7 +208,7 @@ class EpicClient(object):
         """
 
         uri = self._geturi(prefix, '', '', suffix)
-        self._debugmsg('retrieveHandle', "URI " + uri)
+        logging.debug('[retrieveHandle] URI %s' % uri)
         hdrs = self._getheader("READ")
         response, content = self.http.request(uri, method='GET', headers=hdrs)
         output = self._checkresponsecode("retrieveHandle", response.status)
@@ -226,16 +231,14 @@ class EpicClient(object):
         jsonhandle = self.retrieveHandle(prefix, suffix)
         if not jsonhandle:
             return None
-        handle = simplejson.loads(jsonhandle)
+        handle = json.loads(jsonhandle)
         for item in handle:
             if 'type' in item and item['type'] == key:
-                self._debugmsg('getValueFromHandle',
-                               "Found key " + key + " value=" +
-                               str(item['parsed_data']))
+                logging.debug('[getValueFromHandle] Found key %s value=%s'
+                              % (key, str(item['parsed_data'])))
                 return str(item['parsed_data'])
 
-        self._debugmsg('getValueFromHandle', "Value for key " + key +
-                       " not found")
+        logging.debug('[getValueFromHandle] Value for key %s not found' % key)
         return None
 
     def createHandle(self, prefix, location, checksum=None, extratype=None,
@@ -250,10 +253,10 @@ class EpicClient(object):
         Returns the URI of the new handle, None if an error occurred.
 
         """
-        self._debugmsg('createHandle', "PREFIX = " + prefix)
-        self._debugmsg('createHandle', "SUFFIX = " + suffix)
+        logging.debug('[createHandle] PREFIX = %s' % prefix)
+        logging.debug('[createHandle] SUFFIX = %s' % suffix)
         uri = self._geturi(prefix, '', '', suffix)
-        self._debugmsg('createHandleWithLocation', "URI " + uri)
+        logging.debug('[createHandleWithLocation] URI %s' % uri)
         hdrs = self._getheader("CREATE")
 
         idn = 0
@@ -285,26 +288,26 @@ class EpicClient(object):
                          None) is None):
                     handle_array.append({'type': key, 'parsed_data': value})
 
-        new_handle_json = simplejson.dumps(handle_array)
+        new_handle_json = json.dumps(handle_array)
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=new_handle_json)
         output = True
         output = self._checkresponsecode("createHandle", response.status)
         if not output or output is None:
-            self._debugmsg('createHandleWithLocation', 'body json:'
-                           + new_handle_json)
+            logging.debug('[createHandleWithLocation] Body json: %s'
+                          % new_handle_json)
             return None
         else:
             # make sure to only return the handle and strip off the baseuri
             # if it is included
             hdl = response['location']
-            self._debugmsg('hdl', hdl)
+            logging.debug('[hdl] %s' % hdl)
             if hdl.startswith(self.cred.baseuri):
                 hdl = hdl[len(self.cred.baseuri):len(hdl)]
             elif hdl.startswith(self.cred.baseuri + '/'):
                 hdl = hdl[len(self.cred.baseuri + '/'):len(hdl)]
-                self._debugmsg('final hdl', hdl)
+                logging.debug('[final hdl] %s' % hdl)
 
         # update location. Use the previous created handle location
         # self.updateHandleWithLocation(hdl, location)
@@ -324,24 +327,24 @@ class EpicClient(object):
         """
 
         uri = self._geturi(prefix, key, value, suffix)
-        self._debugmsg('modifyHandle', "URI " + uri)
+        logging.debug('[modifyHandle] URI %s' % uri)
 
         hdrs = self._getheader("UPDATE")
 
         handle_json = self.retrieveHandle(prefix, suffix)
         if not handle_json:
-            self._debugmsg('modifyHandle',
-                           "Cannot modify an unexisting handle: " + uri)
+            logging.debug('[modifyHandle] Cannot modify an unexisting handle: %s'
+                          % uri)
             return False
 
-        handle = simplejson.loads(handle_json)
+        handle = json.loads(handle_json)
 
         keyfound = False
 
         if (value is None) or (value is '') or (value is ""):
             for item in handle:
                 if 'type' in item and item['type'] == key:
-                    self._debugmsg('modifyHandle', 'Remove item ' + key)
+                    logging.debug('[modifyHandle] Remove item %s' % key)
                     del item['data']
                     del item['parsed_data']
                     break
@@ -349,22 +352,22 @@ class EpicClient(object):
             for item in handle:
                 if 'type' in item and item['type'] == key:
                     keyfound = True
-                    self._debugmsg('modifyHandle', "Found key " + key +
-                                   " value=" + str(item['parsed_data']))
+                    logging.debug('[modifyHandle] Found key %s value=%s'
+                                  % (key, str(item['parsed_data'])))
                     item['parsed_data'] = value
                     del item['data']
                     break
 
             if keyfound is False:
-                self._debugmsg('modifyHandle', "Value of keyfound is false, "
-                               "create new key")
-                self._debugmsg('modifyHandle',
-                               "Key " + key + " created. Generating new hash")
+                logging.debug('[modifyHandle] Value of keyfound is false, '
+                              'create new key')
+                logging.debug('[modifyHandle] Key %s created. Generating new hash'
+                              % key)
                 handleitem = {'type': key, 'parsed_data': value}
                 handle[len(handle):] = [handleitem]
 
-        handle_json = simplejson.dumps(handle)
-        self._debugmsg('modifyHandle', "JSON: " + str(handle_json))
+        handle_json = json.dumps(handle)
+        logging.debug('[modifyHandle] JSON: %s' % str(handle_json))
 
         response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                         body=handle_json)
@@ -387,43 +390,43 @@ class EpicClient(object):
         uri = self._geturi(prefix, '', '', suffix)
         if not key or key is "":
             hdrs = self._getheader("DELETE")
-            self._debugmsg('deleteHandle', "DELETE Handle " + prefix + "/"
-                           + suffix + " of URI " + uri)
+            logging.debug('[deleteHandle] "DELETE Handle %s/%s of URI %s'
+                          % (prefix, suffix, uri))
             response, _ = self.http.request(uri, method='DELETE',
                                             headers=hdrs)
         else:
-            self._debugmsg('deleteHandle', "DELETE field " + key + " of URI"
-                           + uri)
+            logging.debug('[deleteHandle] "DELETE field %s of URI %s'
+                          % (key, uri))
             handle_json = self.retrieveHandle(prefix, suffix)
             if not handle_json:
-                self._debugmsg('deleteHandle',
-                               "Cannot modify an unexisting handle: " + uri)
+                logging.debug('[deleteHandle] Cannot modify an unexisting '
+                              'handle: %s' % uri)
                 return False
             keyfound = False
-            handle = simplejson.loads(handle_json)
+            handle = json.loads(handle_json)
 
             for item in handle:
                 if 'type' in item and item['type'] == key:
                     keyfound = True
-                    self._debugmsg('deleteHandle', "Found key " + key +
-                                   " value=" + str(item['parsed_data']))
-                    self._debugmsg('deleteHandle', "Remove Key's Field")
+                    logging.debug('[deleteHandle] Found key %s value=%s'
+                                  % (key, str(item['parsed_data'])))
+                    logging.debug("[deleteHandle] Remove Key's Field")
                     del handle[handle.index(item)]
                     break
 
             if keyfound is False:
-                self._debugmsg('deleteHandle', "No Value of key is found. "
-                               "Quiting....")
+                logging.debug('[deleteHandle] No Value of key is found. '
+                              'Quiting....')
                 return False
             else:
                 hdrs = self._getheader("UPDATE")
-                handle_json = simplejson.dumps(handle)
-                self._debugmsg('deleteHandle', "JSON: " + str(handle_json))
+                handle_json = json.dumps(handle)
+                logging.debug('[deleteHandle] JSON: %s' % str(handle_json))
                 response, _ = self.http.request(uri, method='PUT', headers=hdrs,
                                                 body=handle_json)
 
         output = self._checkresponsecode("deleteHandle", response.status)
-        self._debugmsg('deleteHandle', "OUTPUT = " + str(output))
+        logging.debug('[deleteHandle] OUTPUT = %s' % str(output))
         if (output is None) or (output is False):
             return False
         else:
@@ -443,39 +446,35 @@ class EpicClient(object):
         uri = self._geturi(prefix, '', value, suffix)
 
         loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
-        self._debugmsg('updateHandleWithLocation', "found 10320/LOC: " +
-                       str(loc10320))
+        logging.debug('[updateHandleWithLocation] Found 10320/LOC: %s'
+                      % str(loc10320))
         if loc10320 is None:
             loc10320 = ('<locations><location id="0" href="' + value +
                         '" /></locations>')
             response = self.modifyHandle(prefix, "10320/LOC", loc10320, suffix)
             if not response:
-                self._debugmsg('updateHandleWithLocation',
-                               "Cannot update handle: " + uri +
-                               " with location: " + value)
+                logging.debug('[updateHandleWithLocation] Cannot update handle:'
+                              ' %s with location: %s' % (uri, value))
                 return False
         else:
-            lt = LocationType(loc10320, self.debug)
+            lt = LocationType(loc10320)
             response = lt.checkInclusion(value)
             if response:
-                self._debugmsg('updateHandleWithLocation',
-                               "the location " + value +
-                               " is already included!")
+                logging.debug('[updateHandleWithLocation] The location %s is '
+                              'already included!' % value)
             else:
                 resp, content = lt.addLocation(value)
                 if not resp:
-                    self._debugmsg('updateHandleWithLocation',
-                                   "the location " + value +
-                                   " cannot be added")
+                    logging.debug('[updateHandleWithLocation] The location %s '
+                                  ' cannot be added' % value)
                 else:
                     if not self.modifyHandle(prefix, "10320/LOC",
                                              content, suffix):
-                        self._debugmsg('updateHandleWithLocation',
-                                       "Cannot update handle: " + uri +
-                                       " with location: " + value)
+                        logging.debug('[updateHandleWithLocation] Cannot update'
+                                      ' handle: %s with location: %s'
+                                      % (uri, value))
                     else:
-                        self._debugmsg('updateHandleWithLocation',
-                                       "location added")
+                        logging.debug('[updateHandleWithLocation] Location added')
                         return True
 
             return False
@@ -498,16 +497,15 @@ class EpicClient(object):
 
         loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
         if loc10320 is None:
-            self._debugmsg('removeLocationFromHandle',
-                           "Cannot remove location: " + value +
-                           " from handle: " + uri +
-                           ", the field 10320/LOC does not exists")
+            logging.debug('[removeLocationFromHandle] Cannot remove location: '
+                          '%s from handle: %s, the field 10320/LOC does not '
+                          'exists' % (value, uri))
             return False
         else:
-            lt = LocationType(loc10320, self.debug)
+            lt = LocationType(loc10320)
             if not lt.checkInclusion(value):
-                self._debugmsg('removeLocationFromHandle', "the location " +
-                               value + " is not included!")
+                logging.debug('[removeLocationFromHandle] The location %s '
+                              'is not included!' % value)
                 return False
             else:
                 response, content = lt.removeLocation(value)
@@ -515,8 +513,8 @@ class EpicClient(object):
                     if self.modifyHandle(prefix, "10320/LOC", content, suffix):
                         return True
 
-                self._debugmsg('removeLocationFromHandle', "the location " +
-                               value + " cannot be removed")
+                logging.debug('[removeLocationFromHandle] The location %s '
+                              'cannot be removed' % value)
                 return False
 
     def updateLocationInHandle(self, prefix, oldvalue, newvalue, suffix=''):
@@ -536,16 +534,15 @@ class EpicClient(object):
 
         loc10320 = self.getValueFromHandle(prefix, "10320/LOC", suffix)
         if loc10320 is None:
-            self._debugmsg('updateLocationInHandle',
-                           "Cannot update location: " + oldvalue +
-                           " from handle: " + uri +
-                           ", the field 10320/LOC does not exists")
+            logging.debug('[updateLocationInHandle] Cannot update location: '
+                          '%s from handle: %s, the field 10320/LOC does not exists'
+                          % (oldvalue, uri))
             return False
         else:
-            lt = LocationType(loc10320, self.debug)
+            lt = LocationType(loc10320)
             if not lt.checkInclusion(oldvalue):
-                self._debugmsg('updateLocationInHandle', "the location " +
-                               oldvalue + " is not included!")
+                logging.debug('[updateLocationInHandle] The location '
+                              '%s is not included!' % oldvalue)
                 return False
             else:
                 response, content = lt.updateLocation(oldvalue, newvalue)
@@ -553,8 +550,8 @@ class EpicClient(object):
                     if self.modifyHandle(prefix, "10320/LOC", content, suffix):
                         return True
 
-                self._debugmsg('removeLocationFromHandle', "the location " +
-                               oldvalue + " cannot be updated")
+                logging.debug('[removeLocationFromHandle] The location '
+                              '%s cannot be updated' % oldvalue)
                 return False
 
 
@@ -571,15 +568,14 @@ class LocationType(object):
 
     """
 
-    def __init__(self, field, debug=False):
+    def __init__(self, field):
         self.domfield = minidom.parseString(field)
-        self.debug = debug
+        # self.debug = debug
 
-    def _debugmsg(self, method, msg):
-        """Internal: Print a debug message if debug is enabled."""
+    #  def _debugmsg(self, method, msg):
+    #    """Internal: Print a debug message if debug is enabled."""
 
-        if self.debug:
-            print "[", method, "]", msg
+    #    logging.debug("[%s] %s" % (method, msg))
 
     def isEmpty(self):
         """Check if the 10320/LOC handle type field is empty.
@@ -592,10 +588,10 @@ class LocationType(object):
 
         locations = self.domfield.getElementsByTagName("location")
         if locations.length == 0:
-            self._debugmsg('isEmpty', "the 10320/LOC field is empty")
+            logging.debug('[isEmpty] The 10320/LOC field is empty')
             return True, 0
-        self._debugmsg('isEmpty', "the 10320/LOC field contains " +
-                       str(locations.length) + " locations")
+        logging.debug('[isEmpty] The 10320/LOC field contains %s locations'
+                      % str(locations.length))
         return False, str(locations.length)
 
     def checkInclusion(self, loc):
@@ -610,12 +606,12 @@ class LocationType(object):
         locations = self.domfield.getElementsByTagName("location")
         for url in locations:
             if url.getAttribute('href') == loc:
-                self._debugmsg('checkInclusion',
-                               "the location (" + loc + ") is included")
+                logging.debug('[checkInclusion] The location (%s) is included'
+                              % loc)
                 return True
 
-        self._debugmsg('checkInclusion',
-                       "the location (" + loc + ") is not included")
+        logging.debug('[checkInclusion] The location (%s) is not included'
+                      % loc)
         return False
 
     def removeLocation(self, loc):
@@ -633,10 +629,10 @@ class LocationType(object):
         for url in locations:
             if url.getAttribute('href') == loc:
                 main.removeChild(url)
-                self._debugmsg('removeLocation', "removed location: " + loc)
+                logging.debug('[removeLocation] Removed location: %s' % loc)
                 return True, main.toxml()
 
-        self._debugmsg('removeLocation', "cannot remove location: " + loc)
+        logging.debug('[removeLocation] Cannot remove location: %s' % loc)
         return False, None
 
     def addLocation(self, loc):
@@ -656,15 +652,15 @@ class LocationType(object):
             newurl.setAttribute('href', loc)
             self.domfield.childNodes[0].appendChild(newurl)
             main = self.domfield.childNodes[0]
-            self._debugmsg('addLocation', "added new location: " + loc)
+            logging.debug('[addLocation] Added new location: %s' % loc)
             return True, main.toxml()
         except TypeError:
-            self._debugmsg('addLocation', "an XML TypeError occurred, "
-                                          "adding the new location: " + loc)
+            logging.debug('[addLocation] An XML TypeError occurred '
+                          'adding the new location: %s' % loc)
             return False, None
         except AttributeError:
-            self._debugmsg('addLocation', "an XML AttributeError occurred, "
-                                          "adding the new location: " + loc)
+            logging.debug('[addLocation] An XML AttributeError occurred '
+                          'adding the new location: %s' % loc)
             return False, None
 
 
@@ -688,11 +684,11 @@ class LocationType(object):
                 newurl.setAttribute('id', url.getAttribute('id'))
                 newurl.setAttribute('href', newloc)
                 main.replaceChild(newurl, url)
-                self._debugmsg('updateLocation', "updated location: " + oldloc
-                                + "with: " + newloc)
+                logging.debug('[updateLocation] Updated location: %s with %s'
+                              % (oldloc, newloc))
                 return True, main.toxml()
 
-        self._debugmsg('updateLocation', "cannot update location: " + oldloc)
+        logging.debug('[updateLocation] Cannot update location: %s' % oldloc)
         return False, None
 
 
@@ -740,12 +736,12 @@ class Credentials(object):
             try:
                 filehandle = open(self.filename, "r")
             except IOError as err:
-                print "error: failed to open %s: %s" % (self.filename,
-                                                        err.strerror)
+                logging.error("Failed to open %s: %s" % (self.filename,
+                                                         err.strerror))
                 sys.exit(-1)
 
             with filehandle:
-                tmp = simplejson.loads(filehandle.read())
+                tmp = json.loads(filehandle.read())
 
             try:
                 self.baseuri = tmp['baseuri']
@@ -758,22 +754,25 @@ class Credentials(object):
                 self.accept_format = tmp['accept_format']
                 if tmp['debug'] == 'True':
                     self.debug = True
+                    logging.basicConfig(level=logging.DEBUG)
+                else:
+                    logging.basicConfig(level=logging.INFO)
             except KeyError:
-                print "error: missing key-value-pair in credentials file"
+                logging.error("Missing key-value-pair in credentials file")
                 sys.exit(-1)
 
         elif self.store == "irods":
-            print "Function getting credential store in iRODS is in testing ..."
+            logging.info("Function getting credential store in iRODS is in "
+                         "testing ...")
             # FIXME: is there better way to exit ?.
             sys.exit(-1)
         else:
-            print "error: invalid store '%s', aborting" % self.store
+            logging.error("Invalid store '%s', aborting" % self.store)
             sys.exit(-1)
 
-        if self.debug:
-            print ("credentials from %s:%s %s %s %s" %
-                   (self.store, self.baseuri, self.username, self.prefix,
-                    self.accept_format))
+        logging.debug("credentials from %s:%s %s %s %s" %
+                      (self.store, self.baseuri, self.username, self.prefix,
+                       self.accept_format))
 
 
 ###############################################################################
@@ -896,6 +895,8 @@ if __name__ == "__main__":
                              "(os=filespace, irods=iRODS storage)")
     parser.add_argument("credpath", default="NULL",
                         help="path to the credentials")
+    parser.add_argument("-d", "--debug", default=False, action="store_true",
+                        help="Display debug messages")
 
     subparsers = parser.add_subparsers(title='Actions',
                                        description='Handle record management'
@@ -967,4 +968,8 @@ if __name__ == "__main__":
     parser_relation.set_defaults(func=relation)
 
     _args = parser.parse_args()
+
+    if _args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
     _args.func(_args)

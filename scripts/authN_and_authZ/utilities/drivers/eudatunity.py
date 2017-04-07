@@ -6,12 +6,13 @@ import base64
 from pprint import pformat
 import requests
 import fnmatch
+import logging
 
 class EudatRemoteSource:
 
     def __init__(self, main_project, subgroups, conf, role_map, parent_logger=None):
         """initialize the object"""
-        
+
         if (parent_logger): self.logger = parent_logger
         else: self.logger = logging.getLogger('eudat')
 
@@ -39,8 +40,8 @@ class EudatRemoteSource:
 
         with filehandle:
             return json.loads(filehandle.read())        
-            
-
+    
+        
     def queryUnity(self, sublink):
         """
         :param argument: url to unitydb with entity (entityID) or group (groupName)
@@ -59,8 +60,8 @@ class EudatRemoteSource:
         response_dict = json.loads(json_data)
 
         return response_dict
-    
-    
+
+
     def getRemoteUsers(self):
         """
         Get the remote users' list
@@ -124,7 +125,7 @@ class EudatRemoteSource:
             list_group[group_name[1:]] = user_list
 
         final_list['groups'] = list_group
-        
+
         return final_list
 
 
@@ -151,7 +152,7 @@ class EudatRemoteSource:
         for the time beeing just the DNs are considered
         """
         self.logger.info('Checking user attributes ...')
-        
+
         if self.subgroups is not None:
             filtered_group_list = {org:members for (org,members)
                              in self.remote_users_list['groups'].iteritems()
@@ -162,7 +163,7 @@ class EudatRemoteSource:
                     self.logger.debug('looking at user ' + user)
                     users.append(user)
                     self.logger.debug('added user to the list ' + str(users))
-                        
+
             filtered_list = {user:attrs for (user,attrs)
                              in self.remote_users_list['attributes'].iteritems()
                              if user in users}
@@ -180,8 +181,8 @@ class EudatRemoteSource:
                 if u not in data.keys():
                     data[u] = []
                 data[u] = list(set(data[u] + attrs['DN']))
-                self.logger.debug('\tadded user ' + u + '\' DNs: ' 
-                              + pformat(attrs['DN']))
+                self.logger.debug('\tadded user ' + u + '\' DNs: '
+                              + pformat(attrs['DN']))            
 
         return data
 
