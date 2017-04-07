@@ -13,7 +13,7 @@ getEUDATLoggerLevel(*euLogLevel) {
     *euLogLevel=2
 }
 
-
+#
 # Provides parameters for the connection with the EPIC service
 # 
 # Arguments:
@@ -146,8 +146,8 @@ getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
 # 
 getB2SAFEVersion(*version) {
     *major_version = "3";
-    *minor_version = "1";
-    *sub_version = "2";
+    *minor_version = "2";
+    *sub_version = "1";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 
