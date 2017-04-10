@@ -274,7 +274,14 @@ class EpicClient(object):
             for key_value in extratype:
                 key = key_value.split('=')[0]
                 value = key_value.split('=')[1]
-                # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
+                # replace "EUDAT/FIO=pid" with "EUDAT/FIO=handle"
+                if key == 'EUDAT/FIO' and value.lower() == 'pid':
+                    if uri.startswith(self.cred.baseuri):
+                       handle = uri[len(self.cred.baseuri):len(uri)]
+                    elif uri.startswith(self.cred.baseuri + '/'):
+                       handle = uri[len(self.cred.baseuri + '/'):len(uri)]
+                    value = handle
+                 # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
                 if key == 'EUDAT/ROR' and value.lower() == 'pid':
                     if uri.startswith(self.cred.baseuri):
                        handle = uri[len(self.cred.baseuri):len(uri)]
