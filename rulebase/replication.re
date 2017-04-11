@@ -344,10 +344,12 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
     *parentPID = "None";
     *parentROR = "None";
     *childPID = "None";
+    *fio = "None";
+    *fixed = "False";
 
     EUDATGetZoneNameFromPath(*destination, *zoneName);
     EUDATGetZoneHostFromZoneName(*zoneName, *zoneConn);
-    logDebug("Remote zone name: *zoneName, connection contact: *zoneConn");
+    logDebug("[EUDATPIDRegistration] remote zone name: *zoneName, connection contact: *zoneConn");
 
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
@@ -357,18 +359,36 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
         EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
     }
     else {
-        EUDATSearchAndDefineRoR(*source, *parentPID, *parentROR);
-        logDebug("The path *destination has PPID=*parentPID and ROR=*parentROR");
+        *parentROR = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/ROR");
+        if (*parentROR == "None") {
+            logDebug("EUDAT/ROR was empty, using parent PID");
+            *parentROR = *parentPID;
+        }
+        *fio = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIO");
+        if (*fio == "None") {
+            logDebug("EUDAT/FIO was empty, using parent PID");
+            *fio = *parentPID;
+        }
+        *fixed = EUDATSearchAndDefineField(*source, *parentPID, "EUDAT/FIXED_CONTENT");
+        logDebug("[EUDATPIDRegistration] the path *destination has EUDAT/PARENT=*parentPID, "
+                 ++ "EUDAT/ROR=*parentROR, EUDAT/FIO=*fio, EUDAT/FIXED_CONTENT=*fixed");
         # create a PID for the replica which is done on the remote server
         # using remote execution
         remote(*zoneConn,"null") {
-            EUDATCreatePID(*parentPID,*destination,*parentROR,"true",*childPID);
+            EUDATCreatePID(*parentPID, *destination, *parentROR, *fio, *fixed, *childPID);
         }
         # update parent PID with a child one 
         # if the child exists in ICAT on the remote server
         if (*childPID != "None") {
-            EUDATUpdatePIDWithNewChild(*parentPID, *childPID);
-#TODO log the failure of the child update: define function to search *childPID in *parentPID
+            *replica = EUDATUpdatePIDWithNewChild(*parentPID, *childPID);
+            if (*replica != "None") {
+                EUDATCreateAVU("EUDAT/REPLICA", *replica, *source);
+            }
+            else {
+                *registration_response = "REPLICA attribute of source *source is None";
+                logDebug(*registration_response);
+                EUDATUpdateLogging(bool("false"),*source,*destination,*registration_response);
+            }
         }
         else {
             *registration_response = "PID of destination *destination is None";
@@ -397,52 +417,48 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
-#
 EUDATSearchAndCreatePID(*path, *pid) {
 
-    logDebug("query PID of path *path");
+    logDebug("[EUDATSearchAndCreatePID] query PID of path *path");
     EUDATiFieldVALUEretrieve(*path, "PID", *pid);
-    logDebug("Retrieved the iCAT PID value *pid for path *path");
+    logDebug("[EUDATSearchAndCreatePID] retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
-        EUDATCreatePID("None",*path,"None","true",*pid);
+        EUDATCreatePID("None", *path, "None", "None", "false", *pid);
         EUDATiPIDcreate(*path, *pid);
     }
 }
 
 #-----------------------------------------------------------------------------
-# Search RoR for a given path and in case it is not found, 
-# it defines RoR equal to the PID.
+# Search key/value pair for a given path
 #
 # Parameters:
 # *path       [IN]  iRODS path
-# *parentPID  [IN]  the PID associated to path
-# *parentROR  [OUT] ROR related to path
+# *pid        [IN]  the PID associated to path
+# *key        [IN]  The name of the PID field
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
-#
-EUDATSearchAndDefineRoR(*path, *pid, *ROR) {
+EUDATSearchAndDefineField(*path, *pid, *key) {
 
-    *ROR = "None";
-    # get ROR of the source file from ICAT
-    EUDATiFieldVALUEretrieve(*path, "EUDAT/ROR", *ROR);
-    # if there is no entry for the ROR in ICAT, get it from EPIC
-    if (*ROR == "None") {
-        EUDATGeteRorPid(*pid, *ROR);
-        # if there is a ROR in EPIC create it in ICAT
-        if (*ROR != "None") {
-            EUDATCreateAVU("EUDAT/ROR", *ROR, *path);
+    logDebug("[EUDATSearchAndDefineField] query PID *pid and path *path to get *key");
+    *val = "None";
+    # get *key of the *path from ICAT
+    EUDATiFieldVALUEretrieve(*path, *key, *val);
+    logDebug("[EUDATSearchAndDefineField] got *key=*val from iCAT");
+    # if there is no entry for the *key in ICAT, get it from EPIC
+    if (*val == "None") {
+        *val = EUDATGeteValPid(*pid, *key);
+        logDebug("[EUDATSearchAndDefineField] got *key=*val from PID service");
+        # if there is a *key in EPIC create it in ICAT
+        if (*val != "None") {
+            EUDATCreateAVU(*key, *val, *path);
         }
     }
-    # otherwise ROR will be parentPID
-    if (*ROR == "None") {
-        *ROR = *pid;
-    }
+    *val
 }
 
-
-#-----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
 # Compare cheksums of data objects in the source and destination
 #  collection recursively
 #
@@ -461,8 +477,6 @@ EUDATSearchAndDefineRoR(*path, *pid, *ROR) {
 # Author: Elena Erastova, RZG
 # Author: Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-#
-
 EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
 
     *check_response = "";

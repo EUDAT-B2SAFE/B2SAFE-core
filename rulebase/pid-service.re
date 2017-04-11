@@ -13,7 +13,7 @@
 
 # List of the functions:
 #
-# EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID)
+# EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)
 # EUDATSearchPID(*path, *existing_pid)
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
@@ -43,17 +43,20 @@
 #
 # Parameters:
 #   *parent_pid [IN]    the PID of the digital object that was replicated to us (not necessarily the ROR)
-#   *path       [IN]    the path of the replica to store with the PID record
-#   *ror        [IN]    the ROR PID (absolute url) of the digital object that we want to store.
-#   *iCATCache  [IN]    the boolean flag to enable creation of PID in the iCAT 
-#   *newPID     [OUT]   the pid generated for this replica 
+#   *path       [IN]    the path of the object to store with the PID record
+#   *ror        [IN]    the ROR PID of the digital object that we want to store.
+#   *fio        [IN]    the FIO PID of the digital object that we want to store.
+#   *fixed      [IN]    the boolean flag to define that the object related to this PID cannot change
+#   *newPID     [OUT]   the pid generated for this object 
 #
 # Author: Willem Elbers, MPI-TLA
 # Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara, Javier Quinteros, GFZ
 #
-EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
+EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
 
-    logInfo("create pid for *path and save *ror as ror");
+    logInfo("[EUDATCreatePID] create pid for *path");
+    *version = "1";
+    logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror, fio=*fio, fixed=*fixed");
     if (!EUDATisMetadata(*path)) {
         getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
@@ -61,8 +64,7 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
         #check if PID already exists
         if (*msiCurlEnabled) {
             EUDATSearchPIDCurl(*path, *existing_pid);
-        }
-        else {
+        } else {
             EUDATSearchPID(*path, *existing_pid);
         }
    
@@ -72,71 +74,94 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 
             # add ror as extratype parameter
             if (*ror != "None" && *ror != "") {
-                logInfo("Update Parent PID with field ROR");
                 *extraType = "EUDAT/ROR=*ror";
-                if (EUDATtoBoolean(*iCATCache)) {
+                if (*ror != "pid") {
                     EUDATCreateAVU("EUDAT/ROR", *ror, *path);
                 }
-            }        
+            }
 
             # add ppid as extratype parameter
             if (*parent_pid != "None" && *parent_pid != "") {
-                logInfo("Update Parent PID with field PPID");
                 if (*extraType != "empty") {
-                      *extraType = "*extraType"++";EUDAT/PPID=*parent_pid";
+                      *extraType = "*extraType"++";EUDAT/PARENT=*parent_pid";
                 } else {
-                      *extraType = "EUDAT/PPID=*parent_pid";
+                      *extraType = "EUDAT/PARENT=*parent_pid";
                 }
-                if (EUDATtoBoolean(*iCATCache)) {
-                    EUDATCreateAVU("EUDAT/PPID", *parent_pid, *path);
+                EUDATCreateAVU("EUDAT/PARENT", *parent_pid, *path);
+            }
+            # add fio as extratype parameter
+            if (*fio != "None" && *fio != "") {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIO=*fio";
+                } else {
+                      *extraType = "EUDAT/FIO=*fio";
                 }
+                if (*fio != "pid") {
+                      EUDATCreateAVU("EUDAT/FIO", *fio, *path);
+                }            
+            }            
+            # add fixed_content as extratype parameter
+            if (EUDATtoBoolean(*fixed)) {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIXED_CONTENT=True";
+                } else {
+                      *extraType = "EUDAT/FIXED_CONTENT=True";
+                }
+                EUDATCreateAVU("EUDAT/FIXED_CONTENT", "True", *path);
+            }
+            else {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIXED_CONTENT=False";
+                } else {
+                      *extraType = "EUDAT/FIXED_CONTENT=False";
+                }
+                EUDATCreateAVU("EUDAT/FIXED_CONTENT", "False", *path);                
             }
 
-            # create PID
-        
+            # add version as extratype parameter
+            if (*extraType != "empty") {
+                  *extraType = "*extraType"++";EUDAT/PROFILE_VERSION=*version";
+            } else {
+                  *extraType = "EUDAT/PROFILE_VERSION=*version";
+            }
+            
+
             # Verify the type of the input path (collection / data object)
             msiGetObjType(*path, *type);
+
+            # create PID
+            EUDATePIDcreate(*path, *extraType, *newPID);
+            EUDATiPIDcreate(*path, *newPID);
         
-            # If it is a collection - do not compute checksum
-            if (*type == '-c') {
-                if (*msiCurlEnabled) {
+            if (*msiCurlEnabled) {
+                # Verify the type of the input path (collection / data object)
+                msiGetObjType(*path, *type);
+                # If it is a collection - do not compute checksum
+                if (*type == '-c') {
                     EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("false"));
                 }
-                else {
-                    EUDATePIDcreate(*path, *extraType, *newPID, bool("false"));   
-                }
-            }
-            # If it is a data object - compute checksum and add it to PID
-            else if (*type == '-d') {
-                if (*msiCurlEnabled) {
+                # If it is a data object - compute checksum and add it to PID
+                else if (*type == '-d') {
                     EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("true"));
                 }
-                else {
-                    EUDATePIDcreate(*path, *extraType, *newPID, bool("true"));
-                }
             }
-            # creation of ROR in case it has not been provided as input
-            if (*ror == "None" || *ror == "") {
-                EUDATeRORupdate(*newPID, *newPID);
-                if (EUDATtoBoolean(*iCATCache)) {
-                    EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
-                }
-            }            
+            # creation of ROR in icat in case it has been set to pid
+            if (*ror == "pid") {
+                EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
+            }
+            # creation of FIO in icat in case it has been set to pid
+            if (*fio == "pid") {
+                EUDATCreateAVU("EUDAT/FIO", *newPID, *path);
+            }
+
             # creation of the file based metadata record
             *checksum = "";
             *modtime = "";
             EUDATStoreJSONMetadata(*path, *newPID, *ror, *checksum, *modtime);
-
-            if (EUDATtoBoolean(*iCATCache)) {
-                # Add PID into iCAT
-                logInfo("Saving PID into field AVU -PID- of iCAT *path with PID = *newPID");
-                EUDATiPIDcreate(*path, *newPID);
-            }
- 
         }
         else {
             *newPID = *existing_pid;
-            logInfo("PID already exists (*newPID)");
+            logInfo("[EUDATCreatePID] PID already exists (*newPID)");
         }
     }
     else {
@@ -154,10 +179,10 @@ EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID) {
 # Author: Elena Erastova, RZG
 # -----------------------------------------------------------------------------
 EUDATSearchPID(*path, *existing_pid) {
-    logInfo("search pid for *path");
+    logInfo("[EUDATSearchPID] search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     EUDATReplaceHash(*path, *path1);
-    *status = EUDATePIDsearch("URL", "*serverID"++"*path1", *existing_pid);
+    *status = EUDATePIDsearch("URL", "*serverID*path1", *existing_pid);
     *status;
 }
 
@@ -210,28 +235,34 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
 # Modified by: Claudio Cacciari, CINECA
 #
 EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
-    logInfo("update parent pid (*parentPID) with new child (*childPID)");
+    *replicaNew = "None"
+    logInfo("[EUDATUpdatePIDWithNewChild] update parent pid (*parentPID) with new child (*childPID)");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    if(*epicDebug > 1) {
-        logDebug("epicclient.py *credStoreType *credStorePath relation *parentPID *epicApi*childPID");
+    *replica = EUDATGeteValPid(*parentPID, "EUDAT/REPLICA");
+    if ((*replica == "") || (*replica == "None")) {
+        *replicaNew = *childPID;
     }
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath relation *parentPID *epicApi*childPID",
+    else {
+        *replicaNew = *replica ++ "," ++ *childPID;
+    }
+    logDebug("[EUDATUpdatePIDWithNewChild] epicclient.py *credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew");
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew",
                "null", "null", "null", *outUPwNC);
     msiGetStdoutInExecCmdOut(*outUPwNC, *response);
     getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outUPwNC);
     }
-    if(*epicDebug > 1) {
-    	logDebug("update handle location response = *response");
-    }
+    logDebug("[EUDATUpdatePIDWithNewChild] update handle replica response = *response");
+    if (*response != "True") { *replicaNew = "None" }
+    *replicaNew
 }
 
 #-------------------------------------------------------------------------------
 # get the KEY entry for a PID
 #
 # Parameters:
-#   *pid    [IN]     PID that you want to get the ROR for
+#   *pid    [IN]     PID that you want to get the Key for
 #   *key    [IN]     The name of the PID record field to retrieve
 #
 # Author: Claudio Cacciari (CINECA)
@@ -242,41 +273,14 @@ EUDATGeteValPid(*pid, *key) {
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key *key",
                "null", "null", "null", *outGRP);
     msiGetStdoutInExecCmdOut(*outGRP, *val);
-    if(*val == "None") {
-        logInfo("[EUDATGeteValPid] no *key for *pid ");
-    }
-    *val
-}
-
-#
-# get the ROR entry for a PID
-#
-# Parameters:
-#   *pid    [IN]     PID that you want to get the ROR for
-#   *ror    [OUT]    ROR for *pid
-#
-EUDATGeteRorPid(*pid, *ror) {
-    logInfo("get RoR from (*pid)");
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key EUDAT/ROR", 
-               "null", "null", "null", *outGRP);
-    msiGetStdoutInExecCmdOut(*outGRP, *ror);
     getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outGRP);
     }
-    if(*ror=="None") {
-        msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key ROR", 
-                   "null", "null", "null", *outGRP1);
-        msiGetStdoutInExecCmdOut(*outGRP1, *ror);
-        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-        if (*msiFreeEnabled) {
-            msifree_microservice_out(*outGRP1);
-        }
-        if(*ror=="None") {
-            logInfo("geteRorPID -> NO ROR for *pid ");
-        }
+    if(*val == "None") {
+        logInfo("[EUDATGeteValPid] no *key for *pid ");
     }
+    *val
 }
 
 #
@@ -357,7 +361,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*FNAME';
         foreach(*c in *d) {
             *FVALUE = *c.META_COLL_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -366,7 +370,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
         *d = SELECT META_DATA_ATTR_VALUE WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll' AND META_DATA_ATTR_NAME = '*FNAME'; 
         foreach(*c in *d) {
             *FVALUE = *c.META_DATA_ATTR_VALUE;
-            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to= *FVALUE");
+            logInfo("EUDATiFieldVALUEretrieve -> *FNAME equal to *FVALUE");
             *status0 = bool("true");
         }
     }
@@ -386,30 +390,37 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 # Author: Giacomo Mariani, CINECA
 # Edited by:  Robert Verkerk, SURFsara
 #
-EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
+EUDATePIDcreate(*path, *extraType, *PID) {
+
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
     
-    if (*ifchecksum == bool("true") ) {
-        logInfo("EUDATePIDcreate -> Add PID with CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-        EUDATiCHECKSUMget(*path, *checksum, *modtime);
-        *extChksum="";
-        if (*checksum != "") {
-            *extChksum=" --checksum *checksum";
+    *url="*serverID*path";
+
+    EUDATiCHECKSUMget(*path, *checksum, *modtime);
+    if (*checksum != "") {
+        if (*extraType != "empty") {
+            *extraType = "*extraType"++";EUDAT/CHECKSUM=*checksum";
+        } else {
+            *extraType = "EUDAT/CHECKSUM=*checksum";
         }
-        *execCmd="*credStoreType *credStorePath create '*serverID"++"*path'"++"*extChksum";
+        *execCmd=" epoch_to_iso8601  *modtime";
+        msiExecCmd("timeconvert.py","*execCmd","null", "null", "null", *outGRP9);
+        msiGetStdoutInExecCmdOut(*outGRP9, *modtime_iso8601);
+        *modtime_iso8601 = trimr(*modtime_iso8601, "\n");
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+        if (*msiFreeEnabled) {
+            msifree_microservice_out(*outGRP9);
+        }
+         *extraType = "*extraType"++";EUDAT/CHECKSUM_TIMESTAMP=*modtime_iso8601";
     }
-    
-    else {
-        logInfo("EUDATePIDcreate -> Add PID withOUT CHECKSUM to: USER, OBJPATH: $userNameClient, *path");
-        *execCmd="*credStoreType *credStorePath create '*serverID"++"*path'"
-    }
+
+    logInfo("[EUDATePIDcreate] Create PID (CHECKSUM:*checksum, OBJPATH:*path) as user: $userNameClient");
+    *execCmd="*credStoreType *credStorePath create '*url'";       
     
     if (*extraType != "empty") {
-        logInfo("EUDATePIDcreate -> Add PID with extratype parameter: *extraType");
+        logInfo("[EUDATePIDcreate] Create PID with extratype parameter: *extraType");
         *execCmd="*execCmd"++" --extratype \"*extraType\"";
     }
-    # add the default 10320/LOC to each created PID
-    *execCmd="*execCmd"++" --loc10320 '*serverID"++"*path'";
 
     msiExecCmd("epicclient.py","*execCmd","null", "null", "null", *outGRP2);
     msiGetStdoutInExecCmdOut(*outGRP2, *PID);
@@ -417,7 +428,7 @@ EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outGRP2);
     }
-    logInfo("EUDATePIDcreate -> Created handle is: *PID");
+    logInfo("[EUDATePIDcreate] Created handle is: *PID");
 }
 
 #
@@ -435,7 +446,7 @@ EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum) {
 # Author: Giacomo Mariani, CINECA
 #
 EUDATePIDsearch(*field, *value, *PID) {
-    logInfo("EUDATePIDsearch -> search the PID with *field equal to *value");
+    logInfo("[EUDATePIDsearch] search the PID with *field = *value");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     *status0 = bool("true");
     msiExecCmd("epicclient.py","*credStoreType *credStorePath search *field *value", "null", "null", "null", *outPidSearch);
@@ -444,12 +455,11 @@ EUDATePIDsearch(*field, *value, *PID) {
     if (*msiFreeEnabled) {
         msifree_microservice_out(*outPidSearch);
     }
-    logInfo("EUDATePIDsearch -> search handle response = *PID");
+    logInfo("[EUDATePIDsearch] response = *PID");
     # before: 841/test. A single entry.
     # new   : ["841/test"]. An array/list of multiple PID's separated by "," and a space
     if ( str(*PID) == "empty" ) { 
         *status0=bool("false"); 
-        logInfo("EUDATePIDsearch -> search handle response = no PID");
     } else {
         # remove brackets, quotes and spaces from the "*PID" string
         *outStr=str(*PID);
@@ -469,7 +479,6 @@ EUDATePIDsearch(*field, *value, *PID) {
     }
     *status0;
 }
-
 
 # This function update the checksum field of the PID  
 #
@@ -558,18 +567,18 @@ EUDATeURLsearch(*PID, *URL) {
 #
 EUDATePIDremove(*path, *force) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
-    logInfo("EUDATePIDremove -> Removing PID associated to: $userNameClient, *path");
+    logInfo("[EUDATePIDremove] removing PID associated to: $userNameClient, *path");
 
     if (EUDATSearchPID(*path, *pid)) {
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath read --key 10320/LOC *pid", "null", "null", "null", *outEPR);
-        msiGetStdoutInExecCmdOut(*outEPR, *loc10320);
+        msiExecCmd("epicclient.py","*credStoreType *credStorePath read --key EUDAT/REPLICA *pid", "null", "null", "null", *outEPR);
+        msiGetStdoutInExecCmdOut(*outEPR, *replica);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
         if (*msiFreeEnabled) {
             msifree_microservice_out(*outEPR);
         }
-        logInfo("EUDATePIDremove -> get 10320/LOC from handle response = *loc10320");
-        if (("*loc10320" like "Error*")||("*loc10320" == "")||("*loc10320" like "None*")) {
-            logInfo("EUDATePIDremove -> 10320/LOC does not exist or is empty: PID will be deleted");
+        logDebug("[EUDATePIDremove] EUDAT/REPLICA = *replica");
+        if (("*replica" like "Error*")||("*replica" == "")||("*replica" like "None*")) {
+            logDebug("[EUDATePIDremove] No replicas found: PID *pid will be deleted");
             msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
                        "null", "null", "null", *outEPR1);
             msiGetStdoutInExecCmdOut(*outEPR1, *response3);
@@ -577,13 +586,12 @@ EUDATePIDremove(*path, *force) {
             if (*msiFreeEnabled) {
                 msifree_microservice_out(*outEPR1);
             }
-            logInfo("EUDATePIDremove -> delete handle response = *response3");
+            logInfo("[EUDATePIDremove] removing completed, response = *response3");
             # The PID record could be associated to a replica.
             # The field 10320/LOC of the parent PID record should be updated
         }
-        else if (EUDATtoBoolean(*force)){
-            logInfo("EUDATePIDremove -> The PID record *pid contains pointers to other DO copies");
-            logInfo("EUDATePIDremove -> It will be deleted anyway");
+        else if (EUDATtoBoolean(*force) == bool("true")){
+            logDebug("[EUDATePIDremove] Found replicas: PID *pid will be deleted");
             msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid",
                        "null", "null", "null", *outEPR2);
             msiGetStdoutInExecCmdOut(*outEPR2, *response3);
@@ -591,18 +599,18 @@ EUDATePIDremove(*path, *force) {
             if (*msiFreeEnabled) {
                 msifree_microservice_out(*outEPR2);
             }
-            logInfo("EUDATePIDremove -> delete handle response = *response3");
+            logInfo("[EUDATePIDremove] removing completed, response = *response3");
         }
         else {
             # The PID record contains pointers to other DO copies.
             # What should we do?
             # Maybe all the copies should be deleted together with the master copy.
-            logInfo("EUDATePIDremove -> The PID record *pid contains pointers to other DO copies");
-            logInfo("EUDATePIDremove -> Nothing will be deleted");
+            logDebug("[EUDATePIDremove] Found replicas related to PID *pid");
+            logInfo("[EUDATePIDremove] nothing has been deleted");
         }
     }
     else {
-        logInfo("EUDATePIDremove -> No PID associated to *path found");
+        logInfo("[EUDATePIDremove] no PID associated to *path found");
     }
 } 
 
@@ -637,17 +645,14 @@ EUDATeiChecksumMgmtColl(*sourceColl) {
 EUDATiRORupdate(*source, *pid) {
     
     *iRor = 'None';
-    EUDATGeteRorPid(*pid, *eRor);
+    *eRor = EUDATGeteValPid(*pid, "EUDAT/ROR");
     if(*eRor != 'None') {
         EUDATiFieldVALUEretrieve(*source, "EUDAT/ROR", *iRor);
         if(*iRor != *eRor) {
             logInfo("EUDATiRORupdate -> Adding/modifying iCAT EUDAT/ROR value 
                      *iRor according to EUDAT/ROR value *eRor for object 
                      *source with PID *pid");
-            msiGetObjType(*source, *objType);
-            *KVString="EUDAT/ROR=*eRor";
-            msiString2KeyValPair(*KVString,*KVPair);
-            msiSetKeyValuePairsToObj(*KVPair,*source,*objType);
+            EUDATCreateAVU("EUDAT/ROR", *eRor, *source)
         }
     }
 }
@@ -656,25 +661,43 @@ EUDATiRORupdate(*source, *pid) {
 # Add or modify the ROR field of the PID in EPIC system
 #
 # Arguments:
-#   *source            [IN] Object path
+#   *newRor            [IN] The new ROR
 #   *pid               [IN] Object pid
 #
-# Author: Elena Erastova, RZG, 27.08.2015
+# Author: Elena Erastova (RZG) [27.08.2015], Claudio Cacciari (CINECA)
 #-----------------------------------------------------------------------------
-EUDATeRORupdate(*pid,*newRor) {
+EUDATeRORupdate(*pid, *newRor) {
 
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    EUDATGeteRorPid(*pid, *oldRor);
-    if(*oldRor != *newRor) {
-        msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *pid EUDAT/ROR *newRor", 
-                   "null", "null", "null", *outRU);
-        msiGetStdoutInExecCmdOut(*outRU, *response);
-        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-        if (*msiFreeEnabled) {
-            msifree_microservice_out(*outRU);
-        }
-        logInfo("EUDATeCHECKSUMupdate -> modify handle response = *response");
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *pid EUDAT/ROR *newRor", 
+               "null", "null", "null", *outRU);
+    msiGetStdoutInExecCmdOut(*outRU, *response);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outRU);
     }
+    logInfo("[EUDATeRORupdate] modify handle response = *response");
+}
+
+#-----------------------------------------------------------------------------
+# Add or modify the FIO field of the PID in EPIC system
+#
+# Arguments:
+#   *newFio            [IN] The new FIO
+#   *pid               [IN] Object pid
+#
+# Author: Claudio Cacciari (CINECA)
+#-----------------------------------------------------------------------------
+EUDATeFIOupdate(*pid, *newFio) {
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *pid EUDAT/FIO *newFio",
+               "null", "null", "null", *outFU);
+    msiGetStdoutInExecCmdOut(*outFU, *response);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outFU);
+    }
+    logInfo("[EUDATeFIOupdate] modify handle response = *response");
 }
 
 #-----------------------------------------------------------------------------
@@ -683,10 +706,12 @@ EUDATeRORupdate(*pid,*newRor) {
 #
 # Parameters:
 # *collPath    [IN] path of the collection
+# *fixed       [IN] [true | false] it is true if the content of the collection  
+#                   and of the objects must not change
 #
-# Author: Elena Erastova, RZG
+# Author: Elena Erastova (RZG), Claudio Cacciari (Cineca)
 #-----------------------------------------------------------------------------
-EUDATPidsForColl(*collPath) {
+EUDATPidsForColl(*collPath, *fixed) {
 
     logInfo("[EUDATPidsForColl] Creating PIDs for collection *collPath");
 
@@ -697,14 +722,14 @@ EUDATPidsForColl(*collPath) {
         fail;
     }
     # Create PIDs for all subcollections in collection recursively
-    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*RowC in SELECT COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *subCollPath = *RowC.COLL_NAME;
-        EUDATCreatePID("None", *subCollPath, "None", "true", *newPID);
+        EUDATCreatePID("None", *subCollPath, "None", "None", *fixed, *newPID);
     }
     # Create PIDs for all data objects in collection recursively
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME like '*collPath%') {
+    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*collPath' || like '*collPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-        EUDATCreatePID("None", *objPath, "None", "true", *newPID);
+        EUDATCreatePID("None", *objPath, "None", "None", *fixed, *newPID);
     }
 }
 

@@ -1,0 +1,10 @@
+# section containing the logging options
+[Logging]
+# possible values: INFO, DEBUG, ERROR, WARNING, CRITICAL
+log_level=INFO
+log_file=/var/log/irods/messageManager.log
+[Connector]
+#key=lkjhsdf87304wrjf93w84ryowjdf0923038kkkk3
+key=
+#endpoint=https://messaging-devel.argo.grnet.gr/v1/projects/EUDAT2020
+endpoint=

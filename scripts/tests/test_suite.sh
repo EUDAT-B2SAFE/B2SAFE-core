@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REMOTE_ZONE=CINECA01
+REMOTE_ZONE=cinecaDMPZone1
 
 echo "Hello World!" > test_data.txt
 iput test_data.txt
@@ -16,10 +16,8 @@ irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | t
 sourcePath="${irods_home}/test_data.txt"
 
 createPID () {
-#  rule="{EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)}"
-#  input="*parent_pid=%*path=${sourcePath}%*ror=%*fio=%*fixed=true"
-  rule="{EUDATCreatePID(*parent_pid, *path, *ror, *iCATCache, *newPID)}"
-  input="*parent_pid=%*path=${sourcePath}%*ror=%*iCATCache=true"
+  rule="{EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)}"
+  input="*parent_pid=%*path=${sourcePath}%*ror=%*fio=%*fixed=true"
   output="*newPID"
 
   echo "############ PID creation ############"
@@ -49,8 +47,8 @@ createPID () {
 replication () {
   echo ""
   echo "############ REPLICATION ############"
-  destPath="${irods_home}/test_data2.txt"
-#  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
+#  destPath="${irods_home}/test_data2.txt"
+  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
   echo "Replica path: ${destPath}"
   rule="{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); 
         if (*status) {
@@ -73,14 +71,14 @@ replication () {
   pid=`echo ${pid_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
   echo "        PID: ${pid}"
   
-  for k in "URL" "CHECKSUM" "EUDAT/CHECKSUM" "EUDAT/CHECKSUM_TIMESTAMP" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/FIXED_CONTENT" "EUDAT/PARENT" "EUDAT/PPID"
+  for k in "URL" "CHECKSUM" "EUDAT/CHECKSUM" "EUDAT/CHECKSUM_TIMESTAMP" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/FIXED_CONTENT" "EUDAT/PARENT"
   do
       raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid}%*key=$k" "*res"`
       val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
       echo "        $k: ${val}"
   done
   echo "        ############ iCAT key/value pairs: ############"
-  for k in "PID" "EUDAT/ROR" "EUDAT/PPID" "EUDAT/FIO" "EUDAT/PARENT" "EUDAT/FIXED_CONTENT" "eudat_dpm_checksum_date:${irods_default_resource}"
+  for k in "PID" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/PARENT" "EUDAT/FIXED_CONTENT" "eudat_dpm_checksum_date:${irods_default_resource}"
   do
       raw=`irule "{EUDATgetLastAVU(*path, *key, *value)}" "*path=${destPath}%*key=$k" "*value"`
       val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
@@ -91,9 +89,9 @@ replication () {
   val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
   echo "        EUDAT/REPLICA: ${val}"
   echo "        ############ PID record Parent replica value ############" 
-  raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid_source}%*key=10320/LOC" "*res"`
+  raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid_source}%*key=EUDAT/REPLICA" "*res"`
   val=`echo ${raw:7}`
-  echo "        10320/LOC: ${val}"  
+  echo "        EUDAT/REPLICA: ${val}"  
 
   irule "{EUDATePIDremove(*path, *force)}" "*path=${destPath}%*force=true" null
   irm ${destPath}

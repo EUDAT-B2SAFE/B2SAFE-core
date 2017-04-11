@@ -164,6 +164,11 @@ def create(args):
     else:
         l10320 = None
 
+    # replace "EUDAT/FIO=pid" with "EUDAT/FIO=handle"
+    key = 'EUDAT/FIO'
+    if key in extype:
+        if extype[key].lower() == 'pid':
+            extype[key] = handle
 
     # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
     key = 'EUDAT/ROR'
