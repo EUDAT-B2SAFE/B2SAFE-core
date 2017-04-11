@@ -1,4 +1,4 @@
-eudatRepl{
+eudatCreatePID{
     writeLine("stdout", "userNameClient: $userNameClient");
     writeLine("stdout", "rodsZoneClient: $rodsZoneClient");
     if (*home == '') {
@@ -9,8 +9,12 @@ eudatRepl{
     msiDataObjWrite(*fd, "Hello World!", "");
     msiDataObjClose(*fd, *status1);
     writeLine("stdout", "Object *home/test_data.txt written with success!");
-    writeLine("stdout", "Its content is: Hello World!");
-
+    writeLine("stdout", "Object contents:");
+    msiDataObjOpen("*home/test_data.txt", *S_FD);
+    msiDataObjRead(*S_FD, 12,*R_BUF);
+    writeBytesBuf("stdout", *R_BUF);
+    msiDataObjClose(*S_FD, *status2);
+    writeLine("stdout", "");
     # PID creation
     # with PID registration in iCAT (4th argument "true")
     # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);

@@ -1,10 +1,10 @@
-eudatRepl{
+eudatSimulateRecovery{
     writeLine("stdout", "userNameClient: $userNameClient");
     writeLine("stdout", "rodsZoneClient: $rodsZoneClient");
     if (*home == '') {
         *home="/$rodsZoneClient/home/$userNameClient";
     }
-
+    writeLine("stdout", "Create data");
     msiDataObjCreate("*home/test_data.txt", "", *fd);
     msiDataObjWrite(*fd, "Hello World!", "");
     msiDataObjClose(*fd, *status1);
@@ -16,10 +16,11 @@ eudatRepl{
     # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
     EUDATCreatePID("None", "*home/test_data.txt", "None", "true", *newPID);
     writeLine("stdout", "The Object *home/test_data.txt has PID = *newPID");
-
+    writeLine("stdout", "");
     # Data set replication
     # with PID registration (3rd argument "true")
     # and not recursive (4th argument "false")
+    writeLine("stdout", "Replicating file:");
     *res = EUDATReplication("*home/test_data.txt", "*home/test_data2.txt", "true", "false", *response);
     if (*res) {
         writeLine("stdout", "Object *home/test_data.txt replicated to Object *home/test_data2.txt!");
@@ -31,11 +32,11 @@ eudatRepl{
         writeLine("stdout", "");
         EUDATiFieldVALUEretrieve("*home/test_data2.txt", "PID", *value);
         writeLine("stdout", "The Replica *home/test_data2.txt has PID = *value");
-
+        writeLine("stdout", "");
         # Alter the content of the replica to simulate a failure
-        writeLine("stdout", "Altering the replica");
+        writeLine("stdout", "Simulating interruption of file transfer");
         msiDataObjOpen("objPath=*home/test_data2.txt++++openFlags=O_WRONLY", *rfd);
-        msiDataObjWrite(*rfd, "Hello Worldz!", "");
+        msiDataObjWrite(*rfd, "Hello Wor        ", "");
         msiDataObjClose(*rfd, *status3);
         writeLine("stdout", "Now the content of the altered replica is:");
         msiDataObjOpen("*home/test_data2.txt", *S_FD);

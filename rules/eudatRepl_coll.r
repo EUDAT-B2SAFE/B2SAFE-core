@@ -1,28 +1,34 @@
-eudatRepl{
+eudatReplColl{
     writeLine("stdout", "userNameClient: $userNameClient");
     writeLine("stdout", "rodsZoneClient: $rodsZoneClient");
     if (*home == '') {
         *home="/$rodsZoneClient/home/$userNameClient";
     }
 
-    *tcoll="*home/test_coll";
+    *tcoll="*home/t_coll";
     msiCollCreate(*tcoll, "0", *status0);
-    writeLine("stdout","Created collection *home/test_coll");
+    writeLine("stdout","Created collection *tcoll");
 
     *tdata="*tcoll/test_data.txt";
     msiDataObjCreate(*tdata, "", *fd);
     msiDataObjWrite(*fd, "Hello World!", "");
     msiDataObjClose(*fd, *status1);
     writeLine("stdout", "Object *tdata written with success!");
-    writeLine("stdout", "Its content is: Hello World!");
-
-    # PID creation
+    writeLine("stdout", "Object contents:")
+    msiDataObjOpen("*tcoll/test_data.txt", *S_FD);
+    msiDataObjRead(*S_FD, 12,*R_BUF);
+    writeBytesBuf("stdout", *R_BUF);
+    msiDataObjClose(*S_FD, *status2);
+    writeLine("stdout", "");
+    
+        # PID creation
     # with PID registration in iCAT (4th argument "true")
     # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
     EUDATCreatePID("None", *tcoll, "None", "true", *newPID);
     writeLine("stdout", "The Collection *tcoll has PID = *newPID");
+    writeLine("stdout", "");
 
-    *tcoll2="*home/test_coll2";
+    *tcoll2="*home/t_coll2";
     # Data set replication
     # with PID registration (3rd argument "true")
     # and not recursive (4th argument "true")
@@ -36,30 +42,50 @@ eudatRepl{
         writeBytesBuf("stdout", *R_BUF);
         msiDataObjClose(*S_FD, *status2);
         writeLine("stdout", "");
+        writeLine("stdout", "");
 
+        writeLine("stdout", "PIDs for data:");
+        EUDATiFieldVALUEretrieve("*tdata", "PID", *origPID);
+        writeLine("stdout", "The Original *tdata has PID = *origPID");
         EUDATiFieldVALUEretrieve("*tcoll2/test_data.txt", "PID", *value);
         writeLine("stdout", "The Replica *tcoll2/test_data.txt has PID = *value");
+
+        writeLine("stdout", "Remove replicated data object");
         EUDATePIDremove("*tcoll2/test_data.txt", "true");
-        writeLine("stdout", "PID *value removed"); 
+        writeLine("stdout", "PID *value removed");
         msiDataObjUnlink("*tcoll2/test_data.txt",*status3);
         writeLine("stdout", "Replicated object removed");
+
+        writeLine("stdout", "");
+        writeLine("stdout", "PIDs for collections:");
+        EUDATiFieldVALUEretrieve(*tcoll, "PID", *origCollPID);
+        writeLine("stdout", "The Original *tcoll has PID = *origCollPID");
         EUDATiFieldVALUEretrieve(*tcoll2, "PID", *value);
         writeLine("stdout", "The Replica *tcoll2 has PID = *value");
+        
+       writeLine("stdout", "Remove replica Collection and PID.");
         EUDATePIDremove(*tcoll2, "true");
-        writeLine("stdout", "PID *value removed"); 
+        writeLine("stdout", "PID *value removed");
         msiRmColl(*tcoll2, "", *status4);
-        writeLine("stdout", "Replicated collection removed");        
+        writeLine("stdout", "Replicated collection removed");
+
     }
     else {
         writeLine("stdout", "Replication failed: *response");
-    }    
+    }
+    writeLine("stdout", "");
+    writeLine("stdout", "Remove original data and their PIDs");
 
-    EUDATePIDremove("*home/test_coll/test_data.txt", "true");
-    writeLine("stdout", "PID *newPID removed");   
-    msiDataObjUnlink("*home/test_coll/test_data.txt",*status5);
-    writeLine("stdout", "Object *home/test_coll/test_data.txt removed");
-    msiRmColl("*home/test_coll", "", *status6);
-    writeLine("stdout","Removed collection *home/test_coll");
+    EUDATePIDremove("*tdata", "true");
+    writeLine("stdout", "PID *origPID removed");
+    msiDataObjUnlink("*tcoll/test_data.txt",*status5);
+    writeLine("stdout", "Object *tcoll/test_data.txt removed");
+
+    EUDATePIDremove(*tcoll, "true");
+    writeLine("stdout", "PID *origCollPID removed");
+    msiRmColl(*tcoll, "", *status6);
+    writeLine("stdout","Removed collection *tcoll");
 }
 INPUT *home=''
 OUTPUT ruleExecOut
+    

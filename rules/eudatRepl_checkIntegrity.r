@@ -1,4 +1,4 @@
-eudatRepl{
+eudatReplCheckIntegrity{
     writeLine("stdout", "userNameClient: $userNameClient");
     writeLine("stdout", "rodsZoneClient: $rodsZoneClient");
     if (*home == '') {
