@@ -10,6 +10,7 @@
 # EUDATAuthZ(*user, *action, *target, *response)
 #---- utility ---
 # EUDATisMetadata(*path)
+# EUDATPushMetadata(*path, *queue)
 # EUDATMessage(*queue, *message)
 # EUDATLog(*message, *level)
 # EUDATQueue(*action, *message, *number)
@@ -31,6 +32,8 @@
 # EUDATfileInPath(*path,*subColl)
 # EUDATCreateAVU(*Key,*Value,*Path)
 # EUDATgetLastAVU(*Path, *Key, *Value)
+# EUDATgetCollAVU(*path, *res)
+# EUDATgetBulkMetadata(*path, *res)
 # EUDATcountMetaKeys( *Path, *Key, *Value )
 # EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime)
 #---- repository packages ---
@@ -45,7 +48,6 @@
 #                                                                              #
 ################################################################################
 
-#
 # Return a boolean value:
 #   True, if the authorization request matches against, at least
 #   one assertion listed in the authz.map.json file
@@ -58,7 +60,7 @@
 #   *response       [OUT]   True or False depending on authorization rights
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATAuthZ(*user, *action, *target, *response) {
     getAuthZParameters(*authZMapPath);
     logDebug("checking authorization for *user to perform: *action *target");
@@ -99,7 +101,7 @@ EUDATAuthZ(*user, *action, *target, *response) {
 #   *path     [IN]    the  path of the object/collection
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATisMetadata(*path) {
     *isMeta = bool("false");
     if (*path like regex ".*\\.metadata.*") {
@@ -115,7 +117,7 @@ EUDATisMetadata(*path) {
 #   *path     [IN]    the  path of the object/collection
 # 
 # Author: Claudio Cacciari, Cineca
-# 
+#-------------------------------------------------------------------------------
 EUDATPushMetadata(*path, *queue) {
 
     logInfo("[EUDATPushMetadata] pushing metadata of object *path to topic *queue")
@@ -141,7 +143,7 @@ EUDATPushMetadata(*path, *queue) {
 #   *message   [IN]    the message to be sent
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATMessage(*queue, *message) {
 
     logInfo("[EUDATMessage] pushing the message to topic *queue");
@@ -157,7 +159,6 @@ EUDATMessage(*queue, *message) {
     }
 }
 
-
 # It manages the writing and reading of log messages to/from external log services.
 # The current implementation writes the logs to specific log file.
 #
@@ -169,7 +170,7 @@ EUDATMessage(*queue, *message) {
 #   *level          [IN]    the logging level 
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATLog(*message, *level) {
     getLogParameters(*logConfPath);
     logInfo("logging message '*message'");
@@ -180,7 +181,6 @@ EUDATLog(*message, *level) {
         msifree_microservice_out(*outLog);
     }
 }
-
 
 # It implements a FIFO queue for messages to/from external log services.
 #
@@ -196,7 +196,7 @@ EUDATLog(*message, *level) {
 #   *number         [IN]    the number of elements to be extracted
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATQueue(*action, *message, *number) {
     getLogParameters(*logConfPath);
     *options = "";
@@ -222,9 +222,11 @@ EUDATQueue(*action, *message, *number) {
     }
 }
 
-#
-# Logging policies
-#
+################################################################################
+#                                                                              #
+# Logging policies                                                             #
+#                                                                              #
+################################################################################
 
 logDebug(*msg) {
     getEUDATLoggerLevel(*level);
@@ -253,7 +255,6 @@ logWithLevel(*level, *msg) {
     on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
 }
 
-#-----------------------------------------------
 # Function: trsnsfrom string to boolean value
 #
 # Author: Claudio Cacciari (Cineca)
@@ -269,11 +270,10 @@ EUDATtoBoolean(*var) {
     *status
 }
 
-#
 # Function: replace epicclient function
 #
 # Author: Robert Verkerk SURFsara
-#
+#-------------------------------------------------------------------------------
 EUDATReplaceHash(*path, *out) {
  
     # replace #
@@ -289,18 +289,16 @@ EUDATReplaceHash(*path, *out) {
     }
 }
 
-#
 # Function: replace microservice msiGetZoneNameFromPath (eudat.c)
 #
 # Author: Long Phan, JSC
-#
+#-------------------------------------------------------------------------------
 EUDATGetZoneNameFromPath(*path, *out) {
 
     *list = split("*path","/");
     *out = elem(*list,0);
 }
 
-#
 # Gets the connection details of an iRODS Zone.
 #
 # Arguments:
@@ -308,7 +306,7 @@ EUDATGetZoneNameFromPath(*path, *out) {
 #   *conn          [OUT]   the connection details related to the input iRODS Zone (hostname:port)
 #                       
 # Author: Claudio Cacciari, Cineca
-#----------------------------------------------------------
+#-------------------------------------------------------------------------------
 EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 
     *conn = ""
@@ -329,7 +327,6 @@ EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
     }
 }
 
-#
 # Checks if date of the last computation of iCHECKSUM was set and set the date if not.
 # The date is stored as metadata attribute of name 'eudat_dpm_checksum_date:<name of resc>'
 #
@@ -343,7 +340,7 @@ EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 #                               - will be assumed as time of the first computation of the iCHECKSUM
 #
 # Author: Michal Jankowski, PSNC
-#
+#-------------------------------------------------------------------------------
 EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 
     *metaName = 'eudat_dpm_checksum_date:*resc';
@@ -361,8 +358,6 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
     }   
 }   
  
-
-#
 # The function retrieve iCHECKSUM for a given object.
 #
 # Environment variable used:
@@ -374,7 +369,7 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 #   *status             [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
-#
+#-------------------------------------------------------------------------------
 EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
     *status = bool("false");
     *checksum = "";
@@ -402,7 +397,6 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
     *status;
 }
 
-
 # The function obtain iCHECKSUM for a given object creating it if necessary.
 #
 # Arguments:
@@ -411,7 +405,7 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
 #   *modtime            [OUT]   modification time of the checksum
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
-
+#-------------------------------------------------------------------------------
 EUDATiCHECKSUMget(*path, *checksum, *modtime) {
     if (!EUDATiCHECKSUMretrieve(*path, *checksum, *modtime)) {
         #If it is a collection, do not calculate the checksum
@@ -423,7 +417,6 @@ EUDATiCHECKSUMget(*path, *checksum, *modtime) {
         EUDATiCHECKSUMretrieve(*path, *checksum, *modtime);
     }
 }
-
 
 # Calculate the difference between the creation time or the current time
 # and the modification time of an object. In seconds.
@@ -437,7 +430,7 @@ EUDATiCHECKSUMget(*path, *checksum, *modtime) {
 #                         *age = -1 if the object does not exist
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
     *age = -1;
     # Check if the file exists 
@@ -464,7 +457,6 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
     }
 }
 
-#
 # Calculate the difference between the current time and the modification time of an object.
 # In seconds.
 #
@@ -474,7 +466,7 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
 #                         *age = -1 if the object does not exist
 #
 # Author: Claudio Cacciari, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATgetObjectAge(*filePath, *age) {
     *age = -1;
     # Check if the file exists
@@ -487,7 +479,6 @@ EUDATgetObjectAge(*filePath, *age) {
     *age;
 }
 
-#
 # Rules to check if a file is in a given path.
 #
 # Arguments:
@@ -496,7 +487,7 @@ EUDATgetObjectAge(*filePath, *age) {
 #   *b                  [REI]   False if no value is found, trou elsewhere
 #
 # Author: Hao Xu, DICE; Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATfileInPath(*path,*subColl) {
     logInfo("conditional acPostProcForCopy -> EUDATfileInPath");
     msiSplitPath(*path, *coll, *name);
@@ -511,7 +502,6 @@ EUDATfileInPath(*path,*subColl) {
     *b;
 }
 
-#
 # Create AVU with INPUT *Key, *Value for DataObj *Path
 #
 # Parameters:
@@ -521,7 +511,7 @@ EUDATfileInPath(*path,*subColl) {
 # 
 # Author: Long Phan, JSC
 # Modified: Elena Erastova, RZG, 27.08.2015
-# 
+#------------------------------------------------------------------------------- 
 EUDATCreateAVU(*Key, *Value, *Path) {
     logDebug("[EUDATCreateAVU] Adding AVU: *Key = *Value to metadata of *Path");
     msiAddKeyVal(*Keyval, *Key, *Value);
@@ -529,7 +519,6 @@ EUDATCreateAVU(*Key, *Value, *Path) {
     msiSetKeyValuePairsToObj(*Keyval, *Path, *objType);
 }
 
-#-----------------------------------------------------------------------------
 # get the single value of a specific metadata in ICAT
 #
 # Parameters:
@@ -548,7 +537,6 @@ EUDATgetLastAVU(*Path, *Key, *Value)
     }
 }
 
-#-----------------------------------------------------------------------------
 # Get all the AVUs of a collection
 #
 # Parameters:
@@ -569,7 +557,6 @@ EUDATgetCollAVU(*path, *res)
     logDebug("[EUDATgetCollAVU] AVUs: *res");
 }
 
-#-----------------------------------------------------------------------------
 # Get all the AVUs of the objects under a collection
 #
 # Parameters:
@@ -598,7 +585,6 @@ EUDATgetBulkMetadata(*path, *res)
     logDebug("[EUDATgetBulkMetadata] metadata: *res");
 }
 
-#-----------------------------------------------------------------------------
 # count metadata in ICAT
 #
 # Parameters:
@@ -630,7 +616,7 @@ EUDATcountMetaKeys( *Path, *Key, *Value )
 #       *modtime  [IN]   The modification time of the checksum
 #
 # Author: Claudio Cacciari, CINECA
-
+#-------------------------------------------------------------------------------
 EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
 
     getMetaParameters(*metaConfPath,*enabled);
@@ -658,14 +644,12 @@ EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
     }
 }
 
-
 ################################################################################
 #                                                                              #
 # Repository Packages                                                          #
 #                                                                              #
 ################################################################################
 
-#-----------------------------------------------------------------------------
 # Check if the ADMIN_Status value is set to Ready ToArchive and then kicks off ingestion
 #
 # Parameters:
@@ -684,7 +668,6 @@ EUDATrp_checkMeta(*source,*AName,*AValue)
     }
 }
 
-#-----------------------------------------------------------------------------
 # Manage the ingestion in B2SAFE
 # Check the checksum
 # Create PID
@@ -733,7 +716,6 @@ EUDATrp_ingestObject( *source )
     }
 }
 
-#-----------------------------------------------------------------------------
 # Process executed when a transfer has been initiated
 # (this process is triggered by the iputPreProc hook)
 #
@@ -749,7 +731,6 @@ EUDATrp_transferInitiated( *source )
    EUDATCreateAVU("INFO_TimeOfStart", *TimeNow, *source);
 }
 
-#-----------------------------------------------------------------------------
 # Process executed after a transfer is finished
 # (this process is triggered by the iputPostProc hook)
 #

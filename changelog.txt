@@ -1,3 +1,14 @@
+B2SAFE package 4.0.0 [2017/04/12]
+Tested with iRODS 4.1.x and 4.2.0.
+Compatible with EPIC API and HSv8 API.
+- added support for iRODS v4.2.0
+- added support for the EUDAT PID profile
+- changed epic client to support new b2handle library
+- python script code cleaning
+- initial support of the metadata module (added a couple of rules)
+- various bug fixing
+- initial support for the ARGO messaging system
+
 B2SAFE package 3.1.3 [2017/01/04]
 bug fixing release: 
 - fixed many epicclents bugs

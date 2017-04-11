@@ -9,11 +9,11 @@
 # Arguments:
 # *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2]
 #                   0:ERROR, 1:INFO, 2:DEBUG
+#-------------------------------------------------------------------------------                   
 getEUDATLoggerLevel(*euLogLevel) {
     *euLogLevel=2
 }
 
-#
 # Provides parameters for the connection with the EPIC service
 # 
 # Arguments:
@@ -25,7 +25,7 @@ getEUDATLoggerLevel(*euLogLevel) {
 # *epicDebug     [OUT] the debug level for the EPIC client scripts
 #
 # Author: Willem Elbers (MPI-PL)
-#
+#-------------------------------------------------------------------------------
 getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) {
     *credStoreType="os"; 
     *credStorePath="/srv/irods/current/modules/B2SAFE/cmd/credentials_test"; 
@@ -39,7 +39,6 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     }
 }
 
-# -----------------------------------------------------------------------------
 # Parse the credentials to connect to an EPIC server. A file called
 # "credentials" MUST contain all the connection details in the home folder of
 # the user running this rule.
@@ -50,8 +49,7 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
 #   *password           [OUT]   password
 #
 # Author: Javier Quinteros, RZG
-# -----------------------------------------------------------------------------
-#
+#-------------------------------------------------------------------------------
 parseCredentials (*baseuri, *username, *prefix, *password) {
 
     *baseuri = 'https://epic3.storage.surfsara.nl/v2_test/handles/'
@@ -72,7 +70,7 @@ parseCredentials (*baseuri, *username, *prefix, *password) {
 #                      containing the authorization assertions.
 #
 # Author: Claudio Cacciari (Cineca)
-#
+#-------------------------------------------------------------------------------
 getAuthZParameters(*authZMapPath) {
     *authZMapPath="/srv/irods/current/modules/B2SAFE/cmd/authz.map.json"; 
 }
@@ -83,7 +81,7 @@ getAuthZParameters(*authZMapPath) {
 # *logConfPath  [OUT] the file path to the logging configuration.
 #
 # Author: Claudio Cacciari (Cineca)
-#
+#-------------------------------------------------------------------------------
 getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf"; 
 }
@@ -97,7 +95,7 @@ getLogParameters(*logConfPath) {
 #                      json metadata writing
 #
 # Author: Claudio Cacciari (Cineca)
-
+# -------------------------------------------------------------------------------
 getMetaParameters(*metaConfPath, *enabled) {
     *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf"; 
     *enabled=bool("false");
@@ -111,13 +109,13 @@ getMetaParameters(*metaConfPath, *enabled) {
 #                    the usage of the messaging system
 #
 # Author: Claudio Cacciari (Cineca)
-#
+#-------------------------------------------------------------------------------
 getMessageParameters(*msgConfPath, *enabled) {
     *msgLogPath="/opt/eudat/b2safe/conf/msgManager.conf";
     *enabled=bool("false");
 }
 
-#Provides parameters for some B2SAFE configurations.
+# Provides parameters for some B2SAFE configurations.
 # The plugin msifree_microservice_out is a bug fixing to avoid memory leak
 # in case of collection replication involving thousands of files and the
 # parameter msiFreeEnabled enables it.
@@ -130,7 +128,7 @@ getMessageParameters(*msgConfPath, *enabled) {
 #                        defined in the file retrieved by getAuthZParameters.
 #
 # Author: Claudio Cacciari (Cineca)
-#
+#-------------------------------------------------------------------------------
 getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
     *msiFreeEnabled=bool("true");
     *authzEnabled=bool("true");
@@ -143,15 +141,14 @@ getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
 # *version  [OUT] the B2SAFE version.
 # 
 # Author: Claudio Cacciari (Cineca)
-# 
+#-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
-    *major_version = "3";
-    *minor_version = "9";
-    *sub_version = "1";
+    *major_version = "4";
+    *minor_version = "0";
+    *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 
-#
 # This function is used to set up some parameters for the site in case you are
 # going to use the EUDAT repository packages procedure to ingest data.
 #
@@ -160,7 +157,7 @@ getB2SAFEVersion(*version) {
 # *archiveOwner [OUT] This is the iRods user owning the archive
 #
 # Author: S Coutin (CINES)
-#
+#-------------------------------------------------------------------------------
 rp_getRpIngestParameters(*protectArchive, *archiveOwner) {
    *protectArchive = false;
    *archiveOwner = "rodsA";

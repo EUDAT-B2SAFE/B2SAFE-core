@@ -12,15 +12,15 @@
 # EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause)
 # EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response)
 # EUDATReplication(*source, *destination, *registered, *recursive)
-# EUDATTransferUsingFailLog(*buffer_length)
-# EUDATRegDataRepl(*source, *destination)
+# EUDATTransferUsingFailLog(*buffer_length, *stats)
+# EUDATRegDataRepl(*source, *destination, *recursive, *response)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndCreatePID(*path, *pid)
-# EUDATSearchAndDefineRoR(*path, *pid, *ROR)
+# EUDATSearchAndDefineField(*path, *pid, *key)
 # EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
 # EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response)
 
-#
+
 # Update the logging files specific for EUDAT B2SAFE
 # 
 # Parameters:
@@ -31,7 +31,7 @@
 #
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 
     # Update Logging Statistical File
@@ -44,7 +44,6 @@ EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
     EUDATLog(*message, *level);
 }
 
-#
 # Checks differences about checksum and size between two paths
 # 
 # Parameters:
@@ -55,10 +54,9 @@ EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 #    *notification   [IN] value [0|1]: if 1 enable the notification via messaging system
 #    *response       [OUT] the reason of the failure
 #
-#
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
 
     *status_transfer_success = bool("true");
@@ -88,7 +86,6 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
     *status_transfer_success;
 }
 
-#
 # Data set replication
 #
 # Parameters:
@@ -97,10 +94,11 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
 #    *registered  [IN] boolean value: "true" for registered data, "false" otherwise
 #    *recursive   [IN] boolean value: "true" to enable the recursive replication
 #                      of registered data, "false" otherwise.
+#    *response    [OUT]the result of the replication
 # 
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATReplication(*source, *destination, *registered, *recursive, *response) {
 
     logInfo("[EUDATReplication] transfering *source to *destination"); 
@@ -148,17 +146,17 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
     *status;
 }
 
-#
 # Transfer all data object saved in the logging system,
 # according to the format: cause::path_of_transfer_file::target_of_transfer_file.
 #
 # Parameters:
 #   *buffer_length    [IN] max number of failed transfers to process.
 #                          It has to be > 1.
+#   *stats           [OUT] the number of successful transfers
 #
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca;
-#
+#-------------------------------------------------------------------------------
 EUDATTransferUsingFailLog(*buffer_length, *stats) {
 
     logInfo("[EUDATTransferUsingFailLog] checking the last *buffer_length failed transfers");   
@@ -206,8 +204,6 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
       
 }
 
-
-#-----------------------------------------------------------------------------
 # Data object replication and PID management based on remote execution
 # It is assumed that iRODS zone federation is established
 #  and the replicated file is accessible from the source
@@ -324,15 +320,14 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
     *status;
 }
 
-#-----------------------------------------------------------------------------
 # Verify that a PID exist for a given path and optionally create it 
 # if not found.
 #
 # Parameters:
-# *source          [IN]  source iRODS path
-# *destination     [IN]  target iRODS path
-# *notification    [IN]  enable messaging for async call [0|1]
-# *response        [OUT] a message containing the reason of the failure
+# *source                [IN]  source iRODS path
+# *destination           [IN]  target iRODS path
+# *notification          [IN]  enable messaging for async call [0|1]
+# *registration_response [OUT] a message containing the reason of the failure
 #
 # Author: Claudio, Cineca
 #-----------------------------------------------------------------------------
@@ -407,7 +402,6 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
     }
 }
 
-#-----------------------------------------------------------------------------
 # Search PID for a given path and in case it is not found, 
 # it creates a new PID.
 #
@@ -429,7 +423,6 @@ EUDATSearchAndCreatePID(*path, *pid) {
     }
 }
 
-#-----------------------------------------------------------------------------
 # Search key/value pair for a given path
 #
 # Parameters:
@@ -458,7 +451,6 @@ EUDATSearchAndDefineField(*path, *pid, *key) {
     *val
 }
 
-#----------------------------------------------------------------------------
 # Compare cheksums of data objects in the source and destination
 #  collection recursively
 #
@@ -517,7 +509,6 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
     *totalResult;
 }
 
-#
 # Checks differences about checksum and size between two Data Objects
 # and log the result to the B2SAFE logging system
 # 
@@ -529,7 +520,7 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
 #    *response       [OUT] the reason of the failure
 #
 # Author: Claudio Cacciari, Cineca
-#
+#-------------------------------------------------------------------------------
 EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response) {
         
     *status = bool("true");

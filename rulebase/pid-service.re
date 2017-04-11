@@ -18,11 +18,10 @@
 # EUDATSearchPIDchecksum(*path, *existing_pid)
 # EUDATUpdatePIDWithNewChild(*parentPID, *childPID)
 # EUDATGeteValPid(*pid, *key)
-# EUDATGeteRorPid(*pid, *ror)
 # EUDATeiChecksumMgmt(*path, *PID)
 # EUDATiPIDcreate(*path, *PID)
 # EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)
-# EUDATePIDcreate(*path, *extraType, *PID, *ifchecksum)
+# EUDATePIDcreate(*path, *extraType, *PID)
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
@@ -31,12 +30,12 @@
 # EUDATeiChecksumMgmtColl(*sourceColl)
 # EUDATiRORupdate(*source, *pid)
 # EUDATeRORupdate(*pid,*newRor)
+# EUDATeFIOupdate(*pid, *newFio)
 # EUDATPidsForColl(*collPath)
 # EUDATePIDcreateCurl(*path, *extraType, *PID, *ifchecksum)
 # EUDATSearchPIDCurl(*path, *existing_pid)
 
 
-#
 # Generate a new PID for a digital object.
 # Fields stored in the PID record: URL, ROR and CHECKSUM
 # adds a ROR field if (*ror != "None")
@@ -51,7 +50,7 @@
 #
 # Author: Willem Elbers, MPI-TLA
 # Edited by Elena Erastova, RZG; Long Phan, JSC; Robert Verkerk, SURFsara, Javier Quinteros, GFZ
-#
+#-------------------------------------------------------------------------------
 EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
 
     logInfo("[EUDATCreatePID] create pid for *path");
@@ -169,7 +168,6 @@ EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) {
     }
 }
 
-# -----------------------------------------------------------------------------
 # Searching for a PID using URL replacing "#", "%" and "&" with "*"
 # Parameters:
 #   *path       	[IN]    the path of the replica
@@ -186,14 +184,13 @@ EUDATSearchPID(*path, *existing_pid) {
     *status;
 }
 
-#
 # Searching fo a PID using CHECKSUM
 # Parameters:
 #   *path       	[IN]    the path of the replica
 #   *existing_pid	[OUT]   existing PID 
 #
 # Author: Elena Erastova, RZG
-#
+#-------------------------------------------------------------------------------
 EUDATSearchPIDchecksum(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
@@ -224,7 +221,6 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
     }
 }
 
-#
 # Update a PID record with a new child.
 #
 # Parameters:
@@ -233,7 +229,7 @@ EUDATSearchPIDchecksum(*path, *existing_pid) {
 #
 # Author: Willem Elbers, MPI-TLA
 # Modified by: Claudio Cacciari, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     *replicaNew = "None"
     logInfo("[EUDATUpdatePIDWithNewChild] update parent pid (*parentPID) with new child (*childPID)");
@@ -258,7 +254,6 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
     *replicaNew
 }
 
-#-------------------------------------------------------------------------------
 # get the KEY entry for a PID
 #
 # Parameters:
@@ -283,17 +278,15 @@ EUDATGeteValPid(*pid, *key) {
     *val
 }
 
-#
 # This function creates a PID and stores its value and the checksum in the iCAT if it does not exist.
 # Otherwhise the function modifies the PID.
 #
 # Arguments:
 #   *path            [IN]    Path of the source file
 #   *PID             [OUT]   PID of the source file
-#   *iCATCache       [IN]    Specify whether you want to use the iCAT (bool("true")) or not
 #
 # Author: Giacomo Mariani, CINECA; Claudio Cacciari CINECA;
-#
+#-------------------------------------------------------------------------------
 EUDATeiChecksumMgmt(*path, *PID) {
 
     *PID = "empty";
@@ -310,7 +303,6 @@ EUDATeiChecksumMgmt(*path, *PID) {
     }  
 }
 
-# -----------------------------------------------------------------------------
 # The function write iPID given ePID.
 #
 # Parameters:
@@ -342,7 +334,6 @@ EUDATiPIDcreate(*path, *PID) {
     *status0;
 }
 
-#
 # The function retrieves the value of the required field from iCAT.
 #
 # Arguments:
@@ -352,7 +343,7 @@ EUDATiPIDcreate(*path, *PID) {
 #   *status0            [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
     logInfo("EUDATiFieldVALUEretrieve -> looking for *FNAME of *path");
     *status0 = bool("false");
@@ -377,7 +368,6 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
     *status0;
 }
 
-#
 # The function create ePID.
 #
 # Environment variable used:
@@ -389,7 +379,7 @@ EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE) {
 #
 # Author: Giacomo Mariani, CINECA
 # Edited by:  Robert Verkerk, SURFsara
-#
+#-------------------------------------------------------------------------------
 EUDATePIDcreate(*path, *extraType, *PID) {
 
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
@@ -431,7 +421,6 @@ EUDATePIDcreate(*path, *extraType, *PID) {
     logInfo("[EUDATePIDcreate] Created handle is: *PID");
 }
 
-#
 # The function retrieve ePID searching for a field between URL, CHECKSUM. 
 #
 # Environment variable used:
@@ -444,7 +433,7 @@ EUDATePIDcreate(*path, *extraType, *PID) {
 #   *status0         [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATePIDsearch(*field, *value, *PID) {
     logInfo("[EUDATePIDsearch] search the PID with *field = *value");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
@@ -487,7 +476,7 @@ EUDATePIDsearch(*field, *value, *PID) {
 #   *path               [IN] Object path
 #
 # Author: Giacomo Mariani, CINECA
-
+# -------------------------------------------------------------------------------
 EUDATeCHECKSUMupdate(*PID, *path) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug); 
     logDebug("[EUDATeCHECKSUMupdate] modify checksum related to PID *PID");
@@ -512,7 +501,7 @@ EUDATeCHECKSUMupdate(*PID, *path) {
 #   *newURL             [IN] The new URL to be associated to the PID of $objPath
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATeURLupdate(*PID, *newURL) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     EUDATeURLsearch(*PID, *oldURL);
@@ -525,15 +514,8 @@ EUDATeURLupdate(*PID, *newURL) {
         msifree_microservice_out(*outEUU);
     }
     logInfo("EUDATeURLupdate -> modify handle response = *response");
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath modify *PID 10320/LOC \"*oldURL\" \"*newURL\"",
-               "null", "null", "null", *outEUUL);
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-    if (*msiFreeEnabled) {
-        msifree_microservice_out(*outEUUL);
-    }
 }
 
-#
 # This function search the URL field of the PID
 #
 # Arguments:
@@ -541,7 +523,7 @@ EUDATeURLupdate(*PID, *newURL) {
 #   *newURL             [IN] The new URL to be associated to the PID
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATeURLsearch(*PID, *URL) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     logInfo("EUDATeURLsearch -> search URL in PID *PID");
@@ -555,16 +537,14 @@ EUDATeURLsearch(*PID, *URL) {
     logInfo("EUDATeURLsearch -> response = *URL");
 }
 
-
-#
-# This function remove an ePID... even if its 10320/loc field is not empty!
+# This function remove an ePID... even if its EUDAT/REPLICA field is not empty!
 # To be improved.       
 #
 # Arguments:
 #   *path           [IN]    The path of the object to be removed
 #
 # Author: Giacomo Mariani, CINECA
-#
+#-------------------------------------------------------------------------------
 EUDATePIDremove(*path, *force) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) 
     logInfo("[EUDATePIDremove] removing PID associated to: $userNameClient, *path");
@@ -587,8 +567,6 @@ EUDATePIDremove(*path, *force) {
                 msifree_microservice_out(*outEPR1);
             }
             logInfo("[EUDATePIDremove] removing completed, response = *response3");
-            # The PID record could be associated to a replica.
-            # The field 10320/LOC of the parent PID record should be updated
         }
         else if (EUDATtoBoolean(*force) == bool("true")){
             logDebug("[EUDATePIDremove] Found replicas: PID *pid will be deleted");
@@ -614,7 +592,6 @@ EUDATePIDremove(*path, *force) {
     }
 } 
 
-# -----------------------------------------------------------------------------
 # Walk through the collection. For each object in the collection 
 # it creates the object checksum in the iCAT if it does not exist.
 # Otherwhise the function modify the PID.
@@ -633,7 +610,6 @@ EUDATeiChecksumMgmtColl(*sourceColl) {
     }
 }
 
-# -----------------------------------------------------------------------------
 # Add or modify the ROR field of the PID of the object to iCAT
 #
 # Arguments:
@@ -657,7 +633,6 @@ EUDATiRORupdate(*source, *pid) {
     }
 }
 
-#-----------------------------------------------------------------------------
 # Add or modify the ROR field of the PID in EPIC system
 #
 # Arguments:
@@ -679,7 +654,6 @@ EUDATeRORupdate(*pid, *newRor) {
     logInfo("[EUDATeRORupdate] modify handle response = *response");
 }
 
-#-----------------------------------------------------------------------------
 # Add or modify the FIO field of the PID in EPIC system
 #
 # Arguments:
@@ -700,7 +674,6 @@ EUDATeFIOupdate(*pid, *newFio) {
     logInfo("[EUDATeFIOupdate] modify handle response = *response");
 }
 
-#-----------------------------------------------------------------------------
 # Create PIDs for all collections and objects in the collection recursively
 # ROR is assumed to be "None"
 #
@@ -736,8 +709,6 @@ EUDATPidsForColl(*collPath, *fixed) {
 
 # The function create ePID.
 #
-# Environment variable used:
-#
 # Arguments:
 #   *path            [IN]   The full iRODS path of the object
 #   *extraType       [IN]   extra parameters
@@ -747,7 +718,7 @@ EUDATPidsForColl(*collPath, *fixed) {
 # Author: Giacomo Mariani, CINECA
 # Edited by: Robert Verkerk, SURFsara
 # Edited by: Javier Quinteros, GFZ
-
+# -------------------------------------------------------------------------------
 EUDATePIDcreateCurl(*path, *extraType, *PID, *ifcheksum) {
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug) ;
 
@@ -817,7 +788,6 @@ EUDATePIDcreateCurl(*path, *extraType, *PID, *ifcheksum) {
     logInfo("EUDATePIDcreateCurl -> Created handle is: *PID");
 }
 
-# -----------------------------------------------------------------------------
 # Searching for a PID using URL replacing "#", "%" and "&" with "*"
 # Parameters:
 #   *path               [IN]    the path of the replica
@@ -826,7 +796,6 @@ EUDATePIDcreateCurl(*path, *extraType, *PID, *ifcheksum) {
 #
 # Author: Javier Quinteros, GFZ
 # -----------------------------------------------------------------------------
-
 EUDATSearchPIDCurl(*path, *existing_pid) {
     logInfo("search pid for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);

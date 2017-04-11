@@ -12,7 +12,7 @@
 # EUDATCheckOwnershipObj(*path)
 # EUDATCheckOwnershipColl(*path)
 
-#
+
 # Check if 2 replicas have the same checksum
 #
 # Parameters:
@@ -20,7 +20,7 @@
 #	*destination	[IN] path destination of replicated data object
 # 
 # Author: Long Phan, JSC
-#
+#-------------------------------------------------------------------------------
 EUDATCatchErrorChecksum(*source,*destination) {
     logInfo("[EUDATCatchErrorChecksum] Check if 2 replicas have the same checksum. " ++
             "Source = *source, destination = *destination");
@@ -41,7 +41,6 @@ EUDATCatchErrorChecksum(*source,*destination) {
     
 }
 
-#
 # Check if 2 replicas have the same size.
 #
 # Parameters:
@@ -49,7 +48,7 @@ EUDATCatchErrorChecksum(*source,*destination) {
 #	*destination	[IN] path destination of replicated data object
 #  
 # Author: Long Phan, JSC
-#
+#-------------------------------------------------------------------------------
 EUDATCatchErrorSize(*source,*destination) {
     logInfo("[EUDATCatchErrorSize] Check if 2 replicas have the same size." ++
             "Source = *source, destination = *destination");
@@ -78,7 +77,6 @@ EUDATCatchErrorSize(*source,*destination) {
     
 }
 
-#
 # Check if a user is or is not owner of the data object/collection
 # (Reference: https://www.irods.org/index.php/iRODS_Error_Codes or /iRODS/lib/core/include/rodsErrorTable.h)
 #
@@ -88,7 +86,7 @@ EUDATCatchErrorSize(*source,*destination) {
 #
 # Author: Long Phan, JSC;
 # Author: Claudio Cacciari, Cineca;
-#----------------------------------------------------
+#-------------------------------------------------------------------------------
 EUDATCatchErrorDataOwner(*path,*msg) {
     *msg = "ownership check passed";
 
@@ -138,7 +136,6 @@ EUDATCatchErrorDataOwner(*path,*msg) {
     }
 }
 
-
 # Check if a user is or is not owner of the data object, 
 # but comparing the session var "userNameClient" with the owners of the object
 #
@@ -147,7 +144,7 @@ EUDATCatchErrorDataOwner(*path,*msg) {
 #       *message                [OUT] response message
 #
 # Author: Claudio Cacciari, Cineca;
-#----------------------------------------------------
+#-------------------------------------------------------------------------------
 EUDATCheckOwnershipObj(*path) {
 
     msiSplitPath(*path, *collPath, *objPath);
@@ -168,7 +165,7 @@ EUDATCheckOwnershipObj(*path) {
 #       *message                [OUT] response message
 #
 # Author: Claudio Cacciari, Cineca;
-# ----------------------------------------------------
+#-------------------------------------------------------------------------------
 EUDATCheckOwnershipColl(*path) {
 
     *owner = 0;
