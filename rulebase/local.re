@@ -106,14 +106,14 @@ getMetaParameters(*metaConfPath, *enabled) {
 #Provides parameters for the message management mechanism
 #
 # Arguments:
-# *msgLogPath  [OUT] the file path to the message log file.
+# *msgConfPath [OUT] the file path to the message conf file.
 # *enabled     [OUT] boolean value to enable (if true) globally the
 #                    the usage of the messaging system
 #
 # Author: Claudio Cacciari (Cineca)
 #
-getMessageParameters(*msgLogPath, *enabled) {
-    *msgLogPath="/var/log/irods/messageManager.log";
+getMessageParameters(*msgConfPath, *enabled) {
+    *msgLogPath="/opt/eudat/b2safe/conf/msgManager.conf";
     *enabled=bool("false");
 }
 

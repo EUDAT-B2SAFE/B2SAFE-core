@@ -9,7 +9,7 @@ import json
 
 logger = logging.getLogger('messageManager')
 
-def send(args):
+def publish(args):
     """write the message to the queue"""
     msgList = (' '.join(args.message)).split(";")
     payLoad = []
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser_send = subparsers.add_parser('send', help='send a message')
     parser_send.add_argument("queue", help='the value of the message queue')
     parser_send.add_argument("message", nargs='+', help='the message content')
-    parser_send.set_defaults(func=send)
+    parser_send.set_defaults(func=publish)
 
     parser_getlast = subparsers.add_parser('getlast', help='get the last message')
     parser_getlast.add_argument("queue", help='the value of the message queue')

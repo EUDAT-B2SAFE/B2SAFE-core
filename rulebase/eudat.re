@@ -145,10 +145,10 @@ EUDATPushMetadata(*path, *queue) {
 EUDATMessage(*queue, *message) {
 
     logInfo("[EUDATMessage] pushing the message to topic *queue");
-    getMessageParameters(*msgLogPath, *enabled);
+    getMessageParameters(*msgConfPath, *enabled);
     if (*enabled) {
         logInfo("[EUDATMessage] sending message '*message' to the topic '*queue'");
-        msiExecCmd("argotest.py", "-l *msgLogPath publish *queue *message",
+        msiExecCmd("messageManager.py", "*msgConfPath publish *queue *message",
                    "null", "null", "null", *outMessage);
         getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
         if (*msiFreeEnabled) {

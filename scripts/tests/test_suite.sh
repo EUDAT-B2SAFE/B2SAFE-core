@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REMOTE_ZONE=cinecaDMPZone2
+REMOTE_ZONE=cinecaDMPZone1
 
 echo "Hello World!" > test_data.txt
 iput test_data.txt
@@ -47,8 +47,8 @@ createPID () {
 replication () {
   echo ""
   echo "############ REPLICATION ############"
-  destPath="${irods_home}/test_data2.txt"
-#  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
+#  destPath="${irods_home}/test_data2.txt"
+  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
   echo "Replica path: ${destPath}"
   rule="{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); 
         if (*status) {
