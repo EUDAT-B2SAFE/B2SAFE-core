@@ -18,7 +18,7 @@ It works as follows:
 - create package:
   $ ./create_rpm_package.sh
 - login as root and install package:
-  # rpm -ivh /home/irods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-3.0-0.noarch.rpm
+  # rpm -ivh /home/irods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-4.0-0.noarch.rpm
   Preparing...                ########################################### [100%]
      1:irods-eudat-b2safe     ########################################### [100%]
 
