@@ -150,7 +150,10 @@ check_epicclient2_config() {
             echo "we will use the old epicclient"
             EPICCLIENT2=false
         else
-            echo "please add the following parameters to the file: ${INSTALL_CONFIG} and rerun the procedure\""
+            BASENAME=$(basename $INSTALL_CONFIG)
+            echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
+            echo "Update where necessary and rerun the procedure"
+            echo ""
             echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
             echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
             echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""

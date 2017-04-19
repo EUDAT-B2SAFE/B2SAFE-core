@@ -12,7 +12,7 @@ BuildArch:	noarch
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires:	
-Requires:	irods-icat or irods-server
+#Requires:	irods-icat or irods-server
 
 %define _whoami %(whoami)
 %define _b2safehomepackaging %(pwd)
@@ -139,7 +139,6 @@ CERTIFICATE_ONLY=</path/prefix_suffix_index_certificate_only.pem>
 PREFIX=<ZZZ>
 HANDLEOWNER="200:0.NA/\$PREFIX"
 REVERSELOOKUP_USERNAME=<ZZZ>
-#REVERSELOOKUP_PASSWORD=<Password>
 HTTPS_VERIFY="True"
 #
 # users for msiexec command
@@ -194,6 +193,8 @@ fi
 
 
 %changelog
+* Wed Apr 18 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.0
+- update for better info. Remove requires. iRODS can be in 2 different packages.
 * Fri Nov 20 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0
 - set owner of files during installation of rpm.
 * Fri Oct 23 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0

@@ -63,8 +63,8 @@ class IrodsIntegrationTests(unittest.TestCase):
         ienv_result = subprocess_popen(command)
         for elem in ienv_result:
             if 'irods_user_name' in elem:
-                irods_username_result = elem
-        irods_username_result_expected = 'NOTICE: irods_user_name - '+self.irods_user_name
+                irods_username_result = elem.strip("NOTICE: ")
+        irods_username_result_expected = 'irods_user_name - '+self.irods_user_name
         self.assertEqual(
             irods_username_result, irods_username_result_expected,
             'The username we expect is different')
