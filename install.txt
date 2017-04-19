@@ -1,10 +1,11 @@
-*** Installation ***
+*** Installation/Upgrade ***
 
-The following describes the procedure to enable B2SAFE release-3.x.y
+The following describes the procedure to enable B2SAFE release-4.x.y
 
 NOTE: iRODS is running as a normal user process. NOT as root. The package can
 be build by any user. During installation of the package it will use: 
 "/etc/irods/service_account.config" to set the ownership of the files.
+NOTE: iRODS needs to be installed AND configured before installing/upgrading B2SAFE
 
 
 It works as follows:
@@ -13,32 +14,41 @@ It works as follows:
 - go to the directory where the packaging files are:
   $ cd B2SAFE-core/packaging
 
-* RPM *
+* RPM creation, installation/upgrade *
 
 - create package:
   $ ./create_rpm_package.sh
+INSTALLATION
 - login as root and install package:
   # rpm -ivh /home/irods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-4.0-0.noarch.rpm
   Preparing...                ########################################### [100%]
      1:irods-eudat-b2safe     ########################################### [100%]
+UPGRADE
+- login as root and upgrade package:
+  # rpm -Uvh /home/irods/rpmbuild/RPMS/noarch/irods-eudat-b2safe-4.0-0.noarch.rpm
+  Preparing...                ########################################### [100%]
+     1:irods-eudat-b2safe     ########################################### [100%]
 
-* DEB *
+* DEB creation, installation/upgrade *
 
 - create package:
   $ ./create_deb_package.sh
 - login as root or use sudo to install package:
-  $ sudo dpkg -i  /home/irods/debbuild/irods-eudat-b2safe_3.0-0.deb
+  $ sudo dpkg -i  /home/irods/debbuild/irods-eudat-b2safe_4.0-0.deb
   Selecting previously unselected package irods-eudat-b2safe.
   (Reading database ... .... files and directories currently installed.)
-  Preparing to unpack .../irods-eudat-b2safe_3.0-0.deb ...
-  Unpacking irods-eudat-b2safe (3.0-0) ...
-  Setting up irods-eudat-b2safe (3.0-0) ...
+  Preparing to unpack .../irods-eudat-b2safe_4.0-0.deb ...
+  Unpacking irods-eudat-b2safe (4.0-0) ...
+  Setting up irods-eudat-b2safe (4.0-0) ...
 
+
+After installation/upgrade actions. Always to do! Even after an upgrade.
 
 The package b2safe has been installed in /opt/eudat/b2safe.
 To install/configure it in iRODS do following as the user who runs iRODS :
 
-# update install.conf with correct parameters with your favorite editor
+# update install.conf with correct parameters with your favorite editor. See
+ the NOTE below for parameters.
 sudo vi /opt/eudat/b2safe/packaging/install.conf
 
 # install/configure it as the user who runs iRODS
@@ -47,12 +57,12 @@ sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/pa
 
 
 
-NOTE: following need to be updated/added in "/opt/eudat/b2safe/packaging/install.conf":
+NOTE: following needs to be updated/added in "/opt/eudat/b2safe/packaging/install.conf":
    - DEFAULT_RESOURCE
    - SERVER_ID
-   - BASE_URI (needed for epicclient)
-   - USERNAME (needed for epicclient)
-   - PREFIX   (needed for epicclient)
+   - BASE_URI (needed for old epicclient) (OBSOLETE, so make it a comment)
+   - USERNAME (needed for old epicclient) (OBSOLETE, so make it a comment)
+   - PREFIX   (needed for old epicclient) (OBSOLETE, so make it a comment)
    - HANDLE_SERVER_URL      (needed for epicclient2)
    - PRIVATE_KEY            (needed for epicclient2)
    - CERTIFICATE_ONLY       (needed for epicclient2)
@@ -69,9 +79,11 @@ NOTE: following need to be updated/added in "/opt/eudat/b2safe/packaging/install
   $ cd /opt/eudat/b2safe/cmd
   $ ./authZmanager.py -h
   $ ./epicclient.py --help
+  $ ./epicclient2.py --help
   $ ./logmanager.py -h
   $ ./messageManager.py -h
   $ ./metadataManager.py -h
+  $ ./timeconvert.py epoch_to_iso8601 2000000
 
 Try to install missing packages with the standard package manager like apt, yum, zypper etc.
 If packages are not within the standards use pip and install the missing packages with pip. 
