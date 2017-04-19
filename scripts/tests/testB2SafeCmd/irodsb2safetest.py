@@ -236,8 +236,8 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         ienv_result = subprocess_popen(command)
         for elem in ienv_result:
             if 'irods_user_name' in elem:
-                irods_username_result = elem
-        irods_username_result_expected = 'NOTICE: irods_user_name - '+self.irods_user_name
+                irods_username_result = elem.strip("NOTICE: ")
+        irods_username_result_expected = 'irods_user_name - '+self.irods_user_name
 
         # create array with values to test and execute
         test_values=[{ 'action': 'Equal', 'result_value': irods_username_result, 'expected_value': irods_username_result_expected, 'string': 'The username we expect is different'}]
