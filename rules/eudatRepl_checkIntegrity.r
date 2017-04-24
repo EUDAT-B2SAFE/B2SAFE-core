@@ -12,9 +12,9 @@ eudatReplCheckIntegrity{
     writeLine("stdout", "Its content is: Hello World!");
 
     # PID creation
-    # with PID registration in iCAT (4th argument "true")
-    # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
-    EUDATCreatePID("None", "*home/test_data.txt", "None", "true", *newPID);
+    # with PID registration in iCAT (5th argument "true")
+    # EUDATCreatePID(*parent_pid, *source, *ror, *fio, "true", *newPID);
+    EUDATCreatePID("None", "*home/test_data.txt", "None", "None", "true", *newPID);
     writeLine("stdout", "The Object *home/test_data.txt has PID = *newPID");
 
     # Data set replication

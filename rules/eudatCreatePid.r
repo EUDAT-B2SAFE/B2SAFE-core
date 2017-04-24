@@ -16,9 +16,8 @@ eudatCreatePID{
     msiDataObjClose(*S_FD, *status2);
     writeLine("stdout", "");
     # PID creation
-    # with PID registration in iCAT (4th argument "true")
-    # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
-    EUDATCreatePID("None", "*home/test_data.txt", "None", "true", *newPID);
+    # EUDATCreatePID(*parent_pid, *source, *ror, *fio, *fixed, *newPID);
+    EUDATCreatePID("None", "*home/test_data.txt", "None", "None", "false", *newPID);
     writeLine("stdout", "The Object *home/test_data.txt has PID = *newPID");
 
     EUDATePIDremove("*home/test_data.txt", "true");

@@ -24,7 +24,7 @@ eudatReplColl{
         # PID creation
     # with PID registration in iCAT (4th argument "true")
     # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
-    EUDATCreatePID("None", *tcoll, "None", "true", *newPID);
+    EUDATCreatePID("None", *tcoll, "None", "None", "true", *newPID);
     writeLine("stdout", "The Collection *tcoll has PID = *newPID");
     writeLine("stdout", "");
 
