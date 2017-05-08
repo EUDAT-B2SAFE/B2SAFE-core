@@ -51,10 +51,13 @@ class EudatRemoteSource:
         try:
             self.logger.debug("Querying the URL: {}".format(url))
             response = requests.get(url, verify=False, auth=(self.conf['username'], self.conf['password']))
+#            print "URL: " + url 
+#            print str(response)
         except IOError, e:
             self.logger.error("Wrong username or password", exc_info=True)
             sys.exit(1)
-        assert response.status_code == 200
+        assert (response.status_code == 200 or response.status_code == 400)
+        
         json_data = (response.text).encode('utf-8')
         self.logger.debug("Response:{}".format(json_data))
         response_dict = json.loads(json_data)
@@ -83,6 +86,9 @@ class EudatRemoteSource:
                 self.logger.debug("identity['value'] = " + identity['value'])
                 identity_types[identity['typeId']] = identity['value']
             user_attrs = self.queryUnity("entity/"+str(member_id)+"/attributes")
+            if isinstance(user_attrs, dict) and ("error" in user_attrs.keys()):
+                self.logger.error("Error: " + user_attrs['error'])
+                continue
             user_cn = None
             for user_attr in user_attrs:
                 if user_attr['name'] == 'cn':
@@ -121,7 +127,10 @@ class EudatRemoteSource:
             member_list = self.queryUnity("group"+group_name)
             user_list = []
             for member_id in member_list['members']:
-                user_list.append(users_map[member_id])
+                if member_id in users_map.keys():
+                    user_list.append(users_map[member_id])
+                else:
+                    self.logger.error("Error: member id {} is missing".format(member_id))
             list_group[group_name[1:]] = user_list
 
         final_list['groups'] = list_group
@@ -197,6 +206,7 @@ class EudatRemoteSource:
             userdict = {}
         else:
             userdict = data[self.main_project]["groups"]
+            self.logger.debug('The user dictionary for the project {}: {}'.format(self.main_project, userdict))
         for org,members in mainDict.iteritems():
             subjectMatch = False
             for iuser in self.roles:
