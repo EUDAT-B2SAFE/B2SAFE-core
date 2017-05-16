@@ -21,17 +21,17 @@ eudatReplColl{
     msiDataObjClose(*S_FD, *status2);
     writeLine("stdout", "");
     
-        # PID creation
-    # with PID registration in iCAT (4th argument "true")
-    # EUDATCreatePID(*parent_pid, *source, *ror, "true", *newPID);
-    EUDATCreatePID("None", *tcoll, "None", "true", *newPID);
+    # PID creation
+    # EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID) 
+    EUDATCreatePID("None", *tcoll, "None", "None", "true", *newPID);
     writeLine("stdout", "The Collection *tcoll has PID = *newPID");
     writeLine("stdout", "");
 
     *tcoll2="*home/t_coll2";
     # Data set replication
     # with PID registration (3rd argument "true")
-    # and not recursive (4th argument "true")
+    # and recursive (4th argument "true")
+    # EUDATReplication(*source, *destination, *registered, *recursive, *response)
     *res = EUDATReplication(*tcoll, *tcoll2, "true", "true", *response);
     if (*res) {
         writeLine("stdout", "Collection *tcoll replicated to Collection *tcoll2!");
