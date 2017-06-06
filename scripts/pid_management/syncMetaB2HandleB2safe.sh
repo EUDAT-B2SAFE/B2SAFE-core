@@ -85,10 +85,8 @@ listing () {
               input_path=$path
               listing
           else
-              echo "${input_path}/$path"
               sourcePath="${input_path}/$path"
               syncMeta
-              continue
           fi
       done
   done <<< "$IN"
