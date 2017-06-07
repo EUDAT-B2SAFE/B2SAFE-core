@@ -157,11 +157,19 @@ class IRODSUtils():
 
         (rc1, out1) = self.execute_icommand(["ienv"])
         if out1:
-            for row in out1.splitlines():
-                triplet = row.split(':')
-                duplet = (triplet[1].strip()).split('=')
-                if (duplet[0] == 'irods_user_name'):
-                    irods_admin_user = duplet[1]
+            lines = out1.splitlines()
+            self.logger.debug('iRODS version: ' + lines[0])
+            if '4.1' in lines[0]:
+                for row in lines:
+                    triplet = row.split(':')
+                    duplet = (triplet[1].strip()).split(' - ')
+                    if (duplet[0] == 'irods_user_name'):
+                        irods_admin_user = duplet[1]
+            elif '4.2' in lines[0]:
+                for row in lines:
+                    duplet = (row.strip()).split(' - ')
+                    if (duplet[0] == 'irods_user_name'):
+                        irods_admin_user = duplet[1]
 
         (rc, out) = self.execute_icommand(["ichmod", "-Mr", "own", 
                                            irods_admin_user, 

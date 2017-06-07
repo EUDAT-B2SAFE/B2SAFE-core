@@ -50,8 +50,10 @@ class SynchronizationTask():
 
         sg_list = {}
         for proj_name in self.projects.keys():
-            for sg in self.projects[proj_name]['groups'].keys():
-                sg_list[sg] = proj_name
+            if (isinstance(self.projects[proj_name], dict) 
+              and ('groups' in self.projects[proj_name].keys())):
+                for sg in self.projects[proj_name]['groups'].keys():
+                    sg_list[sg] = proj_name
 
         return sg_list
 
@@ -66,7 +68,7 @@ class SynchronizationTask():
 #            pp = pprint.PrettyPrinter(indent=4)
 #            pp.pprint(projects)
 
-        if 'groups' in project.keys():
+        if (isinstance(project, dict)) and ('groups' in project.keys()):
             for user in project['groups'].keys():
 
             #### erastova: added creation of the irods user
@@ -169,28 +171,29 @@ class SynchronizationTask():
 
         self.logger.info("checking if there are users to be added to the group "
                     + proj_name)
-        user_list = project['members']
-        for user in [x for x in user_list
-                     if (new_project_flag or
-                         not(x in self.irods_projects[proj_name]['members']))]:
-            self.logger.info(user)
-            if not(self.dryrun):
-                if not(user in self.irods_users.keys()):
-                    response = self.irodsu.createIrodsUsers(user)
-                    if response[0] != 0:
-                        if self.conf.notification_active:
-                            message = "creation of the irods user " + user \
-                                    + " failed"
-                            mailsnd = MailSender()
-                            mailsnd.send(message, self.conf.notification_sender,
-                                         self.conf.notification_receiver)
-                        self.logger.error("failed to create the irods user %s" % user)
-                    else:
-                        self.logger.debug("created irods user %s" % user)
-                self.irodsu.addIrodsUserToGroup(user, proj_name)
-                self.logger.debug("added irods user %s to the group %s" % (user, proj_name))
-            else:
-                self.logger.info("added user %s to the group %s" % (user, proj_name))
+        if (isinstance(project, dict)) and ('members' in project.keys()):
+            user_list = project['members']
+            for user in [x for x in user_list
+                         if (new_project_flag or
+                             not(x in self.irods_projects[proj_name]['members']))]:
+                self.logger.info(user)
+                if not(self.dryrun):
+                    if not(user in self.irods_users.keys()):
+                        response = self.irodsu.createIrodsUsers(user)
+                        if response[0] != 0:
+                            if self.conf.notification_active:
+                                message = "creation of the irods user " + user \
+                                        + " failed"
+                                mailsnd = MailSender()
+                                mailsnd.send(message, self.conf.notification_sender,
+                                             self.conf.notification_receiver)
+                            self.logger.error("failed to create the irods user %s" % user)
+                        else:
+                            self.logger.debug("created irods user %s" % user)
+                    self.irodsu.addIrodsUserToGroup(user, proj_name)
+                    self.logger.debug("added irods user %s to the group %s" % (user, proj_name))
+                else:
+                    self.logger.info("added user %s to the group %s" % (user, proj_name))
 
 
     def addProjects(self):
@@ -240,9 +243,15 @@ class SynchronizationTask():
             # users are in the UserDB and not in iRODS
             self.addUsersToProject(proj_name, self.projects[proj_name])
             # add users from irods externals
-            user_list = self.projects[proj_name]['members']
-            for sg in self.projects[proj_name]['groups'].keys():
-                user_list += self.projects[proj_name]['groups'][sg]
+            if (isinstance(self.projects[proj_name], dict) 
+              and ('members' in self.projects[proj_name].keys())):
+                user_list = self.projects[proj_name]['members']
+            else:
+                user_list = []
+            if (isinstance(self.projects[proj_name], dict)
+              and ('groups' in self.projects[proj_name].keys())):
+                for sg in self.projects[proj_name]['groups'].keys():
+                    user_list += self.projects[proj_name]['groups'][sg]
             user_list = set(user_list)
             # users are in iRODS and not in the userDB
             for user in [x for x in self.irods_projects[proj_name]['members']
@@ -310,9 +319,15 @@ class SynchronizationTask():
 
                 user_list = []
                 if (proj_name in self.projects.keys()):
-                    user_list = self.projects[proj_name]['members']
-                    for sg in self.projects[proj_name]['groups'].keys():
-                        user_list += self.projects[proj_name]['groups'][sg]
+                    if (isinstance(self.projects[proj_name], dict)
+                      and ('members' in self.projects[proj_name].keys())):
+                        user_list = self.projects[proj_name]['members']
+                    else:
+                        user_list = []
+                    if (isinstance(self.projects[proj_name], dict)
+                      and ('groups' in self.projects[proj_name].keys())):
+                        for sg in self.projects[proj_name]['groups'].keys():
+                            user_list += self.projects[proj_name]['groups'][sg]
                     user_list = set(user_list)
 ##TODO here should be managed user attributes
 
@@ -335,13 +350,8 @@ class SynchronizationTask():
                             self.logger.info("the dn %s has been added for user "
                                              + "%s", dn, user)
                         else:
-<<<<<<< HEAD
                             self.logger.info("the dn " + dn[0] + " has been added for user " + user)
 
-=======
-                            print "the dn {} has been added for user {}".format(
-                                                                        dn,user)
->>>>>>> master
             # the user is in irods, but not in the map file
             if (self.dn_map is not None):
                 for dn in dn_list:
