@@ -1,10 +1,21 @@
-## Testing Guidelines for EPIC Client
+## Testing Guidelines for EPIC Client, EPIC client 2, log, auth, iRODS, b2SAFE
 
-The suite of unit and integration test cases for the EPIC Client uses the standard testing framework, i.e. `unittest`, aka “PyUnit”, the Python version of JUnit.
+The suite can test following parts:
+* epicclient.pyi unit and integration test
+* epicclient2.py integration test
+* log
+* auth
+* iRODS integration test on live installation
+* b2safe integration test on live installation
+
+The suite of unit and integration test cases for all parts uses the standard testing framework, i.e. `unittest`, aka “PyUnit”, the Python version of JUnit.
 
 * Unit tests use `unittest.mock` to mock EPIC REST API calls.
-* Integrations tests require a valid credentials file (otherwise test suite will be skipped):
+* EPIC Integrations tests require a valid credentials file (otherwise test suite will be skipped):
   * filename: `epic_credentials` (see [example](resources/epic_credentials_example))
+  * location: under `resources` directory 
+* EPIC2 Integrations tests require a valid credentials file (otherwise test suite will be skipped):
+  * filename: `epic2_credentials`
   * location: under `resources` directory 
 
 ### Requirements
@@ -15,7 +26,11 @@ Dependencies for Python 2.7 are listed in `requirements.txt`. Earlier versions o
 
 ### Usage
 
+    python testB2SafeCmd.py --help
     python testB2SafeCmd.py -test epic
+    python testB2SafeCmd.py -test epic2
+    python testB2SafeCmd.py -test irods
+    python testB2SafeCmd.py -test b2safe
 
 ### Test coverage
 
@@ -23,7 +38,7 @@ Assuming `coverage` module is installed:
 
     python -m coverage run testB2SafeCmd.py -test epic && python -m coverage xml
 
-This will run all EPIC Client unit & integration tests and create an xml-formatted coverage report suitable for Jenkins/SonarQube
+This will run all unit & integration tests and create an xml-formatted coverage report suitable for Jenkins/SonarQube
 
 ### Known Issues
 
