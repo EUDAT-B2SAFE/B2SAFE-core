@@ -351,8 +351,26 @@ def bulk(args):
                 modify_handle = bulk_array[1] 
                 modify_key = bulk_array[2]
                 modify_value = bulk_array[3]
-                result =  modify_execution(client, modify_handle, modify_key, modify_value)
+                result = modify_execution(client, modify_handle, modify_key, modify_value)
                 bulk_result_file.write('modify handle: '+modify_handle+' key: '+modify_key+' value: '+modify_value+' result: '+result+'\n')
+
+        if bulk_array[0] == 'REPLACE':
+            # REPLACE handle key data1 data2  # replace data1 with data2 in value part of key/value pair in handle
+
+            if len(bulk_array) == 5:
+                replace_handle = bulk_array[1] 
+                replace_key = bulk_array[2]
+                replace_data1 = bulk_array[3]
+                replace_data2 = bulk_array[4]
+                result = read_execution(client, replace_handle, replace_key)
+                if result != "None" and result != 'error':
+                    new_value = result.replace(replace_data1, replace_data2)
+                    if result != new_value:
+                        result = modify_execution(client, replace_handle, replace_key, new_value)
+                    else:
+                        result = "None"
+
+                bulk_result_file.write('replace handle: '+replace_handle+' key: '+replace_key+' data1: '+replace_data1+' data2: '+replace_data2+' result: '+result+'\n')
 
     bulk_input_file.close()
     bulk_result_file.close()
