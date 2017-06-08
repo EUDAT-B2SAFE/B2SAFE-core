@@ -92,32 +92,12 @@ def read(args):
         sys.stdout.write('error')
         return
 
-    # set default return value
-    json_result = "None"
-
     if args.key is None:
-        try:
-            # retrieve whole handle
-            result = client.retrieve_handle_record_json(args.handle)
-        except HandleSyntaxError:
-            json_result = 'error'
-
-        if result is not None:
-            json_result = json.dumps(result["values"])
+        result =  read_execution(client, args.handle)
     else:
-        try:
-            # retrieve single value from a handle
-            result = client.get_value_from_handle(args.handle, args.key)
-        except HandleSyntaxError:
-            json_result = 'error'
+        result =  read_execution(client, args.handle, args.key)
 
-        if result is not None:
-            json_result = json.dumps(result)
-            # remove starting and finishing quotes.
-            json_result = json_result.lstrip('"')
-            json_result = json_result.rstrip('"')
-
-    sys.stdout.write(json_result)
+    sys.stdout.write(result)
 
 
 def create(args):
@@ -182,23 +162,7 @@ def modify(args):
         sys.stdout.write('error')
         return
 
-    kvpairs = dict([(args.key, args.value)])
-
-    result = 'True'
-
-    try:
-        # modify key/value pairs
-        client.modify_handle_value(
-            args.handle,
-            ttl=None,
-            add_if_not_exist=True,
-            **kvpairs)
-    except HandleAuthenticationError:
-        result = 'error'
-    except HandleNotFoundException:
-        result = 'False'
-    except HandleSyntaxError:
-        result = 'error'
+    result = modify_execution(client, args.handle, args.key, args.value)
 
     sys.stdout.write(result)
 
@@ -275,6 +239,7 @@ def relation(args):
 
     sys.stdout.write(result)
 
+
 def bulk(args):
     """perform the bulk actions"""
 
@@ -316,6 +281,19 @@ def bulk(args):
 
     for line in bulk_input_file:
         bulk_array = line.split()
+
+        if bulk_array[0] == 'READ':
+            # READ handle       # read whole handle
+            # READ handle key   # read key/value pair from handle
+
+            read_handle = bulk_array[1] 
+            if len(bulk_array) >= 3:
+                read_key = bulk_array[2]
+                result = read_execution(client, read_handle, read_key)
+                bulk_result_file.write('read handle: '+read_handle+' key: '+read_key+' result: '+result+'\n')
+            else: 
+                result = read_execution(client, read_handle)
+                bulk_result_file.write('read handle: '+read_handle+' result: '+result+'\n')
 
         if bulk_array[0] == 'CREATE':
             # CREATE uuid URL                       # create handle, use uuid for suffix
@@ -360,11 +338,21 @@ def bulk(args):
             delete_handle = bulk_array[1] 
             if len(bulk_array) >= 3:
                 delete_key = bulk_array[2]
-                result =  delete_execution(client, delete_handle, delete_key)
-                bulk_result_file.write('delete handle: '+delete_handle+'key: '+delete_key+' result: '+result+'\n')
+                result = delete_execution(client, delete_handle, delete_key)
+                bulk_result_file.write('delete handle: '+delete_handle+' key: '+delete_key+' result: '+result+'\n')
             else: 
-                result =  delete_execution(client, delete_handle)
+                result = delete_execution(client, delete_handle)
                 bulk_result_file.write('delete handle: '+delete_handle+' result: '+result+'\n')
+
+        if bulk_array[0] == 'MODIFY':
+            # MODIFY handle key value  # modify key/value pair in handle
+
+            if len(bulk_array) == 4:
+                modify_handle = bulk_array[1] 
+                modify_key = bulk_array[2]
+                modify_value = bulk_array[3]
+                result =  modify_execution(client, modify_handle, modify_key, modify_value)
+                bulk_result_file.write('modify handle: '+modify_handle+' key: '+modify_key+' value: '+modify_value+' result: '+result+'\n')
 
     bulk_input_file.close()
     bulk_result_file.close()
@@ -372,6 +360,39 @@ def bulk(args):
 ###############################################################################
 # EPIC Client sub functions
 ###############################################################################
+
+def read_execution(client, read_handle, read_key=None):
+    """Execute the read action """
+
+    # set default return value
+    result = None
+    json_result = "None"
+    
+    if read_key is None:
+        try:
+            # retrieve whole handle
+            result = client.retrieve_handle_record_json(read_handle)
+        except HandleSyntaxError:
+            json_result = 'error'
+
+        if result is not None:
+            json_result = json.dumps(result["values"])
+    else:
+        try:
+            # retrieve single value from a handle
+            result = client.get_value_from_handle(read_handle, read_key)
+        except HandleNotFoundException:
+            json_result = 'error'
+        except HandleSyntaxError:
+            json_result = 'error'
+
+        if result is not None:
+            json_result = json.dumps(result)
+            # remove starting and finishing quotes.
+            json_result = json_result.lstrip('"')
+            json_result = json_result.rstrip('"')
+
+    return(json_result)
 
 def create_execution(client, create_handle, create_location, create_overwrite=False, create_checksum=None, create_loc10320=None, create_extratype=None ):
     """Execute the create action """
@@ -448,6 +469,30 @@ def delete_execution(client, delete_handle, delete_key=None):
             result = 'error'
 
     return(result)
+
+def modify_execution(client, modify_handle, modify_key, modify_value):
+    """Execute the modify action """
+
+    kvpairs = dict([(modify_key, modify_value)])
+
+    result = 'True'
+
+    try:
+        # modify key/value pairs
+        client.modify_handle_value(
+            modify_handle,
+            ttl=None,
+            add_if_not_exist=True,
+            **kvpairs)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
+
+    return(result)
+
 
 ###############################################################################
 # EPIC Client main body #
