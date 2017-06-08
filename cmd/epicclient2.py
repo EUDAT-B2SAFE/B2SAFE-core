@@ -400,7 +400,7 @@ def read_execution(client, read_handle, read_key=None):
             # retrieve single value from a handle
             result = client.get_value_from_handle(read_handle, read_key)
         except HandleNotFoundException:
-            json_result = 'error'
+            json_result = 'None'
         except HandleSyntaxError:
             json_result = 'error'
 
