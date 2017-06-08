@@ -432,3 +432,138 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         self.assertEqual(relation_result[0], 'False',
                          'update non existing handle with location should return False')
 
+    def test_bulk_actions(self):
+        """Test that bulk actions can be executed and gives proper responses."""
+        bulk_input = '/tmp/bulk_input'
+        bulk_output = '/tmp/bulk_result'
+        prefix = self.prefix
+
+        # open input file
+        try:
+            bulk_input_file = open(bulk_input, "w") 
+        except:
+            sys.stdout.write('error opening: '+bulk_input)
+
+        bulk_input_file.write('CREATE test'+prefix+'_01 http://www.test'+prefix+'.com\n')
+        bulk_input_file.write('CREATE test'+prefix+'_02 http://www.test'+prefix+'.com 123456789\n')
+        bulk_input_file.write('CREATE test'+prefix+'_03 http://www.test'+prefix+'.com 123456789 http://www.test.com\n')
+        bulk_input_file.write('CREATE test'+prefix+'_04 http://www.test'+prefix+'.com 123456789 http://www.test.com AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE test'+prefix+'_05 http://www.test'+prefix+'.com 123456789 none AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE test'+prefix+'_06 http://www.test'+prefix+'.com none http://www.test.com AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE test'+prefix+'_07 http://www.test'+prefix+'.com none none AAP=noot;JUT=jul\n')
+
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_01 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_02 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_02 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_03 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_03 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_03 10320/LOC\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_04 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_04 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_04 10320/LOC\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_04 AAP\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_04 JUT\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_05 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_05 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_05 10320/LOC\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_05 AAP\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_05 JUT\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_06 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_06 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_06 10320/LOC\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_06 AAP\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_06 JUT\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 URL\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 CHECKSUM\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 10320/LOC\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 AAP\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 JUT\n')
+
+        bulk_input_file.write('MODIFY '+prefix+'/test'+prefix+'_07 JUT joep\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_07 JUT\n')
+
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_02 CHECKSUM\n')
+        bulk_input_file.write('REPLACE '+prefix+'/test'+prefix+'_02 CHECKSUM 345 543\n')
+        bulk_input_file.write('READ '+prefix+'/test'+prefix+'_02 CHECKSUM\n')
+        bulk_input_file.write('REPLACE '+prefix+'/test'+prefix+'_02 CHECKSUM 345 543\n')
+        bulk_input_file.write('REPLACE '+prefix+'/test'+prefix+'_02 CHECKSUMM 345 543\n')
+        bulk_input_file.write('REPLACE '+prefix+'/test'+prefix+'_021 CHECKSUM 345 543\n')
+
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_01\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_02\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_03\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_04\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_05\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_06\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_07 AAP\n')
+        bulk_input_file.write('DELETE '+prefix+'/test'+prefix+'_07\n')
+
+        bulk_input_file.close()
+
+        expected_lines = []
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_01 result: '+prefix+'/test'+prefix+'_01\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_02 result: '+prefix+'/test'+prefix+'_02\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_03 result: '+prefix+'/test'+prefix+'_03\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_04 result: '+prefix+'/test'+prefix+'_04\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_05 result: '+prefix+'/test'+prefix+'_05\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_06 result: '+prefix+'/test'+prefix+'_06\n')
+        expected_lines.append('create handle: '+prefix+'/test'+prefix+'_07 result: '+prefix+'/test'+prefix+'_07\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_01 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_02 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUM result: 123456789\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_03 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_03 key: CHECKSUM result: 123456789\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_03 key: 10320/LOC result: <locations><location href=\\"http://www.test.com\\" id=\\"0\\" /></locations>\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_04 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_04 key: CHECKSUM result: 123456789\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_04 key: 10320/LOC result: <locations><location href=\\"http://www.test.com\\" id=\\"0\\" /></locations>\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_04 key: AAP result: noot\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_04 key: JUT result: jul\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_05 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_05 key: CHECKSUM result: 123456789\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_05 key: 10320/LOC result: None\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_05 key: AAP result: noot\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_05 key: JUT result: jul\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_06 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_06 key: CHECKSUM result: None\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_06 key: 10320/LOC result: <locations><location href=\\"http://www.test.com\\" id=\\"0\\" /></locations>\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_06 key: AAP result: noot\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_06 key: JUT result: jul\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: URL result: http://www.test'+prefix+'.com\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: CHECKSUM result: None\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: 10320/LOC result: None\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: AAP result: noot\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: JUT result: jul\n')
+        expected_lines.append('modify handle: '+prefix+'/test'+prefix+'_07 key: JUT value: joep result: True\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_07 key: JUT result: joep\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUM result: 123456789\n')
+        expected_lines.append('replace handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUM data1: 345 data2: 543 result: True\n')
+        expected_lines.append('read handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUM result: 125436789\n')
+        expected_lines.append('replace handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUM data1: 345 data2: 543 result: None\n')
+        expected_lines.append('replace handle: '+prefix+'/test'+prefix+'_02 key: CHECKSUMM data1: 345 data2: 543 result: None\n')
+        expected_lines.append('replace handle: '+prefix+'/test'+prefix+'_021 key: CHECKSUM data1: 345 data2: 543 result: None\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_01 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_02 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_03 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_04 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_05 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_06 result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_07 key: AAP result: True\n')
+        expected_lines.append('delete handle: '+prefix+'/test'+prefix+'_07 result: True\n')
+
+        # execute bulk command
+        command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'bulk', '--input', bulk_input, '--result', bulk_output ]
+        bulk_result = subprocess_popen(command)
+
+        # open result file
+        try:
+            bulk_result_file = open(bulk_output, "r") 
+        except:
+            sys.stdout.write('error opening: '+bulk_output)
+
+        # read all lines in a list/array
+        lines = bulk_result_file.readlines()
+
+        self.assertEqual(expected_lines, lines,
+                         'bulk update should give expected return values')
+
