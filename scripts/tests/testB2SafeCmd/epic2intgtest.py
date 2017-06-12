@@ -444,13 +444,13 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         except:
             sys.stdout.write('error opening: '+bulk_input)
 
-        bulk_input_file.write('CREATE test'+prefix+'_01 http://www.test'+prefix+'.com\n')
-        bulk_input_file.write('CREATE test'+prefix+'_02 http://www.test'+prefix+'.com 123456789\n')
-        bulk_input_file.write('CREATE test'+prefix+'_03 http://www.test'+prefix+'.com 123456789 http://www.test.com\n')
-        bulk_input_file.write('CREATE test'+prefix+'_04 http://www.test'+prefix+'.com 123456789 http://www.test.com AAP=noot;JUT=jul\n')
-        bulk_input_file.write('CREATE test'+prefix+'_05 http://www.test'+prefix+'.com 123456789 none AAP=noot;JUT=jul\n')
-        bulk_input_file.write('CREATE test'+prefix+'_06 http://www.test'+prefix+'.com none http://www.test.com AAP=noot;JUT=jul\n')
-        bulk_input_file.write('CREATE test'+prefix+'_07 http://www.test'+prefix+'.com none none AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_01 http://www.test'+prefix+'.com\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_02 http://www.test'+prefix+'.com 123456789\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_03 http://www.test'+prefix+'.com 123456789 http://www.test.com\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_04 http://www.test'+prefix+'.com 123456789 http://www.test.com AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_05 http://www.test'+prefix+'.com 123456789 none AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_06 http://www.test'+prefix+'.com none http://www.test.com AAP=noot;JUT=jul\n')
+        bulk_input_file.write('CREATE '+prefix+'/test'+prefix+'_07 http://www.test'+prefix+'.com none none AAP=noot;JUT=jul\n')
 
         bulk_input_file.write('READ '+prefix+'/test'+prefix+'_01 URL\n')
         bulk_input_file.write('READ '+prefix+'/test'+prefix+'_02 URL\n')

@@ -296,11 +296,11 @@ def bulk(args):
                 bulk_result_file.write('read handle: '+read_handle+' result: '+result+'\n')
 
         if bulk_array[0] == 'CREATE':
-            # CREATE uuid URL                       # create handle, use uuid for suffix
-            # CREATE suffix URL                     # create handle, use suffix for handle
-            # CREATE uuid URL CHECKSUM              # create handle, use uuid for suffix, add checksum
-            # CREATE uuid URL CHECKSUM 10320/LOC    # create handle, use uuid for suffix, add checksum, add 10320/LOC
-            # CREATE uuid URL CHECKSUM 10320/LOC EXTRATYPE # create handle, use uuid for suffix, add checksum, add 10320/LOC, add extratypes
+            # CREATE prefix/uuid URL                       # create handle, use uuid for suffix
+            # CREATE prefix/suffix URL                     # create handle, use suffix for handle, no check before if handle exists
+            # CREATE prefix/uuid URL CHECKSUM              # create handle, use uuid for suffix, add checksum
+            # CREATE prefix/uuid URL CHECKSUM 10320/LOC    # create handle, use uuid for suffix, add checksum, add 10320/LOC
+            # CREATE prefix/uuid URL CHECKSUM 10320/LOC EXTRATYPE # create handle, use uuid for suffix, add checksum, add 10320/LOC, add extratypes
 
             overwrite=False
             checksum = None
@@ -309,7 +309,8 @@ def bulk(args):
 
             # create a handle to put. 
             prefix = str(credentials.get_prefix())
-            create_suffix = bulk_array[1] 
+            create_prefix = bulk_array[1].split("/")[0]
+            create_suffix = bulk_array[1].split("/")[1] 
             if create_suffix == 'uuid':
                 uid = uuid.uuid1()
                 suffix = str(uid)
@@ -329,7 +330,7 @@ def bulk(args):
                     extratype = bulk_array[5]
                 result = create_execution(client, handle, bulk_array[2], overwrite, checksum, loc10320, extratype)
 
-            bulk_result_file.write('create handle: '+handle+' result: '+result+'\n')
+            bulk_result_file.write('create handle: '+bulk_array[1]+' result: '+result+'\n')
 
         if bulk_array[0] == 'DELETE':
             # DELETE handle       # delete whole handle
