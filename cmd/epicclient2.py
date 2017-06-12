@@ -92,32 +92,12 @@ def read(args):
         sys.stdout.write('error')
         return
 
-    # set default return value
-    json_result = "None"
-
     if args.key is None:
-        try:
-            # retrieve whole handle
-            result = client.retrieve_handle_record_json(args.handle)
-        except HandleSyntaxError:
-            json_result = 'error'
-
-        if result is not None:
-            json_result = json.dumps(result["values"])
+        result =  read_execution(client, args.handle)
     else:
-        try:
-            # retrieve single value from a handle
-            result = client.get_value_from_handle(args.handle, args.key)
-        except HandleSyntaxError:
-            json_result = 'error'
+        result =  read_execution(client, args.handle, args.key)
 
-        if result is not None:
-            json_result = json.dumps(result)
-            # remove starting and finishing quotes.
-            json_result = json_result.lstrip('"')
-            json_result = json_result.rstrip('"')
-
-    sys.stdout.write(json_result)
+    sys.stdout.write(result)
 
 
 def create(args):
@@ -151,48 +131,8 @@ def create(args):
         sys.stdout.write('error')
         return
 
-    # pre-process the input parameters for the handle api
-    extype = {}
-    if args.extratype is not None:
-        exlist = args.extratype.split(';')
-        for item in exlist:
-            key = item.split('=')[0]
-            value = item.split('=')[1]
-            extype[key] = value
-    if args.loc10320 is not None:
-        l10320 = args.loc10320.split(';')
-    else:
-        l10320 = None
-
-    # replace "EUDAT/FIO=pid" with "EUDAT/FIO=handle"
-    key = 'EUDAT/FIO'
-    if key in extype:
-        if extype[key].lower() == 'pid':
-            extype[key] = handle
-
-    # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
-    key = 'EUDAT/ROR'
-    if key in extype:
-        if extype[key].lower() == 'pid':
-            extype[key] = handle
-
-    result = ''
-
-    try:
-        # create the new handle
-        result = client.register_handle(
-            handle,
-            location=args.location,
-            checksum=args.checksum,
-            additional_URLs=l10320,
-            overwrite=False,
-            **extype)
-    except HandleAlreadyExistsException:
-        result = 'False'
-    except HandleAuthenticationError:
-        result = 'error'
-    except HandleSyntaxError:
-        result = 'error'
+    overwrite=False
+    result = create_execution(client, handle, args.location, overwrite, args.checksum, args.loc10320, args.extratype)
 
     sys.stdout.write(result)
 
@@ -222,23 +162,7 @@ def modify(args):
         sys.stdout.write('error')
         return
 
-    kvpairs = dict([(args.key, args.value)])
-
-    result = 'True'
-
-    try:
-        # modify key/value pairs
-        client.modify_handle_value(
-            args.handle,
-            ttl=None,
-            add_if_not_exist=True,
-            **kvpairs)
-    except HandleAuthenticationError:
-        result = 'error'
-    except HandleNotFoundException:
-        result = 'False'
-    except HandleSyntaxError:
-        result = 'error'
+    result = modify_execution(client, args.handle, args.key, args.value)
 
     sys.stdout.write(result)
 
@@ -268,28 +192,10 @@ def delete(args):
         sys.stdout.write('error')
         return
 
-    result = 'True'
-
     if args.key is None:
-        # delete whole handle
-        try:
-            client.delete_handle(args.handle)
-        except HandleAuthenticationError:
-            result = 'error'
-        except HandleNotFoundException:
-            result = 'False'
-        except HandleSyntaxError:
-            result = 'error'
+        result =  delete_execution(client, args.handle)
     else:
-        # delete value
-        try:
-            client.delete_handle_value(args.handle, args.key)
-        except HandleAuthenticationError:
-            result = 'error'
-        except HandleNotFoundException:
-            result = 'False'
-        except HandleSyntaxError:
-            result = 'error'
+        result =  delete_execution(client, args.handle, args.key)
 
     sys.stdout.write(result)
 
@@ -332,6 +238,279 @@ def relation(args):
         result = 'error'
 
     sys.stdout.write(result)
+
+
+def bulk(args):
+    """perform the bulk actions"""
+
+    try:
+        # open input file
+        bulk_input_file = open(args.input, "r") 
+    except:
+        sys.stdout.write('error opening: '+args.input)
+        return
+
+    try:
+        # open result file
+        bulk_result_file = open(args.result, "w") 
+    except:
+        sys.stdout.write('error opening: '+args.result)
+        return
+
+    try:
+        # load credentials
+        credentials = PIDClientCredentials.load_from_JSON(args.credpath)
+    except CredentialsFormatError:
+        sys.stdout.write('error')
+        return
+    except HandleSyntaxError:
+        sys.stdout.write('error')
+        return
+
+    # retrieve and set extra values
+    extra_config = {}
+
+    try:
+        # setup connection to handle server
+        client = EUDATHandleClient.instantiate_with_credentials(
+            credentials,
+            **extra_config)
+    except HandleNotFoundException:
+        sys.stdout.write('error')
+        return
+
+    for line in bulk_input_file:
+        bulk_array = line.split()
+
+        if bulk_array[0] == 'READ':
+            # READ handle       # read whole handle
+            # READ handle key   # read key/value pair from handle
+
+            read_handle = bulk_array[1] 
+            if len(bulk_array) >= 3:
+                read_key = bulk_array[2]
+                result = read_execution(client, read_handle, read_key)
+                bulk_result_file.write('read handle: '+read_handle+' key: '+read_key+' result: '+result+'\n')
+            else: 
+                result = read_execution(client, read_handle)
+                bulk_result_file.write('read handle: '+read_handle+' result: '+result+'\n')
+
+        if bulk_array[0] == 'CREATE':
+            # CREATE prefix/uuid URL                       # create handle, use uuid for suffix
+            # CREATE prefix/suffix URL                     # create handle, use suffix for handle, no check before if handle exists
+            # CREATE prefix/uuid URL CHECKSUM              # create handle, use uuid for suffix, add checksum
+            # CREATE prefix/uuid URL CHECKSUM 10320/LOC    # create handle, use uuid for suffix, add checksum, add 10320/LOC
+            # CREATE prefix/uuid URL CHECKSUM 10320/LOC EXTRATYPE # create handle, use uuid for suffix, add checksum, add 10320/LOC, add extratypes
+
+            overwrite=False
+            checksum = None
+            loc10320 = None
+            extratype = None
+
+            # create a handle to put. 
+            prefix = str(credentials.get_prefix())
+            create_prefix = bulk_array[1].split("/")[0]
+            create_suffix = bulk_array[1].split("/")[1] 
+            if create_suffix == 'uuid':
+                uid = uuid.uuid1()
+                suffix = str(uid)
+                handle = prefix+"/"+suffix
+            else:
+                handle = prefix+"/"+create_suffix
+                overwrite=True
+
+            if len(bulk_array) == 3:
+                result = create_execution(client, handle, bulk_array[2], overwrite)
+            else:
+                if len(bulk_array) >= 4 and bulk_array[3].lower() != 'none':
+                    checksum = bulk_array[3]
+                if len(bulk_array) >= 5 and bulk_array[4].lower() != 'none':
+                    loc10320 = bulk_array[4]
+                if len(bulk_array) >= 6 and bulk_array[5].lower() != 'none':
+                    extratype = bulk_array[5]
+                result = create_execution(client, handle, bulk_array[2], overwrite, checksum, loc10320, extratype)
+
+            bulk_result_file.write('create handle: '+bulk_array[1]+' result: '+result+'\n')
+
+        if bulk_array[0] == 'DELETE':
+            # DELETE handle       # delete whole handle
+            # DELETE handle key   # delete key/value pair from handle
+
+            delete_handle = bulk_array[1] 
+            if len(bulk_array) >= 3:
+                delete_key = bulk_array[2]
+                result = delete_execution(client, delete_handle, delete_key)
+                bulk_result_file.write('delete handle: '+delete_handle+' key: '+delete_key+' result: '+result+'\n')
+            else: 
+                result = delete_execution(client, delete_handle)
+                bulk_result_file.write('delete handle: '+delete_handle+' result: '+result+'\n')
+
+        if bulk_array[0] == 'MODIFY':
+            # MODIFY handle key value  # modify key/value pair in handle
+
+            if len(bulk_array) == 4:
+                modify_handle = bulk_array[1] 
+                modify_key = bulk_array[2]
+                modify_value = bulk_array[3]
+                result = modify_execution(client, modify_handle, modify_key, modify_value)
+                bulk_result_file.write('modify handle: '+modify_handle+' key: '+modify_key+' value: '+modify_value+' result: '+result+'\n')
+
+        if bulk_array[0] == 'REPLACE':
+            # REPLACE handle key data1 data2  # replace data1 with data2 in value part of key/value pair in handle
+
+            if len(bulk_array) == 5:
+                replace_handle = bulk_array[1] 
+                replace_key = bulk_array[2]
+                replace_data1 = bulk_array[3]
+                replace_data2 = bulk_array[4]
+                result = read_execution(client, replace_handle, replace_key)
+                if result != "None" and result != 'error':
+                    new_value = result.replace(replace_data1, replace_data2)
+                    if result != new_value:
+                        result = modify_execution(client, replace_handle, replace_key, new_value)
+                    else:
+                        result = "None"
+
+                bulk_result_file.write('replace handle: '+replace_handle+' key: '+replace_key+' data1: '+replace_data1+' data2: '+replace_data2+' result: '+result+'\n')
+
+    bulk_input_file.close()
+    bulk_result_file.close()
+
+###############################################################################
+# EPIC Client sub functions
+###############################################################################
+
+def read_execution(client, read_handle, read_key=None):
+    """Execute the read action """
+
+    # set default return value
+    result = None
+    json_result = "None"
+    
+    if read_key is None:
+        try:
+            # retrieve whole handle
+            result = client.retrieve_handle_record_json(read_handle)
+        except HandleSyntaxError:
+            json_result = 'error'
+
+        if result is not None:
+            json_result = json.dumps(result["values"])
+    else:
+        try:
+            # retrieve single value from a handle
+            result = client.get_value_from_handle(read_handle, read_key)
+        except HandleNotFoundException:
+            json_result = 'None'
+        except HandleSyntaxError:
+            json_result = 'error'
+
+        if result is not None:
+            json_result = json.dumps(result)
+            # remove starting and finishing quotes.
+            json_result = json_result.lstrip('"')
+            json_result = json_result.rstrip('"')
+
+    return(json_result)
+
+def create_execution(client, create_handle, create_location, create_overwrite=False, create_checksum=None, create_loc10320=None, create_extratype=None ):
+    """Execute the create action """
+
+    # pre-process the input parameters for the handle api
+    extype = {}
+    if create_extratype is not None:
+        exlist = create_extratype.split(';')
+        for item in exlist:
+            key = item.split('=')[0]
+            value = item.split('=')[1]
+            extype[key] = value
+    if create_loc10320 is not None:
+        l10320 = create_loc10320.split(';')
+    else:
+        l10320 = None
+
+    # replace "EUDAT/FIO=pid" with "EUDAT/FIO=handle"
+    key = 'EUDAT/FIO'
+    if key in extype:
+        if extype[key].lower() == 'pid':
+            extype[key] = create_handle
+
+    # replace "EUDAT/ROR=pid" with "EUDAT/ROR=handle"
+    key = 'EUDAT/ROR'
+    if key in extype:
+        if extype[key].lower() == 'pid':
+            extype[key] = create_handle
+
+    result = ''
+
+    try:
+        # create the new handle
+        result = client.register_handle(
+            create_handle,
+            location=create_location,
+            checksum=create_checksum,
+            additional_URLs=l10320,
+            overwrite=create_overwrite,
+            **extype)
+    except HandleAlreadyExistsException:
+        result = 'False'
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleSyntaxError:
+        result = 'error'
+
+    return(result)
+
+def delete_execution(client, delete_handle, delete_key=None):
+    """Execute the delete action """
+
+    result = 'True'
+
+    if delete_key is None:
+        # delete whole handle
+        try:
+            client.delete_handle(delete_handle)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
+    else:
+        # delete value
+        try:
+            client.delete_handle_value(delete_handle, delete_key)
+        except HandleAuthenticationError:
+            result = 'error'
+        except HandleNotFoundException:
+            result = 'False'
+        except HandleSyntaxError:
+            result = 'error'
+
+    return(result)
+
+def modify_execution(client, modify_handle, modify_key, modify_value):
+    """Execute the modify action """
+
+    kvpairs = dict([(modify_key, modify_value)])
+
+    result = 'True'
+
+    try:
+        # modify key/value pairs
+        client.modify_handle_value(
+            modify_handle,
+            ttl=None,
+            add_if_not_exist=True,
+            **kvpairs)
+    except HandleAuthenticationError:
+        result = 'error'
+    except HandleNotFoundException:
+        result = 'False'
+    except HandleSyntaxError:
+        result = 'error'
+
+    return(result)
 
 
 ###############################################################################
@@ -409,6 +588,13 @@ if __name__ == "__main__":
     PARSER_RELATION.add_argument("ppid", help="parent handle value")
     PARSER_RELATION.add_argument("cpid", help="child handle value")
     PARSER_RELATION.set_defaults(func=relation)
+    
+    PARSER_BULK = SUBPARSERS.add_parser('bulk',
+                                        help='perform bulk actions using '
+                                             'an input and result file ')
+    PARSER_BULK.add_argument("--input", required=True, help="input file for bulk actions")
+    PARSER_BULK.add_argument("--result", required=True, help="output file for bulk actions")
+    PARSER_BULK.set_defaults(func=bulk)
 
     _ARGS = PARSER.parse_args()
     _ARGS.func(_ARGS)
