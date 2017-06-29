@@ -49,22 +49,9 @@ def search(args):
         sys.stdout.write('error')
         return
 
-    kvpairs = dict([(args.key, str(''.join(args.value)))])
+    result = search_execution(client, args.key, args.value)
 
-    try:
-        # search for handle
-        result = client.search_handle(**kvpairs)
-    except ReverseLookupException:
-        result = '{error}'
-
-    json_result = str(json.dumps(result))
-
-    if json_result == '[]':
-        json_result = 'empty'
-    elif json_result == '{error}':
-        json_result = 'error'
-
-    sys.stdout.write(json_result)
+    sys.stdout.write(result)
 
 
 def read(args):
@@ -282,6 +269,14 @@ def bulk(args):
     for line in bulk_input_file:
         bulk_array = line.split()
 
+        if bulk_array[0] == 'SEARCH':
+            # search key value  # search handle which matches criteria
+
+            search_key = bulk_array[1] 
+            search_value = bulk_array[2]
+            result = search_execution(client, search_key, search_value)
+            bulk_result_file.write('search handle key: '+search_key+' value: '+search_value+' result: '+result+'\n')
+
         if bulk_array[0] == 'READ':
             # READ handle       # read whole handle
             # READ handle key   # read key/value pair from handle
@@ -379,6 +374,31 @@ def bulk(args):
 ###############################################################################
 # EPIC Client sub functions
 ###############################################################################
+
+def search_execution(client, search_key=None, search_value=None):
+    """Execute the search action """
+
+    # set default return value
+    result = None
+    json_result = "None"
+    
+    if search_key is not None and search_value is not None:
+        try:
+            kvpairs = dict([(search_key, str(''.join(search_value)))])
+            # search for handle
+            result = client.search_handle(**kvpairs)
+        except ReverseLookupException:
+            result = '{error}'
+
+        json_result = str(json.dumps(result))
+
+        if json_result == '[]':
+            json_result = 'empty'
+        elif json_result == '{error}':
+            json_result = 'error'
+
+    return(json_result)
+
 
 def read_execution(client, read_handle, read_key=None):
     """Execute the read action """
