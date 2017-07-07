@@ -270,13 +270,25 @@ update_server_config_json() {
        fi
        # put json file in a single string so it easier to process.
        EUDAT_SERVER_CONFIG_JSON_STRING=`awk 1 ORS=' ' ${EUDAT_SERVER_CONFIG} | sed 's/ //g'`
-       JSON_RULESET=`echo $EUDAT_SERVER_CONFIG_JSON_STRING | sed 's/.*re_rulebase_set":/re_rulebase_set":/' | sed 's/}].*$/}]/'` 
-       # append rules..
+       JSON_RULESET=`echo $EUDAT_SERVER_CONFIG_JSON_STRING | sed 's/.*re_rulebase_set":/re_rulebase_set":/ ; s/].*$/]/'` 
+       # check for iRODS 4.2.1 and higher because of new format.
+       IRODS_SERVER_JSON_CONFIG_FORMAT_2='false'
+       echo $JSON_RULESET | grep -e "\"filename\"" > /dev/null
+       if [ $? -eq 1 ]
+       then
+            IRODS_SERVER_JSON_CONFIG_FORMAT_2='true'
+       fi
+       # create a rule working set..
        JSON_RULESET_WORK=`echo $JSON_RULESET | sed 's/]//'`
        EUDAT_RULEFILES=`echo $EUDAT_RULEFILES | sed 's/,/ /g'`
        for file in $EUDAT_RULEFILES
        do
-            JSON_RULESET_WORK+=",{\"filename\":\"$file\"}"
+            if [ "${IRODS_SERVER_JSON_CONFIG_FORMAT_2}" == "false" ]
+            then
+                 JSON_RULESET_WORK+=",{\"filename\":\"$file\"}"
+            else
+                 JSON_RULESET_WORK+=",\"$file\""
+            fi
        done
        JSON_RULESET_WORK+="]"
        # substitute the new string for the old string
