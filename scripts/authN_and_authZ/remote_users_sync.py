@@ -49,7 +49,7 @@ class SyncRemoteUsers:
                                              help='the syncronization target')
         parser_group.add_argument('group', help='the target group (or project)')
         parser_group.add_argument('-s', '--subgroups', dest='subgroups',
-                                  default='', help='the target sub-groups')
+                                  required=True, help='the target sub-groups')
 
         _args = parser.parse_args()
 
@@ -65,7 +65,7 @@ class SyncRemoteUsers:
         if (_args.subgroups is not None) and (len(_args.subgroups)) > 0:
             subgroups = [n.strip() for n in _args.subgroups.split(",")]
         else:
-           subgroups = None
+            subgroups = None
 
         ll = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
               'ERROR': logging.ERROR, 'WARNING': logging.WARNING}
