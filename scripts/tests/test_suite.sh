@@ -1,7 +1,13 @@
 #!/bin/bash
 
-REMOTE_ZONE=cinecaDMPZone1
-DEFAULT_RESC=defaultRescFoo
+# Get command line args:
+DEFAULT_RESC=$1
+REMOTE_ZONE=$2
+if [ -z $REMOTE_ZONE ] || [ -z $DEFAULT_RESC ]
+then
+    echo "Please provide args (1) default resource and (2) remote zone to be used for replication."
+    exit 1
+fi
 
 echo "Hello World!" > test_data.txt
 iput test_data.txt
@@ -24,7 +30,7 @@ fi
 irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
 if [ -z $irods_default_resource ]
 then
-    echo "No irods_default_resource found in ienv output."
+    echo "No irods_default_resource found in ienv output. Using the one from command line."
     irods_default_resource=$DEFAULT_RESC
 fi
 
