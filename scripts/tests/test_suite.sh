@@ -108,14 +108,20 @@ replication () {
   output="*FVALUE"
   pid_raw=`irule "${rule}" "${input}" "${output}"`
   pid=`echo ${pid_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  if [ -z $pid ]
+  then
+    echo "        ERROR! Did not find PID in irods metadata for ${destPath}! Cannot retrieve values from the PID record. Please check what went wrong."
+  fi
   echo "        PID: ${pid}"
   
+  # The following loop could be places in an else clause, but then the user might not notice the failures, so let it fail...
   for k in "URL" "CHECKSUM" "EUDAT/CHECKSUM" "EUDAT/CHECKSUM_TIMESTAMP" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/FIXED_CONTENT" "EUDAT/PARENT"
   do
       raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid}%*key=$k" "*res"`
       val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
       echo "        $k: ${val}"
   done
+  
   echo "        ############ iCAT key/value pairs: ############"
   for k in "PID" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/PARENT" "EUDAT/FIXED_CONTENT" "eudat_dpm_checksum_date:${irods_default_resource}"
   do
