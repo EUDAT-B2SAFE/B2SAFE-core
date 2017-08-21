@@ -9,6 +9,10 @@ then
     exit 1
 fi
 
+# Define test file name
+testFileName="test_data.txt"
+testFileNameRemote="test_data2.txt"
+
 # Get user name and zone name from ienv
 irods_user_name=`ienv | grep irods_user_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
 irods_zone_name=`ienv | grep irods_zone_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
@@ -28,9 +32,9 @@ then
 fi
 
 # Define test file
-sourcePath="${irods_home}/test_data.txt"
+sourcePath="${irods_home}/${testFileName}"
 # If exists, ask whether replace or exit
-exists=`ils ${irods_home} | grep test_data.txt`
+exists=`ils ${irods_home} | grep ${testFileName}`
 if [ ! -z $exists ]
 then
     echo "The file $sourcePath already exists. Remove it before continuing (y or n)? Otherwise, script will exit."
@@ -46,11 +50,11 @@ then
     fi
 fi
 
-echo "Hello World!" > test_data.txt
-iput test_data.txt
-rm test_data.txt
+echo "Hello World!" > ${testFileName}
+iput ${testFileName}
+rm ${testFileName}
 echo "############ Data Object ############"
-ils -l test_data.txt
+ils -l ${testFileName}
 echo ""
 
 
@@ -87,7 +91,7 @@ replication () {
   echo ""
   echo "############ REPLICATION ############"
 #  destPath="${irods_home}/test_data2.txt"
-  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
+  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/${testFileNameRemote}"
   echo "Replica path: ${destPath}"
   rule="{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); 
         if (*status) {
