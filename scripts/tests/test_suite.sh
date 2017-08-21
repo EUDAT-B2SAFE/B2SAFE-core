@@ -9,13 +9,6 @@ then
     exit 1
 fi
 
-echo "Hello World!" > test_data.txt
-iput test_data.txt
-rm test_data.txt
-echo "############ Data Object ############"
-ils -l test_data.txt
-echo ""
-
 # Get user name and zone name from ienv
 irods_user_name=`ienv | grep irods_user_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
 irods_zone_name=`ienv | grep irods_zone_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
@@ -36,6 +29,30 @@ fi
 
 # Define test file
 sourcePath="${irods_home}/test_data.txt"
+# If exists, ask whether replace or exit
+exists=`ils ${irods_home} | grep test_data.txt`
+if [ ! -z $exists ]
+then
+    echo "The file $sourcePath already exists. Remove it before continuing (y or n)? Otherwise, script will exit."
+    read shouldRemove
+    echo "You entered $shouldRemove"
+    if [ $shouldRemove == "y" ]
+    then
+        echo "Will be removed"
+        irm $sourcePath
+    else
+        echo "Exiting..."
+        exit 1
+    fi
+fi
+
+echo "Hello World!" > test_data.txt
+iput test_data.txt
+rm test_data.txt
+echo "############ Data Object ############"
+ils -l test_data.txt
+echo ""
+
 
 createPID () {
   rule="{EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)}"
