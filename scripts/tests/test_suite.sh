@@ -1,6 +1,7 @@
 #!/bin/bash
 
 REMOTE_ZONE=cinecaDMPZone1
+DEFAULT_RESC=defaultRescFoo
 
 echo "Hello World!" > test_data.txt
 iput test_data.txt
@@ -9,10 +10,25 @@ echo "############ Data Object ############"
 ils -l test_data.txt
 echo ""
 
-irods_home=`ienv | grep irods_home | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+# Get user name and zone name from ienv
 irods_user_name=`ienv | grep irods_user_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
 irods_zone_name=`ienv | grep irods_zone_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+# Get home dir (not in ienv output)
+irods_home=`ienv | grep irods_home | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+if [ -z $irods_home  ]
+then
+    echo "No irods_home found in ienv output. Constructing irods_home from zone name and user name."
+    irods_home="/${irods_zone_name}/home/${irods_user_name}"
+fi
+# Get default resc (not in ienv output)
 irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+if [ -z $irods_default_resource ]
+then
+    echo "No irods_default_resource found in ienv output."
+    irods_default_resource=$DEFAULT_RESC
+fi
+
+# Define test file
 sourcePath="${irods_home}/test_data.txt"
 
 createPID () {
