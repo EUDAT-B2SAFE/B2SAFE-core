@@ -1,12 +1,21 @@
 #!/bin/bash
 
-# Get command line args:
-DEFAULT_RESC=$1
-REMOTE_ZONE=$2
-if [ -z $REMOTE_ZONE ] || [ -z $DEFAULT_RESC ]
+# If no param given: Fail:
+if [ -z $1 ]
 then
-    echo "Please provide args (1) default resource and (2) remote zone to be used for replication."
+    echo "Please provide args (1) remote zone for replication and (2) default resource. The latter is optional. (If not provided, it's taken from the ienv command)."
     exit 1
+fi
+
+# Get remote zone from command line arg:
+REMOTE_ZONE=$1
+
+# If a second arg is given, it's the resource:
+if [ ! -z $2 ]
+then
+    DEFAULT_RESC=$2
+else
+    DEFAULT_RESC=
 fi
 
 # Define test file name
@@ -23,12 +32,18 @@ then
     echo "No irods_home found in ienv output. Constructing irods_home from zone name and user name."
     irods_home="/${irods_zone_name}/home/${irods_user_name}"
 fi
-# Get default resc (not in ienv output)
-irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+# If not provided via command line, get default resc from in ienv output
+if [ -z $DEFAULT_RESC ]
+then
+    irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+else
+    irods_default_resource=$DEFAULT_RESC
+fi
+# If it's neither provided nor found in ienv, exit!
 if [ -z $irods_default_resource ]
 then
-    echo "No irods_default_resource found in ienv output. Using the one from command line."
-    irods_default_resource=$DEFAULT_RESC
+    echo "No irods_default_resource found in ienv output nor passed as argument. Exiting. Please provide it as command line argument"
+    exit
 fi
 
 # Define test file
