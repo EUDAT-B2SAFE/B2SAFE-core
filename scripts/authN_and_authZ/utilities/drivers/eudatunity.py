@@ -1,4 +1,5 @@
 # !/usr/bin/env python
+# -*- coding: utf-8 -*- 
 
 import sys
 import json
@@ -51,12 +52,15 @@ class EudatRemoteSource:
         try:
             self.logger.debug("Querying the URL: {}".format(url))
             response = requests.get(url, verify=False, auth=(self.conf['username'], self.conf['password']))
+            self.logger.debug("Encoding:{}".format(response.encoding))
+            response.encoding = 'utf-8'
+            self.logger.debug("New Encoding:{}".format(response.encoding))
         except IOError, e:
             self.logger.error("Wrong username or password", exc_info=True)
             sys.exit(1)
         assert (response.status_code == 200 or response.status_code == 400)
         
-        json_data = (response.text).encode('utf-8')
+        json_data = response.content
         self.logger.debug("Response:{}".format(json_data))
         response_dict = json.loads(json_data)
 
@@ -93,27 +97,44 @@ class EudatRemoteSource:
             for member_id in subg_attrs['members']:
                 attr_list = {}
 
-#                user_record = self.queryUnity("entity/"+str(member_id)+"?group=%2F" + subg)
-#                identity_types = {}
-#                for identity in user_record['identities']:
-#                    self.logger.debug("identity['typeId'] = " + identity['typeId'])
-#                    self.logger.debug("identity['value'] = " + identity['value'])
-#                    identity_types[identity['typeId']] = identity['value']
-#                user_persistent_id = identity_types['persistent']
+# only for B2ACCESS devel
+
+                # 16/08/2017 bug fix @Paolo
+                member_id = str(member_id.get('entityId',''))
+                user_record = self.queryUnity("entity/"+member_id+"?group=%2F" + subg)
+                # 16/08/2017 bug fix @Paolo
+
+                identity_types = {}
+                for identity in user_record['identities']:
+                    self.logger.debug("identity['typeId'] = " + identity['typeId'])
+                    self.logger.debug("identity['value'] = " + identity['value'])
+                    identity_types[identity['typeId']] = identity['value']
+                user_persistent_id = identity_types['persistent']
+# end B2ACCESS devel
 
                 user_attrs = self.queryUnity("entity/"+str(member_id)+"/attributes?group=%2F" + subg)
                 if isinstance(user_attrs, dict) and ("error" in user_attrs.keys()):
                     self.logger.error("Error: " + user_attrs['error'])
                     continue
                 user_cn = None
-                user_persistent_id = None
+# for production
+#               user_persistent_id = None
+#
                 for user_attr in user_attrs:
                     if user_attr['name'] == 'cn':
                         user_cn = user_attr['values'][0]
+                        self.logger.debug("user_cn = " + user_cn)
                     elif user_attr['name'] == 'unity:persistent':
                         user_persistent_id = user_attr['values'][0]
-                             
-                if user_persistent_id is not None:
+                        self.logger.debug("user_persistent_id = " + user_persistent_id)
+        
+# only for B2ACCESS devel                    
+                if "userName" in identity_types.keys():
+                    list_member.append(identity_types['userName'])
+                    users_map[member_id] = identity_types['userName']
+                elif user_persistent_id is not None:
+# end B2ACCESS devel
+#                if user_persistent_id is not None:
                     list_member.append(user_persistent_id)
                     users_map[member_id] = user_persistent_id
                 else:
@@ -122,15 +143,18 @@ class EudatRemoteSource:
  
                 if user_cn is None:
                     user_cn = users_map[member_id]
+                  
                 userDN = None
                 if user_persistent_id is not None:
+                    
                     # Here we build the DN: the way to build it could change
                     # in the future.
 #TODO catch unicode error and filter out strange CN, logging the errors
                     userDN = self.conf['carootdn'] + '/CN=' + user_persistent_id \
-                           + '/CN=' + user_cn.encode('ascii', 'replace')
+                           + '/CN=' + user_cn
                     # Here the DN attribute is considered a list because, 
                     # in principle, multiple DNs could be associated to a user
+                    self.logger.debug("userDN = " + userDN)
                 attr_list['DN'] = [userDN]
    
                 attribs_map[users_map[member_id]] = attr_list
