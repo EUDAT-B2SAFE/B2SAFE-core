@@ -7,8 +7,8 @@
 # Provides the log level for the EUDAT specific rules
 # 
 # Arguments:
-# *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2]
-#                   0:ERROR, 1:INFO, 2:DEBUG
+# *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2 | 3]
+#                   0:ERROR, 1:INFO, 2:DEBUG, 3:VERBOSE DEBUG
 #-------------------------------------------------------------------------------                   
 getEUDATLoggerLevel(*euLogLevel) {
     *euLogLevel=2
@@ -110,8 +110,9 @@ getMetaParameters(*metaConfPath, *enabled) {
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getMessageParameters(*msgConfPath, *enabled) {
-    *msgLogPath="/opt/eudat/b2safe/conf/msgManager.conf";
+getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
+    *msgConfPath="/opt/eudat/b2safe/conf/msgManager.conf";
+    *controlQueueName="B2SAFE";
     *enabled=bool("false");
 }
 
