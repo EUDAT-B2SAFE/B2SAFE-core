@@ -6,7 +6,7 @@ import requests
 import os
 import subprocess
 
-API_TOKEN="Cti7PPvLhemuLDT20f6Jj0ragxcxp7N5rYAHHeC8PMYU8dWgtyc4MZEzAXgx"
+API_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 API_URL = "https://trng-b2share.eudat.eu/api/"
 COMMUNITY_ID = "0c97d6d2-88da-473a-8d30-2f4e730ed4a2" #EPOS
 COMMUNITY_ID = "e9b9792e-79fb-4b07-b6b4-b9c2bd06d095" #B2SHARE
