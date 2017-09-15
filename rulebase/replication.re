@@ -11,9 +11,9 @@
 #
 # EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause)
 # EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response)
-# EUDATReplication(*source, *destination, *registered, *recursive)
+# EUDATReplication(*source, *destination, *dest_res, *registered, *recursive)
 # EUDATTransferUsingFailLog(*buffer_length, *stats)
-# EUDATRegDataRepl(*source, *destination, *recursive, *response)
+# EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndCreatePID(*path, *pid)
 # EUDATSearchAndDefineField(*path, *pid, *key)
@@ -76,12 +76,12 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
         logInfo("[EUDATCheckIntegrity] *source and *destination are coherent");
     }
 
-    if (*notification == 1) {
-        EUDATGetZoneNameFromPath(*source, *zone);
-        *queue = *zone ++ "_" ++ $userNameClient;
-        *message = "status:*status_transfer_success;response:*source::*destination::*response";
-        EUDATMessage(*queue, *message);
-    }
+#    if (*notification == 1) {
+#        EUDATGetZoneNameFromPath(*source, *zone);
+#        *queue = *zone ++ "_" ++ $userNameClient;
+#        *message = "status:*status_transfer_success;response:*source::*destination::*response";
+#        EUDATMessage(*queue, *message);
+#    }
 
     *status_transfer_success;
 }
@@ -91,6 +91,7 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
 # Parameters:
 #    *source      [IN] path of the source data set in iRODS
 #    *destination [IN] destination of replication in iRODS
+#    *dest_res    [IN] resource of the destination
 #    *registered  [IN] boolean value: "true" for registered data, "false" otherwise
 #    *recursive   [IN] boolean value: "true" to enable the recursive replication
 #                      of registered data, "false" otherwise.
@@ -99,11 +100,14 @@ EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
-EUDATReplication(*source, *destination, *registered, *recursive, *response) {
+EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response) {
 
     logInfo("[EUDATReplication] transfering *source to *destination"); 
     *status = bool("true");
     *response = "";
+    if ((*dest_res == "") || (*dest_res == "None")) {
+        *dest_res = "null";
+    }
 
     # Catch Error CAT_NO_ACCESS_PERMISSION before replication
     if (errormsg(EUDATCatchErrorDataOwner(*source,*msg), *errmsg) < 0) {
@@ -118,15 +122,15 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
         logInfo("[EUDATReplication] *msg");
         if (EUDATtoBoolean(*registered)) {
             logDebug("replicating registered data");
-            *status = EUDATRegDataRepl(*source, *destination, EUDATtoBoolean(*recursive), *response);
+            *status = EUDATRegDataRepl(*source, *destination, *dest_res, EUDATtoBoolean(*recursive), *response);
         } else {
             logDebug("replicating data without PID registration");
             msiGetObjType(*source,*source_type);
             if (*source_type == '-c')  {
-                msiCollRsync(*source,*destination,"null","IRODS_TO_IRODS",*rsyncStatus);
+                msiCollRsync(*source,*destination,*dest_res,"IRODS_TO_IRODS",*rsyncStatus);
             }
             else if (*source_type == '-d') {            
-                msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
+                msiDataObjRsync(*source,"IRODS_TO_IRODS",*dest_res,*destination,*rsyncStatus);
             }
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
@@ -137,11 +141,14 @@ EUDATReplication(*source, *destination, *registered, *recursive, *response) {
         }
     }   
 
-    if (*status) { *response = "*source::*destination::registered=*registered::recursive=*recursive" }
-    EUDATGetZoneNameFromPath(*source, *zone);
-    *queue = *zone ++ "_" ++ $userNameClient;
-    *message = "status:*status;response:*response"
-    EUDATMessage(*queue, *message);
+    if (*status) { 
+        *response = "*source::*destination::*dest_res"
+                 ++ "::registered=*registered::recursive=*recursive";
+    }
+#    EUDATGetZoneNameFromPath(*source, *zone);
+#    *queue = *zone ++ "_" ++ $userNameClient;
+#    *message = "status:*status;response:*response"
+#    EUDATMessage(*queue, *message);
 
     *status;
 }
@@ -211,6 +218,7 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
 # Parameters:
 # *source       [IN] source path of the data object to be replicated
 # *destination  [IN] destination path of the replicated data object
+# *dest_res     [IN] resource of the destination
 # *recursive    [IN] boolean value: "true" to consider all the sub-collections 
 #                    and objects under the root collection, "false" to consider 
 #                    only the root path.
@@ -218,10 +226,13 @@ EUDATTransferUsingFailLog(*buffer_length, *stats) {
 #
 # Authors: Elena Erastova, RZG; Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-EUDATRegDataRepl(*source, *destination, *recursive, *response) {
+EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
 
     *status = bool("true");
     *response = "";
+    if ((*dest_res == "") || (*dest_res == "None")) {
+        *dest_res = "null";
+    }    
 
     # initial value of parentPID
     *parentPID = "None";
@@ -230,15 +241,8 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
     EUDATSearchAndCreatePID(*source, *parentPID);
     if (*parentPID == "empty" || (*parentPID == "None")) {
         *status = bool("false");
-        # check to skip metadata special path
-        if (!EUDATisMetadata(*source)) {
-            *response = "PID is empty, no replication will be executed for *source";
-            EUDATUpdateLogging(*status,*source,*destination,"empty PID");
-        }
-        else {
-            *response = "the path '*source' is a special metadata path: it cannot be registered";
-            EUDATUpdateLogging(*status,*source,*destination,"reserved metadata path");
-        }
+        *response = "PID is empty, no replication will be executed for *source";
+        EUDATUpdateLogging(*status,*source,*destination,"empty PID");
         logDebug(*response);
     }
     else {
@@ -248,7 +252,7 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
 
             logDebug("The path *source is a collection");
             logDebug("Replication's beginning ...... ");
-            msiCollRsync(*source,*destination,"null","IRODS_TO_IRODS",*rsyncStatus);
+            msiCollRsync(*source,*destination,*dest_res,"IRODS_TO_IRODS",*rsyncStatus);
             if (*rsyncStatus != 0) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
@@ -268,31 +272,27 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
                     msiStrlen(*source,*pathLength);
                     # loop over the sub-collections of the collection
                     foreach (*Row in SELECT COLL_NAME WHERE COLL_NAME like '*source/%') {
-                        if (!EUDATisMetadata(*Row.COLL_NAME)) {
-                            msiSubstr(*Row.COLL_NAME, str(int(*pathLength)+1), "null", *subCollection);
-                            *target = "*destination/*subCollection";
-                            EUDATPIDRegistration(*Row.COLL_NAME, *target, *notification, *singleRes);
-                            if (*singleRes != "None") { 
-                                *contents = *Row.COLL_NAME ++ '::*target::false::*singleRes';
-                                *responses = *responses ++ *contents ++ ",";
-                            }
-                            *status = (*singleRes == "None") && *status;
+                        msiSubstr(*Row.COLL_NAME, str(int(*pathLength)+1), "null", *subCollection);
+                        *target = "*destination/*subCollection";
+                        EUDATPIDRegistration(*Row.COLL_NAME, *target, *notification, *singleRes);
+                        if (*singleRes != "None") { 
+                            *contents = *Row.COLL_NAME ++ '::*target::false::*singleRes';
+                            *responses = *responses ++ *contents ++ ",";
                         }
+                        *status = (*singleRes == "None") && *status;
                     }
                     logDebug("loop over the objects of the collection");
                     # loop over the objects of the collection
                     foreach (*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*source' || like '*source/%') {
-                        if (!EUDATisMetadata(*Row.COLL_NAME)) {
-                            *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
-                            msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
-                            *target = "*destination/*subCollection";
-                            EUDATPIDRegistration(*objPath, *target, *notification, *singleRes);
-                            if (*singleRes != "None") {                       
-                                *contents = "*objPath::*target::false::*singleRes";
-                                *responses = *responses ++ *contents ++ ",";
-                            }
-                            *status = (*singleRes == "None") && *status;
+                        *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
+                        msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
+                        *target = "*destination/*subCollection";
+                        EUDATPIDRegistration(*objPath, *target, *notification, *singleRes);
+                        if (*singleRes != "None") {                       
+                            *contents = "*objPath::*target::false::*singleRes";
+                            *responses = *responses ++ *contents ++ ",";
                         }
+                        *status = (*singleRes == "None") && *status;
                     }
                     *response = trimr(*responses, ",");
                 }
@@ -301,7 +301,7 @@ EUDATRegDataRepl(*source, *destination, *recursive, *response) {
         } else {
             
             logDebug("Replication's beginning ...... ");
-            msiDataObjRsync(*source,"IRODS_TO_IRODS","null",*destination,*rsyncStatus);
+            msiDataObjRsync(*source,"IRODS_TO_IRODS",*dest_res,*destination,*rsyncStatus);
             if (*rsyncStatus != 0) {
                  logDebug("perform a further verification about checksum and size");
                  *logEnabled = bool("true");
@@ -392,14 +392,14 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
         }
     }
    
-    if (*notification == 1) { 
-        if (*registration_response == "None") { *statusMsg = "true"; }
-        else { *statusMsg = "false"; }
-        EUDATGetZoneNameFromPath(*source, *zone);
-        *queue = *zone ++ "_" ++ $userNameClient;
-        *message = "status:*statusMsg;response:*source::*destination::*registration_response";
-        EUDATMessage(*queue, *message);
-    }
+#    if (*notification == 1) { 
+#        if (*registration_response == "None") { *statusMsg = "true"; }
+#        else { *statusMsg = "false"; }
+#        EUDATGetZoneNameFromPath(*source, *zone);
+#        *queue = *zone ++ "_" ++ $userNameClient;
+#        *message = "status:*statusMsg;response:*source::*destination::*registration_response";
+#        EUDATMessage(*queue, *message);
+#    }
 }
 
 # Search PID for a given path and in case it is not found, 

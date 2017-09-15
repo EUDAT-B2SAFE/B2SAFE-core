@@ -86,21 +86,6 @@ getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf"; 
 }
 
-
-#Provides parameters for the metadata management mechanism
-#
-# Arguments:
-# *metaConfPath  [OUT] the file path to the metadata tool configuration.
-# *enabled       [OUT] boolean value to enable (if true) globally the 
-#                      json metadata writing
-#
-# Author: Claudio Cacciari (Cineca)
-# -------------------------------------------------------------------------------
-getMetaParameters(*metaConfPath, *enabled) {
-    *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf"; 
-    *enabled=bool("false");
-}
-
 #Provides parameters for the message management mechanism
 #
 # Arguments:
