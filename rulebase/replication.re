@@ -10,15 +10,15 @@
 # List of the functions:
 #
 # EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause)
-# EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response)
+# EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, *logEnabled,*notification,*response)
 # EUDATReplication(*source, *destination, *dest_res, *registered, *recursive)
 # EUDATTransferUsingFailLog(*buffer_length, *stats)
 # EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndCreatePID(*path, *pid)
 # EUDATSearchAndDefineField(*path, *pid, *key)
-# EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *response) 
-# EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response)
+# EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnabled, *response) 
+# EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled, *response)
 
 
 # Update the logging files specific for EUDAT B2SAFE
@@ -48,7 +48,9 @@ EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 # 
 # Parameters:
 #    *source         [IN] source path in iRODS
+#    *source_res     [IN]  iRODS resource name of the source
 #    *destination    [IN] detination path in iRODS
+#    *dest_res       [IN]  iRODS resource name of the destination
 #    *logEnabled     [IN] boolean value: "true" to enable the logging system, 
 #                                        "false" to silence it.
 #    *notification   [IN] value [0|1]: if 1 enable the notification via messaging system
@@ -57,17 +59,22 @@ EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause) {
 # Author: Long Phan, JSC
 # Modified by Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
-EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response) {
+EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, 
+                    *logEnabled, *notification, *response) {
 
     *status_transfer_success = bool("true");
 
     msiGetObjType(*source,*source_type);
     if (*source_type == '-c') {
         logDebug("source path *source is a collection");
-        *status_transfer_success = EUDATCheckIntegrityColl(*source,*destination,*logEnabled,*response);
+        *status_transfer_success = EUDATCheckIntegrityColl(*source, *source_res,
+                                                           *destination, *dest_res,
+                                                           *logEnabled, *response);
     } else if (*source_type == '-d') {
         logDebug("source path *source is a data object");
-        *status_transfer_success = EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response);
+        *status_transfer_success = EUDATCheckIntegrityDO(*source, *source_res, 
+                                                         *destination, *dest_res, 
+                                                         *logEnabled, *response);
     }
   
     if (!*status_transfer_success) {
@@ -136,7 +143,9 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
-                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
+                *source_res = "";
+                *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
+                                              *logEnabled, *notification, *response);
             }
         }
     }   
@@ -257,7 +266,9 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                 logDebug("perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
-                *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
+                *source_res = "";
+                *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
+                                              *logEnabled, *notification, *response);
             }
             
             if (*status) {
@@ -306,7 +317,9 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                  logDebug("perform a further verification about checksum and size");
                  *logEnabled = bool("true");
                  *notification = 0;
-                 *status = EUDATCheckIntegrity(*source,*destination,*logEnabled,*notification,*response);
+                 *source_res = "";
+                 *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
+                                               *logEnabled, *notification, *response);
             }
             if (*status) {
                 *notification = 0;
@@ -414,7 +427,7 @@ EUDATPIDRegistration(*source, *destination, *notification, *registration_respons
 EUDATSearchAndCreatePID(*path, *pid) {
 
     logDebug("[EUDATSearchAndCreatePID] query PID of path *path");
-    EUDATiFieldVALUEretrieve(*path, "PID", *pid);
+    EUDATgetLastAVU(*path, "PID", *pid);
     logDebug("[EUDATSearchAndCreatePID] retrieved the iCAT PID value *pid for path *path");
     # if there is no entry for the PID in ICAT, get it from EPIC
     if (*pid == "None") {
@@ -437,7 +450,7 @@ EUDATSearchAndDefineField(*path, *pid, *key) {
     logDebug("[EUDATSearchAndDefineField] query PID *pid and path *path to get *key");
     *val = "None";
     # get *key of the *path from ICAT
-    EUDATiFieldVALUEretrieve(*path, *key, *val);
+    EUDATgetLastAVU(*path, *key, *val);
     logDebug("[EUDATSearchAndDefineField] got *key=*val from iCAT");
     # if there is no entry for the *key in ICAT, get it from EPIC
     if (*val == "None") {
@@ -456,7 +469,9 @@ EUDATSearchAndDefineField(*path, *pid, *key) {
 #
 # Parameters:
 # *sCollPath    [IN] path of the source collection
+# *source_res   [IN]  iRODS resource name of the source
 # *dCollPath    [IN] path of the destination collection
+# *dest_res     [IN]  iRODS resource name of the destination
 # *logEnabled   [IN] boolean value: "true" to enable the logging system, 
 #                                     "false" to silence it.
 # *response     [OUT] the reason of the failure
@@ -469,10 +484,12 @@ EUDATSearchAndDefineField(*path, *pid, *key) {
 # Author: Elena Erastova, RZG
 # Author: Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
+EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnabled, *check_response) {
 
+    if (*source_res == "" || *source_res == "None") { *source_res = "%" }
     *check_response = "";
-    logInfo("[EUDATCheckIntegrityColl] Compare the size and the checksum of DOs in *sCollPath and *dCollPath");
+    logInfo("[EUDATCheckIntegrityColl] Compare the size and the checksum"
+            ++ " of DOs in *sCollPath:*source_res: and *dCollPath:*dest_res:");
 
     # Verify that source input path is a collection
     msiGetObjType(*sCollPath, *type);
@@ -493,11 +510,12 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
     # For each DO in the sorce collection recursively compare checksum amd size
     # with the DO in the destination collection.
     # If they do not match, write an error in the b2safe log
-    foreach(*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*sCollPath' || like '*sCollPath/%') {
+    foreach(*Row in SELECT DATA_NAME, DATA_RESC_NAME, COLL_NAME 
+            WHERE DATA_RESC_NAME like '*source_res' and COLL_NAME = '*sCollPath' || like '*sCollPath/%') {
         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
         msiSubstr(*objPath, str(int(*pathLength)+1), "null", *subCollection);
         *destination = "*dCollPath/*subCollection";
-        *result = EUDATCheckIntegrityDO(*objPath,*destination,*logEnabled,*singleRes);
+        *result = EUDATCheckIntegrityDO(*objPath, *source_res, *destination, *dest_res, *logEnabled, *singleRes);
         if (!*result) {
             *contents = "*objPath::*destination::*result::*singleRes";
             *check_response = *check_response ++ *contents ++ ",";
@@ -514,14 +532,16 @@ EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
 # 
 # Parameters:
 #    *source         [IN] path of source file in iRODS
+#    *source_res     [IN]  iRODS resource name of the source
 #    *destination    [IN] path of target file in iRODS
+#    *dest_res       [IN]  iRODS resource name of the destination
 #    *logEnabled     [IN] boolean value: "true" to enable the logging system, 
 #                                        "false" to silence it.
 #    *response       [OUT] the reason of the failure
 #
 # Author: Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
-EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response) {
+EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled, *response) {
         
     *status = bool("true");
     *response = "";
@@ -530,11 +550,9 @@ EUDATCheckIntegrityDO(*source,*destination,*logEnabled,*response) {
     if (*err < 0) {
         *response = "missing replicated object";
         *status = bool("false");
-    } else if (!EUDATCatchErrorSize(*source,*destination)) {
-        *response = "different size";
+    } else if (!EUDATCatchErrorSize(*source, *source_res, *destination, *dest_res, *response)) {
         *status = bool("false");
-    } else if (!EUDATCatchErrorChecksum(*source,*destination)) {
-        *response = "different checksum";
+    } else if (!EUDATCatchErrorChecksum(*source, *source_res, *destination, *dest_res, *response)) {
         *status = bool("false");
     }
     if (*logEnabled) {

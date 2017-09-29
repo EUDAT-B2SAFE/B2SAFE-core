@@ -102,23 +102,15 @@ getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
 }
 
 # Provides parameters for some B2SAFE configurations.
-# The plugin msifree_microservice_out is a bug fixing to avoid memory leak
-# in case of collection replication involving thousands of files and the
-# parameter msiFreeEnabled enables it.
-# The CURL plugin 
 #
 # Arguments:
-# *msiFreeEnabled  [OUT] if True the msiFree plugin must be deployed
-# *msiCurlEnabled  [OUT] if True the msiCurl plugin must be deployed 
 # *authzEnabled    [OUT] if True the authorization mechanism enforces the assertions 
 #                        defined in the file retrieved by getAuthZParameters.
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
-    *msiFreeEnabled=bool("true");
+getConfParameters(*authzEnabled) {
     *authzEnabled=bool("true");
-    *msiCurlEnabled=bool("false");
 }
 
 # Provides version of the B2SAFE

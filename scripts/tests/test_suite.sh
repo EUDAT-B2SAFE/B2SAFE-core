@@ -108,21 +108,21 @@ replication () {
 #  destPath="${irods_home}/test_data2.txt"
   destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/${testFileNameRemote}"
   echo "Replica path: ${destPath}"
-  rule="{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); 
+  rule="{*status = EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response); 
         if (*status) {
             writeLine('stdout', 'Success!');
         }
         else {
             writeLine('stdout', 'Failed: *response');
         }}"
-  input="*source=${sourcePath}%*destination=${destPath}%*registered=true%*recursive=true"
+  input="*source=${sourcePath}%*destination=${destPath}%*dest_res=${irods_default_resource}%*registered=true%*recursive=true"
   
   echo "Rule: irule ${rule} ${input} ruleExecOut"
   rep_raw=`irule "${rule}" "${input}" ruleExecOut`
   echo "Replication response: ${rep_raw}"
 
   echo "        ############ PID record key/value pairs: ############"
-  rule="{EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)}"
+  rule="{EUDATgetLastAVU(*path, *FNAME, *FVALUE)}"
   input="*path=${destPath}%*FNAME=PID"
   output="*FVALUE"
   pid_raw=`irule "${rule}" "${input}" "${output}"`
