@@ -157,7 +157,7 @@ if __name__ == "__main__":
     
     parser.add_argument("-dbg", "--debug", action="store_true", help="enable debug")
     parser.add_argument("-d", "--dryrun", action="store_true", help="run without performing any real change")
-    parser.add_argument("-u", "--userName", help="B2Share user name")
+    parser.add_argument("-u", "--userName", help="name of the irods user")
     parser.add_argument("--collectionName", help="path to the collection where to create the metadata")
     
     parser.set_defaults(func=create_md_schema) 
