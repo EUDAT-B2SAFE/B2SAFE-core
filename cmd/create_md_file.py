@@ -74,9 +74,6 @@ class Configuration():
             return None
 
 def getAllCommunities(configuration):
-    #get all comunity names and print/log them
-    #warn the user that the script need community name
-    
     
     host = configuration.b2share_host_name
     endpoint = configuration.list_communities_endpoint
@@ -101,7 +98,7 @@ def create_md_schema(args):
     configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
     configuration.parseConf()
     
-    #get access_token from collection metadata
+    #get access_token from user metadata in iRODS
     irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
     access_token = irodsu.getMetadata(args.userName, "access_token", '-u')[0]
     configuration.access_token = access_token
@@ -121,7 +118,8 @@ def create_md_schema(args):
         get_community_schema_url = host + community_endpoint + comunity_id + get_schema_endpoint + acces_part
         
         response = requests.get(url=get_community_schema_url)
-        community_schema = response.json()["json_schema"]["allOf"][0]
+		#May be parsing for manifest extention
+        #community_schema = response.json()["json_schema"]["allOf"][0]
         #print(response.json())
         #print(community_schema)
         #then ["properties"] dictianary with all properties objects
@@ -129,13 +127,13 @@ def create_md_schema(args):
         
         
         if args.dryrun:
-            print(response.json())
+            print(str(response.text))
         else:
             logger.info('Writing the metadata to a file')
-            file_path = args.collectionName + "/" + "metadata.txt"
+            file_path = args.collectionName + "/" + "b2share_metadata.json" #TODO: config, argument?
             temp = tempfile.NamedTemporaryFile()
             try:
-                temp.write(str(response.json()))
+                temp.write(str(response.text))
                 temp.flush()
                 try: 
                     irodsu.putFile(temp.name, file_path, configuration.irods_resource)
@@ -157,7 +155,7 @@ if __name__ == "__main__":
     
     parser.add_argument("-dbg", "--debug", action="store_true", help="enable debug")
     parser.add_argument("-d", "--dryrun", action="store_true", help="run without performing any real change")
-    parser.add_argument("-u", "--userName", help="name of the irods user")
+    parser.add_argument("-u", "--userName", help="B2Share user name")
     parser.add_argument("--collectionName", help="path to the collection where to create the metadata")
     
     parser.set_defaults(func=create_md_schema) 
