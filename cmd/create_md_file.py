@@ -74,6 +74,9 @@ class Configuration():
             return None
 
 def getAllCommunities(configuration):
+    #get all community names and print/log them
+    #warn the user that the script need community name
+    
     
     host = configuration.b2share_host_name
     endpoint = configuration.list_communities_endpoint
@@ -98,7 +101,7 @@ def create_md_schema(args):
     configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
     configuration.parseConf()
     
-    #get access_token from user metadata in iRODS
+    #get access_token from collection metadata
     irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
     access_token = irodsu.getMetadata(args.userName, "access_token", '-u')[0]
     configuration.access_token = access_token
@@ -110,15 +113,15 @@ def create_md_schema(args):
         
         #get metadata schema
         #api/communities/
-        comunity_id = communities_list[commName]
+        community_id = communities_list[commName]
         host = configuration.b2share_host_name
         community_endpoint = configuration.list_communities_endpoint
         get_schema_endpoint = configuration.get_community_schema_endpoint
         acces_part = configuration.access_parameter + "=" + configuration.access_token
-        get_community_schema_url = host + community_endpoint + comunity_id + get_schema_endpoint + acces_part
+        get_community_schema_url = host + community_endpoint + community_id + get_schema_endpoint + acces_part
         
         response = requests.get(url=get_community_schema_url)
-		#May be parsing for manifest extention
+        #May be parsing for manifest extention
         #community_schema = response.json()["json_schema"]["allOf"][0]
         #print(response.json())
         #print(community_schema)
