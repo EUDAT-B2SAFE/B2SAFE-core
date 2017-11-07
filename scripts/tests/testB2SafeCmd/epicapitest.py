@@ -1,5 +1,6 @@
 import sys
 if sys.version_info < (2, 7):
+    sys.path.append('/usr/lib/python2.7/site-packages')
     import unittest2 as unittest
 else:
     import unittest
