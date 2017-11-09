@@ -191,7 +191,12 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
         *replicaNew = *childPID;
     }
     else {
-        *replicaNew = *replica ++ "," ++ *childPID;
+        if (*replica like "*"++*childPID++"*") {
+           *replicaNew = *replica;
+        }
+        else {
+           *replicaNew = *replica ++ "," ++ *childPID;
+        }
     }
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath modify *parentPID EUDAT/REPLICA *replicaNew",
                "null", "null", "null", *outUPwNC);
