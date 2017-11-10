@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- python -*-
+# -*- coding: utf-8 -*-
 
 import sys
 import argparse
@@ -13,6 +14,7 @@ from pprint import pformat
 import os
 import ConfigParser
 import ast
+import io
 
 from utilities.drivers.eudatunity import *
 
@@ -113,15 +115,15 @@ class SyncRemoteUsers:
             sys.exit(0)
 
         if data:
-            with open(self.filepath, "w") as jsonFile:
-                jsonFile.write(json.dumps(data, indent=2))
+            with io.open(self.filepath, 'w', encoding='utf-8') as jsonFile:
+                jsonFile.write(json.dumps(data, indent=2, ensure_ascii=False))
             self.logger.info('{0} correctly written!'.format(self.filepath))
         else:
             self.logger.info('No data to write to {0}'.format(self.filepath))
 
         if userdata:
-            with open(self.dnsfilepath, "w") as jsonFile:
-                jsonFile.write(json.dumps(userdata, indent=2))
+            with io.open(self.dnsfilepath, 'w', encoding='utf-8') as jsonFile:
+                jsonFile.write(json.dumps(userdata, indent=2, ensure_ascii=False))
             self.logger.info('{0} correctly written!'.format(self.dnsfilepath))
         else:
             self.logger.info('No data to write to {0}'.format(self.dnsfilepath))

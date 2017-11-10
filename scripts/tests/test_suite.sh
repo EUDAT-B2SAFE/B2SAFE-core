@@ -1,19 +1,77 @@
 #!/bin/bash
 
-REMOTE_ZONE=cinecaDMPZone1
+# If no param given: Fail:
+if [ -z $1 ]
+then
+    echo "Please provide args (1) remote zone for replication and (2) default resource. The latter is optional. (If not provided, it's taken from the ienv command)."
+    exit 1
+fi
 
-echo "Hello World!" > test_data.txt
-iput test_data.txt
-rm test_data.txt
-echo "############ Data Object ############"
-ils -l test_data.txt
-echo ""
+# Get remote zone from command line arg:
+REMOTE_ZONE=$1
 
-irods_home=`ienv | grep irods_home | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+# If a second arg is given, it's the resource:
+if [ ! -z $2 ]
+then
+    DEFAULT_RESC=$2
+else
+    DEFAULT_RESC=
+fi
+
+# Define test file name
+testFileName="test_data.txt"
+testFileNameRemote="test_data2.txt"
+
+# Get user name and zone name from ienv
 irods_user_name=`ienv | grep irods_user_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
 irods_zone_name=`ienv | grep irods_zone_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
-irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
-sourcePath="${irods_home}/test_data.txt"
+# Get home dir (not in ienv output)
+irods_home=`ienv | grep irods_home | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+if [ -z $irods_home  ]
+then
+    echo "No irods_home found in ienv output. Constructing irods_home from zone name and user name."
+    irods_home="/${irods_zone_name}/home/${irods_user_name}"
+fi
+# If not provided via command line, get default resc from in ienv output
+if [ -z $DEFAULT_RESC ]
+then
+    irods_default_resource=`ienv | grep irods_default_resource | cut -d '-' -f 2 | tr -d '[[:space:]]'`
+else
+    irods_default_resource=$DEFAULT_RESC
+fi
+# If it's neither provided nor found in ienv, exit!
+if [ -z $irods_default_resource ]
+then
+    echo "No irods_default_resource found in ienv output nor passed as argument. Exiting. Please provide it as command line argument"
+    exit
+fi
+
+# Define test file
+sourcePath="${irods_home}/${testFileName}"
+# If exists, ask whether replace or exit
+exists=`ils ${irods_home} | grep ${testFileName}`
+if [ ! -z $exists ]
+then
+    echo "The file $sourcePath already exists. Remove it before continuing (y or n)? Otherwise, script will exit."
+    read shouldRemove
+    echo "You entered $shouldRemove"
+    if [ $shouldRemove == "y" ]
+    then
+        echo "Will be removed"
+        irm $sourcePath
+    else
+        echo "Exiting..."
+        exit 1
+    fi
+fi
+
+echo "Hello World!" > ${testFileName}
+iput ${testFileName}
+rm ${testFileName}
+echo "############ Data Object ############"
+ils -l ${testFileName}
+echo ""
+
 
 createPID () {
   rule="{EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)}"
@@ -48,35 +106,41 @@ replication () {
   echo ""
   echo "############ REPLICATION ############"
 #  destPath="${irods_home}/test_data2.txt"
-  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/test_data2.txt"
+  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/${testFileNameRemote}"
   echo "Replica path: ${destPath}"
-  rule="{*status = EUDATReplication(*source, *destination, *registered, *recursive, *response); 
+  rule="{*status = EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response); 
         if (*status) {
             writeLine('stdout', 'Success!');
         }
         else {
             writeLine('stdout', 'Failed: *response');
         }}"
-  input="*source=${sourcePath}%*destination=${destPath}%*registered=true%*recursive=true"
+  input="*source=${sourcePath}%*destination=${destPath}%*dest_res=${irods_default_resource}%*registered=true%*recursive=true"
   
   echo "Rule: irule ${rule} ${input} ruleExecOut"
   rep_raw=`irule "${rule}" "${input}" ruleExecOut`
   echo "Replication response: ${rep_raw}"
 
   echo "        ############ PID record key/value pairs: ############"
-  rule="{EUDATiFieldVALUEretrieve(*path, *FNAME, *FVALUE)}"
+  rule="{EUDATgetLastAVU(*path, *FNAME, *FVALUE)}"
   input="*path=${destPath}%*FNAME=PID"
   output="*FVALUE"
   pid_raw=`irule "${rule}" "${input}" "${output}"`
   pid=`echo ${pid_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  if [ -z $pid ]
+  then
+    echo "        ERROR! Did not find PID in irods metadata for ${destPath}! Cannot retrieve values from the PID record. Please check what went wrong."
+  fi
   echo "        PID: ${pid}"
   
+  # The following loop could be places in an else clause, but then the user might not notice the failures, so let it fail...
   for k in "URL" "CHECKSUM" "EUDAT/CHECKSUM" "EUDAT/CHECKSUM_TIMESTAMP" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/FIXED_CONTENT" "EUDAT/PARENT"
   do
       raw=`irule "{*res=EUDATGeteValPid(*pid, *key)}" "*pid=${pid}%*key=$k" "*res"`
       val=`echo ${raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
       echo "        $k: ${val}"
   done
+  
   echo "        ############ iCAT key/value pairs: ############"
   for k in "PID" "EUDAT/ROR" "EUDAT/FIO" "EUDAT/PARENT" "EUDAT/FIXED_CONTENT" "eudat_dpm_checksum_date:${irods_default_resource}"
   do
