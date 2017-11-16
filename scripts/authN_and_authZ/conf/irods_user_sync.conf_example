@@ -1,0 +1,79 @@
+# section containing the common options
+[common]
+
+#path to the log file
+logfile=/var/log/irods_user_sync.log
+# log level, possible values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+loglevel=DEBUG
+#logging format
+logformat=%(asctime)s %(levelname)s in %(module)s: %(message)s
+#Max size of the log file
+logmaxbytes=4194304
+#number of log files to rotate
+logbackupcnt=10
+#temp directory to store info on expiring user authorisation data
+expiration_tempdir=/tmp/irods_user_sync_exp
+#period of time in which the authorisation data is assumed as valid (in seconds))
+#longer period => less connections to B2ACCESS and iCAT and better performance
+#shorter period => security information more up to date
+expiration_period_sec=36
+
+# configuration of B2ACCESS API bind
+[B2ACCESS]
+
+#base URL to access the API
+base_url=https://b2access.eudat.eu/rest-admin/v1/
+#API user name
+username=PRACE_proxy
+#file with API user password
+password_file=~/.unity.pwd
+#path to file or directory containing certificates used to verify the B2ACCESS server
+#it is not mandatory, but recommended for security
+cert_verify=/etc/ssl/certs/b2access.eudat.eu.pem
+
+# configuration for parsing subject (DN) of the certificate issued by B2ACCESS
+[usercert]
+
+#pattern the DN shall match
+dn_pattern=^CN=(.*),CN=(([a-f]|[0-9]|-)*),OU=B2ACCESS Intrgration,O=EUDAT,C=EU$
+#number of regex match subgroup containing entity id
+id_match=2
+#identity type of the above id
+id_type=persistent
+
+#configuration of iRODS
+[iRods]
+
+#iRODS host
+host=localhost
+#iRODS port
+port=1247
+#iRODS admin user
+rods_user=rods
+#file with admin user password
+rods_password_file=~/.irods.pwd
+#zone of the admin user
+rods_zone=mainZone
+#zone of the common users
+user_zone=mainZone
+#type of the common user
+user_type=rodsuser
+#prefix of iRods account to be mapped to the user
+#it will be concatenated with identity value
+account_prefix=eudat_
+#Unity identity type to be used for the concatenation
+# -allowed values are: entityId, persistent
+account_identity_type=persistent
+#In case DN is mapped to an account named different than expected (computed according to the above rules),
+#if this parameter is nonzero the script will replace the old mapping by the new one
+replace_mapping=1
+
+#B2ACCESS to iRods group mapping
+#syntax:
+#<unity_group>=<comma separated list of iRods groups>
+#Note, that ':' in <unity_group> must be replaced by '//' while using Python 2.x
+[groupmap]
+/PRACE=EUDAT,prace
+/eudat//b2safe=EUDAT,b2safe
+/bitusejf=bitusejf
+/A/B/C/de=abcde,EUDAT,     zocha,		krycha
