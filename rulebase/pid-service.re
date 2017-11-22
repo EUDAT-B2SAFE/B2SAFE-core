@@ -34,6 +34,8 @@
 # EUDATPidsForColl(*collPath)
 # EUDATePIDcreateCurl(*path, *extraType, *PID, *ifchecksum)
 # EUDATSearchPIDCurl(*path, *existing_pid)
+# EUDATVersioningCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *do_version, *newPID)
+# EUDATVersioningUpdatePIDWithNewChild(*parentPID, *childPID, *field)
 
 
 # Generate a new PID for a digital object.
@@ -827,4 +829,210 @@ EUDATSearchPIDCurl(*path, *existing_pid) {
     }
     *status;
 }
+
+#-------------------------------------------------------------------------------
+# Generate a new version PID for a digital object.
+# Fields stored in the PID record: URL, ROR and CHECKSUM
+# adds a ROR field if (*ror != "None")
+#
+# Parameters:
+#   *parent_pid     [IN]    the PID of the digital object whose version was created (not necessarily the ROR)
+#   *path           [IN]    the path of the object to store with the PID record
+#   *ror            [IN]    the ROR PID of the digital object that we want to store.
+#   *fio            [IN]    the FIO PID of the digital object that we want to store.
+#   *fixed          [IN]    the boolean flag to define that the object related to this PID cannot change
+#   *do_version     [IN]    version number of data object
+#   *prevVersionPID [IN]    PID of previous version of data object
+#   *newPID         [OUT]   the pid generated for this object 
+#
+# Author: Alexander Atamas, DANS
+#-------------------------------------------------------------------------------
+EUDATVersioningCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *do_version, *prevVersionPID, *newPID) {
+
+    logInfo("[EUDATCreatePID] create pid for *path");
+    *version = "1";
+    logDebug("[EUDATCreatePID] input parameters: parent=*parent_pid, path=*path, ror=*ror, fio=*fio, fixed=*fixed");
+    if (!EUDATisMetadata(*path)) {
+        getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+
+        #check if PID already exists
+        if (*msiCurlEnabled) {
+            EUDATSearchPIDCurl(*path, *existing_pid);
+        } else {
+            EUDATSearchPID(*path, *existing_pid);
+        }
+   
+        if((*existing_pid == "empty") || (*existing_pid == "None")) {
+            # add extraType parameters
+            *extraType = "empty";
+
+            # add ror as extratype parameter
+            if (*ror != "None" && *ror != "") {
+                *extraType = "EUDAT/ROR=*ror";
+                if (*ror != "pid") {
+                    EUDATCreateAVU("EUDAT/ROR", *ror, *path);
+                }
+            }
+
+            # add ppid as extratype parameter
+            if (*parent_pid != "None" && *parent_pid != "") {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/VERSION_SOURCE=*parent_pid";
+                } else {
+                      *extraType = "EUDAT/VERSION_SOURCE=*parent_pid";
+                }
+                EUDATCreateAVU("EUDAT/VERSION_SOURCE", *parent_pid, *path);
+            }
+            # add fio as extratype parameter
+            if (*fio != "None" && *fio != "") {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIO=*fio";
+                } else {
+                      *extraType = "EUDAT/FIO=*fio";
+                }
+                if (*fio != "pid") {
+                      EUDATCreateAVU("EUDAT/FIO", *fio, *path);
+                }            
+            }            
+            # add fixed_content as extratype parameter
+            if (EUDATtoBoolean(*fixed)) {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIXED_CONTENT=True";
+                } else {
+                      *extraType = "EUDAT/FIXED_CONTENT=True";
+                }
+                EUDATCreateAVU("EUDAT/FIXED_CONTENT", "True", *path);
+            }
+            else {
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/FIXED_CONTENT=False";
+                } else {
+                      *extraType = "EUDAT/FIXED_CONTENT=False";
+                }
+                EUDATCreateAVU("EUDAT/FIXED_CONTENT", "False", *path);                
+            }
+
+            # add version as extratype parameter
+            if (*extraType != "empty") {
+                  *extraType = "*extraType"++";EUDAT/PROFILE_VERSION=*version";
+            } else {
+                  *extraType = "EUDAT/PROFILE_VERSION=*version";
+            }
+
+            if (*do_version != "None" && *do_version != "") {
+
+                # add do_version (i.e., data object version) as extratype parameter
+            
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/DO_VERSION_NUMBER=*do_version";
+                } else {
+                      *extraType = "EUDAT/DO_VERSION_NUMBER=*do_version";
+                }
+                EUDATCreateAVU("EUDAT/DO_VERSION_NUMBER", *do_version, *path);
+            }
+
+            if (*prevVersionPID != "None" && *prevVersionPID != "") {
+
+                # add prevVersionPID (PID of previous version of data object ) as extratype parameter
+            
+                if (*extraType != "empty") {
+                      *extraType = "*extraType"++";EUDAT/REVISION_OF=*prevVersionPID";
+                } else {
+                      *extraType = "EUDAT/REVISION_OF=*prevVersionPID";
+                }
+                EUDATCreateAVU("EUDAT/REVISION_OF", *prevVersionPID, *path);
+            }
+            else {
+
+                if ( *parent_pid != "None" && *parent_pid != "" ){
+                   if (*extraType != "empty" ) {
+                        *extraType = "*extraType"++";EUDAT/REVISION_OF=*parent_pid";
+                   } else {
+                        *extraType = "EUDAT/REVISION_OF=*parent_pid";
+                   }
+                   EUDATCreateAVU("EUDAT/REVISION_OF", *parent_pid, *path);
+                }                
+            }
+
+            # Verify the type of the input path (collection / data object)
+            msiGetObjType(*path, *type);
+
+            # create PID
+            EUDATePIDcreate(*path, *extraType, *newPID);
+            EUDATiPIDcreate(*path, *newPID);
+        
+            if (*msiCurlEnabled) {
+                # Verify the type of the input path (collection / data object)
+                msiGetObjType(*path, *type);
+                # If it is a collection - do not compute checksum
+                if (*type == '-c') {
+                    EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("false"));
+                }
+                # If it is a data object - compute checksum and add it to PID
+                else if (*type == '-d') {
+                    EUDATePIDcreateCurl(*path, *extraType, *newPID, bool("true"));
+                }
+            }
+            # creation of ROR in icat in case it has been set to pid
+            if (*ror == "pid") {
+                EUDATCreateAVU("EUDAT/ROR", *newPID, *path);
+            }
+            # creation of FIO in icat in case it has been set to pid
+            if (*fio == "pid") {
+                EUDATCreateAVU("EUDAT/FIO", *newPID, *path);
+            }
+
+            # creation of the file based metadata record
+            *checksum = "";
+            *modtime = "";
+            EUDATStoreJSONMetadata(*path, *newPID, *ror, *checksum, *modtime);
+        }
+        else {
+            *newPID = *existing_pid;
+            logInfo("[EUDATCreatePID] PID already exists (*newPID)");
+        }
+    }
+    else {
+        logInfo("Skipped PID creation on metadata path: *path");
+}
+}
+
+
+#-------------------------------------------------------------------------------
+# Versioning update a PID record with a new child.
+#
+# Parameters:
+#       *parentPID  [IN]    PID of the record that will be updated
+#       *childPID   [IN]    PID to store as one of the child locations
+#
+# Author: Alexander Atamas, DANS
+#-------------------------------------------------------------------------------
+EUDATVersioningUpdatePIDWithNewChild(*parentPID, *childPID, *field) {
+    *versionNew = "None"
+    logInfo("[EUDATUpdatePIDWithNewVersionChild] update parent pid (*parentPID) with new child (*childPID)");
+    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
+    *version = EUDATGeteValPid(*parentPID, *field);
+#    if ((*version == "") || (*version == "None")) {
+#        *versionNew = *childPID;
+#    }
+#    else {
+           *versionNew = *childPID;
+#    }
+    logDebug("[EUDATUpdatePIDWithNewVersionChild] epicclient.py *credStoreType *credStorePath modify *parentPID *field *versionNew");
+    msiExecCmd("epicclient.py", "*credStoreType *credStorePath modify *parentPID *field *versionNew",
+               "null", "null", "null", *outUPwNC);
+    msiGetStdoutInExecCmdOut(*outUPwNC, *response);
+    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    if (*msiFreeEnabled) {
+        msifree_microservice_out(*outUPwNC);
+    }
+    logDebug("[EUDATUpdatePIDWithNewVersionChild] update handle version response = *response");
+    if (*response != "True") { *versionNew = "None" }
+
+    *versionNew;
+}
+
+
+
 
