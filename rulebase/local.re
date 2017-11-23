@@ -89,9 +89,11 @@ getLogParameters(*logConfPath) {
 #Provides parameters for the message management mechanism
 #
 # Arguments:
-# *msgConfPath [OUT] the file path to the message conf file.
-# *enabled     [OUT] boolean value to enable (if true) globally the
-#                    the usage of the messaging system
+# *msgConfPath      [OUT] the file path to the message conf file.
+# *controlQueueName [OUT] the name of the queue/topic which stores the list
+#                         of modified collections
+# *enabled          [OUT] boolean value to enable (if true) globally the
+#                         the usage of the messaging system
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------

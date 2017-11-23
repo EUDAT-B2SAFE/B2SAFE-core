@@ -78,11 +78,11 @@ logError(*msg) {
     }
 }
 
-logWithLevel(*level, *msg) {
-    on (*level == "info") { writeLine("serverLog","INFO: *msg");}
-    on (*level == "debug") { writeLine("serverLog","DEBUG: *msg");}
-    on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
-    on (*level == "verbose") { writeLine("serverLog","VERBOSE: *msg");}
+logWithLevel(*levelstring, *msg) {
+    if (*levelstring == "info") { writeLine("serverLog","INFO: *msg");}
+    else if (*levelstring == "debug") { writeLine("serverLog","DEBUG: *msg");}
+    else if (*levelstring == "error") { writeLine("serverLog","ERROR: *msg");}
+    else if (*levelstring == "verbose") { writeLine("serverLog","VERBOSE: *msg");}
 }
 
 ################################################################################

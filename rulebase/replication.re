@@ -93,6 +93,13 @@ EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
     *status_transfer_success;
 }
 
+EUDATCheckIntegrity(*source, *destination, *logEnabled, *notification, *response) {
+    *source_res = "";
+    *dest_res = "";
+    EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, 
+                        *logEnabled, *notification, *response);
+}
+
 # Data set replication
 #
 # Parameters:
@@ -119,7 +126,7 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
     # Catch Error CAT_NO_ACCESS_PERMISSION before replication
     if (errormsg(EUDATCatchErrorDataOwner(*source,*msg), *errmsg) < 0) {
 
-        logDebug("*errmsg");
+        logDebug("[EUDATReplication] *errmsg");
         *status = bool("false");
         *response = "no access permission to the path *source for user $userNameClient";
         EUDATUpdateLogging(*status,*source,*destination,*response);
@@ -128,10 +135,10 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
 
         logInfo("[EUDATReplication] *msg");
         if (EUDATtoBoolean(*registered)) {
-            logDebug("replicating registered data");
+            logDebug("[EUDATReplication] replicating registered data");
             *status = EUDATRegDataRepl(*source, *destination, *dest_res, EUDATtoBoolean(*recursive), *response);
         } else {
-            logDebug("replicating data without PID registration");
+            logDebug("[EUDATReplication] replicating data without PID registration");
             msiGetObjType(*source,*source_type);
             if (*source_type == '-c')  {
                 msiCollRsync(*source,*destination,*dest_res,"IRODS_TO_IRODS",*rsyncStatus);
@@ -140,7 +147,7 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
                 msiDataObjRsync(*source,"IRODS_TO_IRODS",*dest_res,*destination,*rsyncStatus);
             }
             if (*rsyncStatus != 0) {
-                logDebug("perform a further verification about checksum and size");
+                logDebug("[EUDATReplication] perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
                 *source_res = "";
@@ -154,12 +161,18 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
         *response = "*source::*destination::*dest_res"
                  ++ "::registered=*registered::recursive=*recursive";
     }
+    logDebug("[EUDATReplication] response = *response");
 #    EUDATGetZoneNameFromPath(*source, *zone);
 #    *queue = *zone ++ "_" ++ $userNameClient;
 #    *message = "status:*status;response:*response"
 #    EUDATMessage(*queue, *message);
 
     *status;
+}
+
+EUDATReplication(*source, *destination, *registered, *recursive, *response) {
+    *dest_res = "";
+    EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response);
 }
 
 # Transfer all data object saved in the logging system,
@@ -255,15 +268,15 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
         logDebug(*response);
     }
     else {
-        logDebug("PID exist for *source");
+        logDebug("[EUDATRegDataRepl] PID exist for *source");
         msiGetObjType(*source,*source_type);
         if (*source_type == '-c')  {
 
-            logDebug("The path *source is a collection");
-            logDebug("Replication's beginning ...... ");
+            logDebug("[EUDATRegDataRepl] The path *source is a collection");
+            logDebug("[EUDATRegDataRepl] Replication's beginning ...... ");
             msiCollRsync(*source,*destination,*dest_res,"IRODS_TO_IRODS",*rsyncStatus);
             if (*rsyncStatus != 0) {
-                logDebug("perform a further verification about checksum and size");
+                logDebug("[EUDATRegDataRepl] perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
                 *source_res = "";
@@ -279,7 +292,7 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                 if (*status && *recursive) {
                
                     *responses = "";
-                    logDebug("loop over the sub-collections"); 
+                    logDebug("[EUDATRegDataRepl] loop over the sub-collections"); 
                     msiStrlen(*source,*pathLength);
                     # loop over the sub-collections of the collection
                     foreach (*Row in SELECT COLL_NAME WHERE COLL_NAME like '*source/%') {
@@ -292,7 +305,7 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                         }
                         *status = (*singleRes == "None") && *status;
                     }
-                    logDebug("loop over the objects of the collection");
+                    logDebug("[EUDATRegDataRepl] loop over the objects of the collection");
                     # loop over the objects of the collection
                     foreach (*Row in SELECT DATA_NAME,COLL_NAME WHERE COLL_NAME = '*source' || like '*source/%') {
                         *objPath = *Row.COLL_NAME ++ '/' ++ *Row.DATA_NAME;
@@ -311,10 +324,10 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
 
         } else {
             
-            logDebug("Replication's beginning ...... ");
+            logDebug("[EUDATRegDataRepl] Replication's beginning ...... ");
             msiDataObjRsync(*source,"IRODS_TO_IRODS",*dest_res,*destination,*rsyncStatus);
             if (*rsyncStatus != 0) {
-                 logDebug("perform a further verification about checksum and size");
+                 logDebug("[EUDATRegDataRepl] perform a further verification about checksum and size");
                  *logEnabled = bool("true");
                  *notification = 0;
                  *source_res = "";
@@ -325,12 +338,18 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                 *notification = 0;
                 # update the parent PID of the replica with the related child PID
                 EUDATPIDRegistration(*source, *destination, *notification, *response);
+                logDebug("[EUDATRegDataRepl] registration's response: *response");
                 if (*response != "None") { *status = bool("false") }
             }
         }
     }
 
     *status;
+}
+
+EUDATRegDataRepl(*source, *destination, *recursive, *response) {
+    *dest_res = "";
+    EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response);
 }
 
 # Verify that a PID exist for a given path and optionally create it 
@@ -527,6 +546,13 @@ EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnab
     *totalResult;
 }
 
+EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
+    *source_res = "";
+    *dest_res = "";
+    EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, 
+                            *logEnabled, *check_response);
+}
+
 # Checks differences about checksum and size between two Data Objects
 # and log the result to the B2SAFE logging system
 # 
@@ -560,4 +586,11 @@ EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled
     }
 
     *status;
+}
+
+EUDATCheckIntegrityDO(*source, *destination, *logEnabled, *response) {
+    *source_res = "";
+    *dest_res = "";
+    EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, 
+                          *logEnabled, *response);
 }
