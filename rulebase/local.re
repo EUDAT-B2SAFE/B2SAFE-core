@@ -97,10 +97,10 @@ getLogParameters(*logConfPath) {
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
+getMessageParameters(*msgConfPath, *controlQueueName, *messageQueueEnabled) {
     *msgConfPath="/opt/eudat/b2safe/conf/msgManager.conf";
     *controlQueueName="B2SAFE";
-    *enabled=bool("false");
+    *messageQueueEnabled=bool("false");
 }
 
 # Provides parameters for some B2SAFE configurations.

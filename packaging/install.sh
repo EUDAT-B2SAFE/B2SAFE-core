@@ -58,8 +58,7 @@ SHARED_SPACE=
 # sensible defaults are chosen. They can be overridden by adding them to
 # the configuration in install.conf
 AUTHZ_ENABLED=true
-MSIFREE_ENABLED=false
-MSICURL_ENABLED=false
+MSG_QUEUE_ENABLED=false
 #
 #
 #============================================
@@ -691,17 +690,13 @@ update_get_conf_parameters() {
         cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
     fi
     cat $B2SAFE_LOCALFILE | \
-        awk -F= -v AUTHZ_ENABLED=$AUTHZ_ENABLED -v MSIFREE_ENABLED=$MSIFREE_ENABLED -v MSICURL_ENABLED=$MSICURL_ENABLED '{
+        awk -F= -v AUTHZ_ENABLED=$AUTHZ_ENABLED -v MSG_QUEUE_ENABLED=$MSG_QUEUE_ENABLED '{
             if ( $1 ~ /^ +\*authzEnabled/ ) {
                 $1=$1"=bool(\""AUTHZ_ENABLED"\");"
                 $2=""
-            }
-            if ( $1 ~ /^ +\*msiFreeEnabled/ ) {
-                $1=$1"=bool(\""MSIFREE_ENABLED"\");"
-                $2=""
-            }
-            if ( $1 ~ /^ +\*msiCurlEnabled/ ) {
-                $1=$1"=bool(\""MSICURL_ENABLED"\");"
+            } 
+            if ( $1 ~ /^ +\*messageQueueEnabled/ ) {
+                $1=$1"=\""MSG_QUEUE_ENABLED"\";"
                 $2=""
             } print $0
         }' >  $B2SAFE_LOCALFILE.new
