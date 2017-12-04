@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import requests
-import json
-
 import os
-import logging
 import logging.handlers
 import argparse
 import ConfigParser
@@ -92,10 +89,10 @@ def getAllCommunities(configuration):
     communities = {}
     for community_object in communities_list:
         name = community_object["name"]
-        id = community_object["id"]
-        communities[name] = id
+        community_id = community_object["id"]
+        communities[name] = community_id
     
-    return 	communities
+    return     communities
 
 
 def create_md_schema(args):
@@ -125,21 +122,29 @@ def create_md_schema(args):
         
         response = requests.get(url=get_community_schema_url)
         #May be parsing for manifest extention
-        #community_schema = response.json()["json_schema"]["allOf"][0]
-        #print(response.json())
-        #print(community_schema)
-        #then ["properties"] dictianary with all properties objects
-        #and ["required"] the list of required ones
+        community_schema = response.json()["json_schema"]["allOf"][0]
+        requiredProperties = community_schema["b2share"]["presentation"]["major"]
+        optionalProperties = community_schema["b2share"]["presentation"]["minor"]
         
+        mdPatchSceleton = '#please fill out at least the required fields with values as JSON strings in the line after the property name.' + "\n"
+        mdPatchSceleton = mdPatchSceleton + '#e.g. for community - EUDAT, for open_access - true, for contributors - '+ \
+                        '[{"contributor_name":"Hulk", "contributor_type": "Editor"}, {"contributor_name":"Banner", "contributor_type": "ContactPerson"}]' + "\n\n"
+        mdPatchSceleton = mdPatchSceleton + "[required]" + "\n"
+        for requiredProperty in requiredProperties:
+            mdPatchSceleton = mdPatchSceleton + requiredProperty + "\n\n"
+        
+        mdPatchSceleton = mdPatchSceleton + "\n" + "[optional]" + "\n"
+        for optionalPropertiy in optionalProperties:
+            mdPatchSceleton = mdPatchSceleton + optionalPropertiy + "\n\n"
         
         if args.dryrun:
-            print(str(response.text))
+            print(mdPatchSceleton)
         else:
             logger.info('Writing the metadata to a file')
-            file_path = args.collectionName + "/" + "b2share_metadata.json" #TODO: config, argument?
+            file_path = args.collectionName + os.sep + "b2share_metadata.json" #TODO: config, argument?
             temp = tempfile.NamedTemporaryFile()
             try:
-                temp.write(str(response.text))
+                temp.write(mdPatchSceleton)
                 temp.flush()
                 try: 
                     irodsu.putFile(temp.name, file_path, configuration.irods_resource)
