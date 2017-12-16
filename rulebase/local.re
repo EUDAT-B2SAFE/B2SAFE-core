@@ -33,7 +33,7 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    getConfParameters(*authzEnabled);
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
     }
@@ -57,7 +57,7 @@ parseCredentials (*baseuri, *username, *prefix, *password) {
     *password = "<password>"
     *prefix = "<prefix>"
  
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled); 
+    getConfParameters(*authzEnabled); 
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", "EPIC credentials", *response);
     }
@@ -97,10 +97,10 @@ getLogParameters(*logConfPath) {
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getMessageParameters(*msgConfPath, *controlQueueName, *messageQueueEnabled) {
+getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
     *msgConfPath="/opt/eudat/b2safe/conf/msgManager.conf";
     *controlQueueName="B2SAFE";
-    *messageQueueEnabled=bool("false");
+    *enabled=bool("false");
 }
 
 # Provides parameters for some B2SAFE configurations.
@@ -124,8 +124,8 @@ getConfParameters(*authzEnabled) {
 #-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
     *major_version = "4";
-    *minor_version = "0";
-    *sub_version = "1";
+    *minor_version = "1";
+    *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 

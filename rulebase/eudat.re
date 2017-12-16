@@ -235,8 +235,8 @@ EUDATPushObjMetadata(*path, *queue) {
 EUDATMessage(*queue, *message) {
 
     *res = 'None';
-    getMessageParameters(*msgConfPath, *ctrlQName, *messageQueueEnabled);
-    if (*messageQueueEnabled) {
+    getMessageParameters(*msgConfPath, *ctrlQName, *enabled);
+    if (*enabled) {
         logInfo("[EUDATMessage] sending message to the topic '*queue'");
         logVerbose("[EUDATMessage] message '*message'");
         if (*queue == 'None') {

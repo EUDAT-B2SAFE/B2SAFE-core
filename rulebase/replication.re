@@ -17,7 +17,7 @@
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndCreatePID(*path, *pid)
 # EUDATSearchAndDefineField(*path, *pid, *key)
-# EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnabled, *response) 
+# EUDATCheckIntegrityColl(*sCollPesult*source_res, *dCollPath, *dest_res, *logEnabled, *response) 
 # EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled, *response)
 
 
@@ -94,10 +94,11 @@ EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
 }
 
 EUDATCheckIntegrity(*source, *destination, *logEnabled, *notification, *response) {
-    *source_res = "";
-    *dest_res = "";
-    EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, 
-                        *logEnabled, *notification, *response);
+    *source_res = "null";
+    *dest_res = "null";
+    *status_transfer_success = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, 
+                                                   *logEnabled, *notification, *response);
+    *status_transfer_success;
 }
 
 # Data set replication
@@ -150,7 +151,7 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
                 logDebug("[EUDATReplication] perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
-                *source_res = "";
+                *source_res = "null";
                 *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
                                               *logEnabled, *notification, *response);
             }
@@ -162,17 +163,14 @@ EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *res
                  ++ "::registered=*registered::recursive=*recursive";
     }
     logDebug("[EUDATReplication] response = *response");
-#    EUDATGetZoneNameFromPath(*source, *zone);
-#    *queue = *zone ++ "_" ++ $userNameClient;
-#    *message = "status:*status;response:*response"
-#    EUDATMessage(*queue, *message);
 
     *status;
 }
 
 EUDATReplication(*source, *destination, *registered, *recursive, *response) {
-    *dest_res = "";
-    EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response);
+    *dest_res = "null";
+    *status = EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response);
+    *status;
 }
 
 # Transfer all data object saved in the logging system,
@@ -279,7 +277,7 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                 logDebug("[EUDATRegDataRepl] perform a further verification about checksum and size");
                 *logEnabled = bool("true");
                 *notification = 0;
-                *source_res = "";
+                *source_res = "null";
                 *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
                                               *logEnabled, *notification, *response);
             }
@@ -330,7 +328,7 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
                  logDebug("[EUDATRegDataRepl] perform a further verification about checksum and size");
                  *logEnabled = bool("true");
                  *notification = 0;
-                 *source_res = "";
+                 *source_res = "null";
                  *status = EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res,
                                                *logEnabled, *notification, *response);
             }
@@ -348,8 +346,9 @@ EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response) {
 }
 
 EUDATRegDataRepl(*source, *destination, *recursive, *response) {
-    *dest_res = "";
-    EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response);
+    *dest_res = "null";
+    *status = EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response);
+    *status;
 }
 
 # Verify that a PID exist for a given path and optionally create it 
@@ -547,10 +546,11 @@ EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnab
 }
 
 EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response) {
-    *source_res = "";
-    *dest_res = "";
-    EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, 
-                            *logEnabled, *check_response);
+    *source_res = "null";
+    *dest_res = "null";
+    *totalResult =  EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, 
+                                            *logEnabled, *check_response);
+    *totalResult;
 }
 
 # Checks differences about checksum and size between two Data Objects
@@ -589,8 +589,9 @@ EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled
 }
 
 EUDATCheckIntegrityDO(*source, *destination, *logEnabled, *response) {
-    *source_res = "";
-    *dest_res = "";
-    EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, 
-                          *logEnabled, *response);
+    *source_res = "null";
+    *dest_res = "null";
+    *status = EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, 
+                                    *logEnabled, *response);
+    *status;
 }
