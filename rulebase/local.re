@@ -33,7 +33,7 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    getConfParameters(*authzEnabled);
+    getConfParameters(*authzEnabled, *b2shareConf);
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
     }
@@ -111,8 +111,9 @@ getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getConfParameters(*authzEnabled) {
+getConfParameters(*authzEnabled, *b2shareConf) {
     *authzEnabled=bool("true");
+    *b2shareConf="/opt/eudat/b2safe/conf/b2share.conf"
 }
 
 # Provides version of the B2SAFE
