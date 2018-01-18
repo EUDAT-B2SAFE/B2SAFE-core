@@ -23,9 +23,9 @@ class B2shareClient():
                                             + ", community: " + str(community_id))
             acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
             create_draft_url = self.configuration.b2share_host_name + self.configuration.records_endpoint + acces_part
-            #'"external_pids":' + filePIDsString + ', ' + \
             data = '{"titles":[{"title":"' + title + '"}], ' + \
                    '"community":"' + community_id + '", ' + \
+				   '"external_pids":' + filePIDsString + ', ' + \
                    '"open_access":true, "community_specific": {}}'
             headers = {"Content-Type":"application/json"}
             if self.configuration.dryrun:
