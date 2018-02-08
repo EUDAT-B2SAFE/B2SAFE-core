@@ -89,7 +89,8 @@ def collectPIDsForCollection(collectionPath, configuration):
     for filePath in filePathsMap.keys():
         filePID = irodsu.getMetadata(filePath, "PID")
         if filePID : 
-            PIDobject = '{"key":"'+filePath+'",'+' "ePIC_PID":"'+filePID[0] +'"}'
+            # filePath[1:] deletes leading / in a path as requested in issue #112 on GitHub
+            PIDobject = '{"key":"'+filePath[1:]+'",'+' "ePIC_PID":"'+filePID[0] +'"}'
             PIDobjectsString = PIDobjectsString + PIDobject +','
     forLastElemIndex = len(PIDobjectsString) - 1 #delete last comma
     PIDobjectsString = PIDobjectsString[:forLastElemIndex] + ']'
