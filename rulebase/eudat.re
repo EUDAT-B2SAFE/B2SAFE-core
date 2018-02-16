@@ -304,8 +304,7 @@ EUDATLog(*message, *level) {
 # Author: Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
 EUDATQueue(*action, *message, *number) {
-    logDebug("[EUDATQueue] performing action *action with message '*message'"
-             ++ " and number *number");
+    logDebug("[EUDATQueue] performing action *action");
     getLogParameters(*logConfPath);
     *options = "";
     if (*action == 'pop' || *action == 'queuesize') {
