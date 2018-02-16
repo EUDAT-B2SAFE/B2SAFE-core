@@ -29,7 +29,7 @@ eudatSimulateRecovery{
         writeBytesBuf("stdout", *R_BUF);
         msiDataObjClose(*S_FD, *status2);
         writeLine("stdout", "");
-        EUDATiFieldVALUEretrieve("*home/test_data2.txt", "PID", *value);
+        EUDATgetLastAVU("*home/test_data2.txt", "PID", *value);
         writeLine("stdout", "The Replica *home/test_data2.txt has PID = *value");
         writeLine("stdout", "");
         # Alter the content of the replica to simulate a failure

@@ -29,7 +29,7 @@ eudatRepl{
         msiDataObjClose(*S_FD, *status2);
         writeLine("stdout", "");
 
-        EUDATiFieldVALUEretrieve("*home/test_data2.txt", "PID", *value);
+        EUDATgetLastAVU("*home/test_data2.txt", "PID", *value);
         writeLine("stdout", "The Replica *home/test_data2.txt has PID = *value");
         EUDATePIDremove("*home/test_data2.txt", "true");
         writeLine("stdout", "PID *value removed"); 
