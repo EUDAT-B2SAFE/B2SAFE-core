@@ -45,9 +45,9 @@ eudatReplColl{
         writeLine("stdout", "");
 
         writeLine("stdout", "PIDs for data:");
-        EUDATiFieldVALUEretrieve("*tdata", "PID", *origPID);
+        EUDATgetLastAVU("*tdata", "PID", *origPID);
         writeLine("stdout", "The Original *tdata has PID = *origPID");
-        EUDATiFieldVALUEretrieve("*tcoll2/test_data.txt", "PID", *value);
+        EUDATgetLastAVU("*tcoll2/test_data.txt", "PID", *value);
         writeLine("stdout", "The Replica *tcoll2/test_data.txt has PID = *value");
 
         writeLine("stdout", "Remove replicated data object");
@@ -58,9 +58,9 @@ eudatReplColl{
 
         writeLine("stdout", "");
         writeLine("stdout", "PIDs for collections:");
-        EUDATiFieldVALUEretrieve(*tcoll, "PID", *origCollPID);
+        EUDATgetLastAVU(*tcoll, "PID", *origCollPID);
         writeLine("stdout", "The Original *tcoll has PID = *origCollPID");
-        EUDATiFieldVALUEretrieve(*tcoll2, "PID", *value);
+        EUDATgetLastAVU(*tcoll2, "PID", *value);
         writeLine("stdout", "The Replica *tcoll2 has PID = *value");
         
        writeLine("stdout", "Remove replica Collection and PID.");
