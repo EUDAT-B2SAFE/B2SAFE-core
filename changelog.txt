@@ -1,3 +1,7 @@
+B2SAFE package 4.1.1 [2018/02/22]
+- fixed bug related to EUDATTransferUsingFailLog rule (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/113)
+- updated test rules
+
 B2SAFE package 4.1.0 [2017/12/18]
 - tested sucessfully against iRODS v4.2.1. The test against iRODS 4.2.2 failed due to this bug: https://github.com/irods/irods/issues/3722, therefore the v4.2.2 is not supported yet.
 - fixed bug related to EUDATReplication rule (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/102)
