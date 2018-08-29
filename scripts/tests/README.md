@@ -18,12 +18,15 @@ The suite of unit and integration test cases for all parts uses the standard tes
   * filename: `epic2_credentials`
   * location: under `resources` directory 
 * iRODS Integration tests require a `~/.irods/irods_environment.json` with at least:
+
     irods_default_hash_scheme
     irods_default_resource
     irods_home
     irods_user_name
     irods_zone_name
+
 * b2safe Integration test require a `~/.irods/irods_environment.json` with at least:
+
     irods_default_hash_scheme
     irods_default_resource
     irods_home
