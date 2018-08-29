@@ -79,7 +79,6 @@ NOTE: following needs to be updated/added in "/opt/eudat/b2safe/packaging/instal
 - check the python scripts for missing python libraries.
   $ cd /opt/eudat/b2safe/cmd
   $ ./authZmanager.py -h
-  $ ./epicclient.py --help
   $ ./epicclient2.py --help
   $ ./logmanager.py -h
   $ ./messageManager.py -h

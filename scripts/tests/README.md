@@ -1,7 +1,7 @@
 ## Testing Guidelines for EPIC Client, EPIC client 2, log, auth, iRODS, b2SAFE
 
 The suite can test following parts:
-* epicclient.pyi unit and integration test
+* epicclient.py unit and integration test
 * epicclient2.py integration test
 * log
 * auth
