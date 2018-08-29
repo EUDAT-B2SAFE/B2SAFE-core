@@ -11,12 +11,24 @@ The suite can test following parts:
 The suite of unit and integration test cases for all parts uses the standard testing framework, i.e. `unittest`, aka “PyUnit”, the Python version of JUnit.
 
 * Unit tests use `unittest.mock` to mock EPIC REST API calls.
-* EPIC Integrations tests require a valid credentials file (otherwise test suite will be skipped):
+* EPIC Integration tests require a valid credentials file (otherwise test suite will be skipped):
   * filename: `epic_credentials` (see [example](resources/epic_credentials_example))
   * location: under `resources` directory 
-* EPIC2 Integrations tests require a valid credentials file (otherwise test suite will be skipped):
+* EPIC2 Integration tests require a valid credentials file (otherwise test suite will be skipped):
   * filename: `epic2_credentials`
   * location: under `resources` directory 
+* iRODS Integration tests require a `~/.irods/irods_environment.json` with at least:
+    irods_default_hash_scheme
+    irods_default_resource
+    irods_home
+    irods_user_name
+    irods_zone_name
+* b2safe Integration test require a `~/.irods/irods_environment.json` with at least:
+    irods_default_hash_scheme
+    irods_default_resource
+    irods_home
+    irods_user_name
+    irods_zone_name
 
 ### Requirements
 
