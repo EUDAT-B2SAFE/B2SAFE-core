@@ -13,7 +13,6 @@
 INSTALL_CONFIG=./install.conf
 STATUS=0
 EUDAT_RULEFILES=''
-EPICCLIENT2=true
 JSON_CONFIG="false"
 DATE_TODAY=`date +%Y%m%d`
 #
@@ -34,11 +33,6 @@ DEFAULT_RESOURCE=eudat
 CRED_STORE_TYPE=os
 CRED_FILE_PATH=$B2SAFE_PACKAGE_DIR/conf
 SERVER_ID=
-#
-# credentials for epicclient
-BASE_URI=
-USERNAME=
-PREFIX=
 #
 # credentials for epicclient2
 HANDLE_SERVER_URL=
@@ -137,32 +131,19 @@ check_epicclient2_config() {
     then
         echo "epicclient2 parameters set. We will use epicclient2"
     else
-        ANSWER_STRING="YES, I am really really really sure I want to use the old epicclient!"
+        BASENAME=$(basename $INSTALL_CONFIG)
+        echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
+        echo "Update where necessary and rerun the procedure"
         echo ""
-        echo "epicclient2 parameters are NOT set"
+        echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
+        echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
+        echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""
+        echo "PREFIX=\"ZZZ\""
+        echo "HANDLEOWNER=\"0.NA/ZZZ\""
+        echo "REVERSELOOKUP_USERNAME=\"ZZZ\""
+        echo "HTTPS_VERIFY=\"True\""
         echo ""
-        echo -n "If you want to use the old epicclient answer \"${ANSWER_STRING}\" :"
-        read ANSWER
-        echo ""
-        if [ "$ANSWER_STRING" == "$ANSWER" ]
-        then
-            echo "we will use the old epicclient"
-            EPICCLIENT2=false
-        else
-            BASENAME=$(basename $INSTALL_CONFIG)
-            echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
-            echo "Update where necessary and rerun the procedure"
-            echo ""
-            echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
-            echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
-            echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""
-            echo "PREFIX=\"ZZZ\""
-            echo "HANDLEOWNER=\"0.NA/ZZZ\""
-            echo "REVERSELOOKUP_USERNAME=\"ZZZ\""
-            echo "HTTPS_VERIFY=\"True\""
-            echo ""
-            STATUS=1
-        fi
+        STATUS=1
     fi
 
     return $STATUS
@@ -372,10 +353,6 @@ install_python_scripts() {
         echo "rm $PYTHON_LINKFILE"
         rm $PYTHON_LINKFILE
     fi
-    if ! [ "${EPICCLIENT2}" == "true" ]
-    then
-        file=`find $B2SAFE_PACKAGE_DIR/cmd/${SHORTFILE}` 
-    fi
     # link the correct file
     echo "ln -sf $file $PYTHON_LINKFILE"
     ln -sf $file $PYTHON_LINKFILE
@@ -414,52 +391,6 @@ update_get_epic_api_parameters() {
         echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
         STATUS=1
     fi
-
-    return $STATUS
-}
-
-update_epicclient_credentials() {
-
-    echo -n "enter the password belonging to the credentals of username: $USERNAME for prefix: $PREFIX :"
-    read -s PASSWORD
-    echo ""
-
-    if [ ! -e ${CRED_FILE_PATH}.org.${DATE_TODAY} ]
-    then
-        if [ -e $CRED_FILE_PATH ]
-        then
-           cp $CRED_FILE_PATH ${CRED_FILE_PATH}.org.${DATE_TODAY} 
-           # set access mode to file
-           chmod 600 ${CRED_FILE_PATH}.org.${DATE_TODAY}
-        fi
-    fi
-
-    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_epicclient_example
-    cat $CRED_FILE_PATH_EXAMPLE | \
-        awk -v BASE_URI=$BASE_URI -v USERNAME=$USERNAME -v PREFIX=$PREFIX -v PASSWORD=$PASSWORD '{
-            if ( $1 ~ /baseuri/ ) {
-                $0="    \"baseuri\": \""BASE_URI"\","
-            }
-            if ( $1 ~ /"username/ ) {
-                $0="    \"username\": \""USERNAME"\","
-            }
-            if ( $1 ~ /prefix/ ) {
-                $0="    \"prefix\": \""PREFIX"\","
-            }
-            if ( $1 ~ /password/ ) {
-                $0="    \"password\": \""PASSWORD"\","
-            } print $0
-        }' >  $CRED_FILE_PATH.new
-    if [ $? -eq 0 ]
-    then
-        mv $CRED_FILE_PATH.new   $CRED_FILE_PATH
-    else
-        echo "ERROR: updating $CRED_FILE_PATH failed!"
-        STATUS=1
-    fi
-
-    # set access mode to file
-    chmod 600 $CRED_FILE_PATH
 
     return $STATUS
 }
@@ -835,16 +766,9 @@ fi
 #
 if [ $STATUS -eq 0 ]
 then
-    if [ "${EPICCLIENT2}" == "true" ]
-    then
-        echo "update_epicclient2_credentials"
-        update_epicclient2_credentials
-        STATUS=$?
-    else
-        echo "update_epicclient_credentials"
-        update_epicclient_credentials
-        STATUS=$?
-    fi
+    echo "update_epicclient2_credentials"
+    update_epicclient2_credentials
+    STATUS=$?
 fi
 
 #
@@ -856,7 +780,6 @@ then
     echo "update_authz_map_json"
     update_get_auth_parameters
     STATUS=$?
-    #update_authz_map_json
 fi
 
 #
