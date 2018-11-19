@@ -23,7 +23,7 @@
 # EUDATePIDsearch(*field, *value, *PID)
 # EUDATeCHECKSUMupdate(*PID, *path)
 # EUDATeURLupdate(*PID, *newURL)
-# EUDATeURLsearch(*PID, *URL)
+# EUDATeURLupdateColl(*PID, *newURL)
 # EUDATePIDremove(*path, *force)
 # EUDATiRORupdate(*source, *pid)
 # EUDATeRORupdate(*pid,*newRor)
@@ -167,13 +167,13 @@ EUDATSearchPID(*path, *existing_pid) {
 #-------------------------------------------------------------------------------
 EUDATSearchPIDchecksum(*path, *existing_pid, *existing_url) {
 
-    logDebug("[EUDATSearchPIDchecksum] search pid for *path");
+    logDebug("[EUDATSearchPIDchecksum] searching checksum for *path");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
 
     *resource = "";
     EUDATiCHECKSUMget(*path, *checksum, *modtime, *resource)
     EUDATePIDsearch("EUDAT/CHECKSUM", *checksum, *existing_pid);
-    EUDATeURLsearch(*existing_pid, *existing_url);
+    *existing_url = EUDATGeteValPid(*existing_pid, "URL");
     logDebug("[EUDATSearchPIDchecksum] PID = *existing_pid, URL = *existing_url");
 }
 
@@ -412,8 +412,8 @@ EUDATeURLupdate(*PID, *newURL) {
 # and all its sub-collections and objects.
 #
 # Arguments:
-#   *PID                [IN] The PID associated to $collName
-#   *newURL             [IN] The new URL to be associated to the PID of $collName
+#   *PID                [IN] The PID associated to the collection
+#   *newURL             [IN] The new URL to be associated to the PID of the collection
 #
 # Author: Claudio Cacciari, CINECA
 #-------------------------------------------------------------------------------
@@ -422,14 +422,13 @@ EUDATeURLupdateColl(*PID, *newURL) {
     logDebug("[EUDATeURLupdateColl] updating collection *PID with URL *newURL and all its content");
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     getHttpApiParameters(*serverApireg, *serverApipub);
+    *oldURL = EUDATGeteValPid(*PID, "URL");
     if (*oldURL like "*serverApireg\*" ) {
         *serverApi = *serverApireg
     }
     else {
        *serverApi = *serverApipub
     }
-
-    EUDATeURLsearch(*PID, *oldURL);
     msiStrlen(*serverApi,*serverApiLength);
     msiSubstr(*oldURL, str(int(*serverApiLength)), "null", *sourcePath);
     msiSubstr(*newURL, str(int(*serverApiLength)), "null", *targetPath);
@@ -457,23 +456,6 @@ EUDATeURLupdateColl(*PID, *newURL) {
             EUDATeURLupdate(*existing_pid, *targetObj);
         }
     }
-}
-
-# This function search the URL field of the PID
-#
-# Arguments:
-#   *PID                [IN] The PID associated to $objPath
-#   *newURL             [IN] The new URL to be associated to the PID
-#
-# Author: Giacomo Mariani, CINECA
-#-------------------------------------------------------------------------------
-EUDATeURLsearch(*PID, *URL) {
-    getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
-    logDebug("[EUDATeURLsearch] search URL in PID *PID");
-    msiExecCmd("epicclient.py","*credStoreType *credStorePath read *PID --key URL ",
-               "null", "null", "null", *outEUS);
-    msiGetStdoutInExecCmdOut(*outEUS, *URL);
-    logDebug("[EUDATeURLsearch] response = *URL");
 }
 
 # This function remove an ePID... even if its EUDAT/REPLICA field is not empty!
