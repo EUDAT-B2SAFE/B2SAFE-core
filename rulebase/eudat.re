@@ -7,12 +7,14 @@
 # List of the functions:
 #
 # ---- logging ---
+# logVerbose(*msg)
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
 #---- authorization ---
 # EUDATAuthZ(*user, *action, *target, *response)
+# EUDATGetPAMusers(*json_map)
 #---- utility ---
 # EUDATObjExist(*path, *response)
 # EUDATPushMetadata(*path, *queue)
@@ -745,6 +747,21 @@ EUDATcountMetaKeys( *Path, *Key, *Value ) {
         *Value = *B.META_DATA_ATTR_VALUE;
     }
     logVerbose("[EUDATcountMetaKeys] got count = *Value");     
+}
+
+# get the content of the user map file for OAuth2 authentication in json format
+# 
+# Parameters:
+#     *json_map     [OUT] a string representing the user mapping
+#
+# Author: Claudio Cacciari, CINECA
+# -----------------------------------------------------------------------------
+EUDATGetPAMusers(*json_map) {
+    logVerbose("[EUDATGetPAMusers] checking authorization for $userNameClient to read users");
+    EUDATAuthZ($userNameClient, "read", "users", *response);
+    msiExecCmd("pam_user_reader.py", "null", "null", "null", "null", *outUsersJson);
+    msiGetStdoutInExecCmdOut(*outUsersJson, *json_map);    
+    logVerbose("[EUDATGetPAMusers] json user map = *json_map");
 }
 
 ################################################################################

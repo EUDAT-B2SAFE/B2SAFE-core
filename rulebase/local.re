@@ -39,6 +39,20 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     }
 }
 
+# Provides parameters for the connection with the EPIC service
+#  
+# Arguments:
+# *serverApireg     [OUT] the endpoint of the HTTP API interface for data with PIDs
+# *serverApipub     [OUT] the endpoint of the HTTP API interface for public data
+#
+# Author: Claudio Cacciari (Cineca)
+#-------------------------------------------------------------------------------
+getHttpApiParameters(*serverApireg, *serverApipub) {
+
+    *serverApireg="https://<hostnameWithFullDomain>/api/registered";
+    *serverApipub="https://<hostnameWithFullDomain>/api/public";
+}
+
 # Parse the credentials to connect to an EPIC server. A file called
 # "credentials" MUST contain all the connection details in the home folder of
 # the user running this rule.
@@ -124,8 +138,8 @@ getConfParameters(*authzEnabled) {
 #-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
     *major_version = "4";
-    *minor_version = "1";
-    *sub_version = "1";
+    *minor_version = "2";
+    *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
 

@@ -21,6 +21,8 @@ fi
 # Define test file name
 testFileName="test_data.txt"
 testFileNameRemote="test_data2.txt"
+testCollName="test_coll_root"
+testCollNameSub="test_coll_sub"
 
 # Get user name and zone name from ienv
 irods_user_name=`ienv | grep irods_user_name | cut -d '-' -f 2 | tr -d '[[:space:]]'`
@@ -72,6 +74,35 @@ echo "############ Data Object ############"
 ils -l ${testFileName}
 echo ""
 
+# Define collection
+collPath="${irods_home}/${testCollName}"
+# If exists, ask whether replace or exit
+exists=`ils ${irods_home} | grep ${testCollName}`
+if [ ! -z $exists ]
+then
+    echo "The collection $collPath already exists. Remove it before continuing (y or n)? Otherwise, script will exit."
+    read shouldRemove
+    echo "You entered $shouldRemove"
+    if [ $shouldRemove == "y" ]
+    then
+        echo "Will be removed"
+        irm -rf $collPath
+    else
+        echo "Exiting..."
+        exit 1
+    fi
+fi
+
+imkdir ${testCollName}
+imkdir "${testCollName}/${testCollNameSub}"
+echo "Hello World!" > ${testFileName}
+iput ${testFileName} ${testCollName}
+iput ${testFileName} "${testCollName}/${testCollNameSub}"
+rm ${testFileName}
+echo "############ Collection ############"
+ils -rl ${testCollName}
+echo ""
+
 
 createPID () {
   rule="{EUDATCreatePID(*parent_pid, *path, *ror, *fio, *fixed, *newPID)}"
@@ -105,8 +136,12 @@ createPID () {
 replication () {
   echo ""
   echo "############ REPLICATION ############"
-#  destPath="${irods_home}/test_data2.txt"
-  destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/${testFileNameRemote}"
+  if [ "${REMOTE_ZONE}" == "${irods_zone_name}" ]
+  then
+    destPath="${irods_home}/${testFileNameRemote}"
+  else
+    destPath="/${REMOTE_ZONE}/home/${irods_user_name}#${irods_zone_name}/${testFileNameRemote}"
+  fi
   echo "Replica path: ${destPath}"
   rule="{*status = EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response); 
         if (*status) {
@@ -161,10 +196,53 @@ replication () {
   irm ${destPath}
 }
 
+moveCollection () {
+  rule="{EUDATPidsForColl(*collPath, *fixed)}"
+  input="*collPath=${collPath}%*fixed=true"
+
+  echo ""
+  echo "############ Collection PID creation ############"
+  echo "Rule: irule ${rule} ${input} null"
+
+  irule "${rule}" "${input}" null
+  rule="{EUDATSearchPID(*path, *existing_pid)}"
+  input="*path=${collPath}"
+  output="*existing_pid"
+  pid_raw=`irule "${rule}" "${input}" "${output}"`
+  pid=`echo ${pid_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  echo "ROOT Collection PID: ${pid}"
+  root_coll_pid=${pid}
+  root_coll_url_raw=`irule "{EUDATGeteValPid(*pid, *key)}" "*pid=${root_coll_pid}%*key='URL'" ruleExecOut`
+  root_coll_url=`echo ${root_coll_url_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  echo "ROOT Collection URL: ${root_coll_url}"
+  new_collPath="${irods_home}/${testCollName}_new"
+
+  echo ""
+  echo "############ Moving collection ############"
+  imv ${collPath} ${new_collPath}
+
+  echo ""
+  echo "############ Updating collection PID ############"
+  http_url_raw=`irule "{getHttpApiParameters(*serverApireg, *serverApipub)}" null "*serverApireg"`
+  http_url=`echo ${http_url_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  newURL="${http_url}${new_collPath}"
+  irule "{EUDATeURLupdateColl(*pid, *newURL)}" "*pid=${pid}%*newURL=${newURL}" null
+  new_root_coll_url_raw=`irule "{EUDATGeteValPid(*pid, *key)}" "*pid=${root_coll_pid}%*key='URL'" ruleExecOut`
+  new_root_coll_url=`echo ${new_root_coll_url_raw} | cut -d '=' -f 2 | tr -d '[[:space:]]'`
+  echo "NEW ROOT Collection URL: ${new_root_coll_url}"
+  irule "{EUDATePIDremove(*path, *force)}" "*path=${new_collPath}%*force=true" null
+  irule "{EUDATePIDremove(*path, *force)}" "*path=${new_collPath}/${testFileName}%*force=true" null
+  irule "{EUDATePIDremove(*path, *force)}" "*path=${new_collPath}/${testCollNameSub}%*force=true" null
+  irule "{EUDATePIDremove(*path, *force)}" "*path=${new_collPath}/${testCollNameSub}/${testFileName}%*force=true" null
+  irm -rf ${new_collPath}
+}
+
 createPID
 if [ -n "$REMOTE_ZONE" ]; then
   replication
 fi
+moveCollection
 
 irule "{EUDATePIDremove(*path, *force)}" "*path=${sourcePath}%*force=true" null
 irm ${sourcePath}
+#irm -rf ${collPath}
