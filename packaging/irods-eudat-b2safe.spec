@@ -182,9 +182,11 @@ fi
 
 
 %changelog
+* Thu Nov 22 2018  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.0
+- add new parameters.
 * Wed Nov 22 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.1
 - remove obsolete parameters. Only support epicclient2.py
-* Wed Apr 18 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.0
+* Tue Apr 18 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.0
 - update for better info. Remove requires. iRODS can be in 2 different packages.
 * Fri Nov 20 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0
 - set owner of files during installation of rpm.
@@ -192,7 +194,7 @@ fi
 - remove docs directory.
 * Thu Oct 15 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - add extra files and create docs directory, specify config files.
-* Mon Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
+* Tue Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - assign version of package at build time with input parameters 
 * Fri Feb 13 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - Add files to b2safe package

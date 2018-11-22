@@ -150,6 +150,45 @@ check_epicclient2_config() {
 
 }
 
+check_http_api_config() {
+
+    COUNTER=0
+    PARAMETERS_PRESENT=0
+
+    # check which of the http api parameters are set
+    for parameter in SERVERAPIREG SERVERAPIPUB
+    do
+        let COUNTER=COUNTER+1
+        eval processed_parameter=\$$parameter
+        if ! [ "${processed_parameter}X" == "X"  ]
+        then
+           let PARAMETERS_PRESENT=PARAMETERS_PRESENT+1
+        fi
+    done
+
+    if [ "$COUNTER" -eq "$PARAMETERS_PRESENT" ]
+    then
+        echo "http api parameters set. We will use the http api parameters"
+    else
+        BASENAME=$(basename $INSTALL_CONFIG)
+        echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
+        echo "Update where necessary and rerun the procedure"
+        echo ""
+        echo "SERVERAPIREG=\"https://<hostnameWithFullDomain>/api/registered\""
+        echo "SERVERAPIPUB=\"https://<hostnameWithFullDomain>/api/pub\""
+        echo ""
+        echo "or if no http api is present"
+        echo ""
+        echo "SERVERAPIREG=\"irods://<hostnameWithFullDomain>:1247\""
+        echo "SERVERAPIPUB=\"irods://<hostnameWithFullDomain>:1247\""
+        echo ""
+        STATUS=1
+    fi
+
+    return $STATUS
+
+}
+
 create_links() {
 
     COUNT=0
@@ -642,6 +681,34 @@ update_get_conf_parameters() {
     return $STATUS
 }
 
+update_get_http_api_parameters() {
+
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v SERVERAPIREG=$SERVERAPIREG -v SERVERAPIPUB=$SERVERAPIPUB '{
+            if ( $1 ~ /^ +\*serverApireg/ ) {
+                $1=$1"=\""SERVERAPIREG"\";"
+                $2=""
+            } 
+            if ( $1 ~ /^ +\*serverApipub/ ) {
+                $1=$1"=\""SERVERAPIPUB"\";"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
 
 
 ########################
@@ -699,6 +766,17 @@ if [ $STATUS -eq 0 ]
 then
     echo "check epicclient2 config in install.conf"
     check_epicclient2_config
+    STATUS=$?
+fi
+
+#
+# check if parameters for http api are set.
+# if they are NOT set ask the user to add them
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "check http api config in install.conf"
+    check_http_api_config
     STATUS=$?
 fi
 
@@ -814,3 +892,12 @@ then
     STATUS=$?
 fi
 
+#
+# update the "getConfParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "update_http_api_parameters"
+    update_get_http_api_parameters
+    STATUS=$?
+fi
