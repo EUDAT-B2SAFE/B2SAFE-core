@@ -195,7 +195,9 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
         *replicaNew = *childPID;
     }
     else {
-        if (*replica like "*"++*childPID++"*") {
+        msiExecCmd("regex_search_string.py","*childPID *replica", "null", "null", "null", *status);
+        msiGetStdoutInExecCmdOut(*status, *response);
+        if (*response not like "no match found!") {
            *replicaNew = *replica;
         }
         else {
