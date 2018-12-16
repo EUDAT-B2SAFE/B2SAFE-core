@@ -4,11 +4,14 @@
 ################################################################################
 # B2SAFE B2SHARE client Command Line Interface                                 #
 ################################################################################
+import sys
+#sys.path.insert(0,'/usr/lib/python3.4/site-packages')
+
 import logging.handlers
-import requests
 import argparse
 import os
 import pprint
+import requests
 
 from manifest import IRODSUtils
 from configuration import Configuration

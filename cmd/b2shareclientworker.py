@@ -1,9 +1,8 @@
 #!/usr/bin/env python 
 # -*- coding: utf-8 -*-
-
 import json
-import requests
 import jsonpatch
+import requests
 
 class B2shareClient():
 
