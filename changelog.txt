@@ -1,3 +1,10 @@
+B2SAFE package 4.2.0 [2019/01/07]
+- fixed bug related to redundant replica handles (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/120)
+- updated test rules
+- improved wiki docuentation
+- added support for oauth2 protocol via PAM module
+- added support to HTTP interfaces in the PID parameters
+
 B2SAFE package 4.1.1 [2018/02/22]
 - fixed bug related to EUDATTransferUsingFailLog rule (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/113)
 - updated test rules
