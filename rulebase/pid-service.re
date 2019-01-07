@@ -222,6 +222,12 @@ EUDATUpdatePIDWithNewChild(*parentPID, *childPID) {
 #-------------------------------------------------------------------------------
 EUDATGeteValPid(*pid, *key) {
     logVerbose("[EUDATGeteValPid] get *key from *pid");
+    if (*pid == "") {
+        # throw error to avoid costly interaction with pid server that will fail anyway
+        logError("[EUDATGeteValPid] No PID provided. This will fail.");
+        *errorMsg = "Trying to read values from PID when no PID provided.";
+        failmsg(-1, *errorMsg); # TODO Return a more suitable return code
+    }
     getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);
     msiExecCmd("epicclient.py", "*credStoreType *credStorePath read *pid --key *key",
                "null", "null", "null", *outGRP);
