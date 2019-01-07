@@ -1,0 +1,68 @@
+# section containing the common options
+[common]
+
+#path to the log file
+logfile=log/prace_eudat_users_sync.log
+# log level, possible values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+loglevel=DEBUG
+#logging format
+logformat=%(asctime)s %(levelname)s in %(module)s: %(message)s
+#Max size of the log file
+logmaxbytes=4194304
+#number of log files to rotate
+logbackupcnt=10
+
+# configuration of B2ACCESS API bind
+[B2ACCESS]
+
+#base URL to access the API
+base_url=https://b2access.eudat.eu/rest-admin/v1/
+#API user name
+username=PRACE_proxy
+#file with API user password
+password_file=~/.unity.pwd
+#path to file or directory containing certificates used to verify the B2ACCESS server
+#it is not mandatory, but recommended for security
+cert_verify=/etc/ssl/certs/b2access.eudat.eu.pem
+
+[PRACE]
+#Host with PRACE LDAP
+host=ldap://ldap.prace.eu:389
+#Bind DN to LDAP
+binddn=cn=admin,dc=deisa,dc=org
+#file with password to LDAP
+password_file=~/.prace.pwd
+#search base
+searchbase=dc=deisa,dc=org
+#attribute containing DN from user's certificate
+usercertdn=deisaSubjectDN
+#attribure contaning user id
+userid=uid
+#attribute containing user name
+username=cn
+
+#MAP SECTIONS
+# The sections names must be MAP*
+# They are analysed in alphabetical order.
+# A single section maps users from prace_searchbase LDAP subtree,
+# filtered by prace_userfilter to possibly many eudat_groups
+# Note, that a member of /X/Y EUDAT subgrop must be also a member of /X group
+[MAP_1]
+eudat_groups=/PRACE
+prace_searchbase=dc=deisa,dc=org
+prace_userfilter=(deisaUserProfile=eudat)
+
+[MAP_2]
+eudat_groups=/PRACE/inactive
+prace_searchbase=dc=deisa,dc=org
+prace_userfilter=(&(!(praceAccountStatus=active))(deisaUserProfile=eudat))
+
+[MAP_3]
+eudat_groups=/PRACE/psnc2 /PRACE/psnc
+prace_searchbase=ou=psnc.pl,ou=ua,dc=deisa,dc=org
+prace_userfilter=(deisaUserProfile=eudat2)
+
+[MAP_4]
+eudat_groups=/PRACE/active
+prace_searchbase=dc=deisa,dc=org
+prace_userfilter=(&(praceAccountStatus=active)(deisaUserProfile=eudat))

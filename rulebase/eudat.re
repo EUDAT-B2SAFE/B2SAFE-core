@@ -6,27 +6,31 @@
 
 # List of the functions:
 #
-#---- authorization ---
-# EUDATAuthZ(*user, *action, *target, *response)
-#---- utility ---
-# EUDATisMetadata(*path)
-# EUDATPushMetadata(*path, *queue)
-# EUDATMessage(*queue, *message)
-# EUDATLog(*message, *level)
-# EUDATQueue(*action, *message, *number)
 # ---- logging ---
+# logVerbose(*msg)
 # logInfo(*msg)
 # logDebug(*msg)
 # logError(*msg)
 # logWithLevel(*level, *msg)
+#---- authorization ---
+# EUDATAuthZ(*user, *action, *target, *response)
+# EUDATGetPAMusers(*json_map)
+#---- utility ---
+# EUDATObjExist(*path, *response)
+# EUDATPushMetadata(*path, *queue)
+# EUDATPushCollMetadata(*path, *queue)
+# EUDATPushObjMetadata(*path, *queue)
+# EUDATMessage(*queue, *message)
+# EUDATLog(*message, *level)
+# EUDATQueue(*action, *message, *number)
 # ---- core ---
 # EUDATtoBoolean(*var)
 # EUDATReplaceHash(*path, *out)
 # EUDATGetZoneNameFromPath(*path, *out)
 # EUDATGetZoneHostFromZoneName(*zoneName, *conn)
 # EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime)
-# EUDATiCHECKSUMretrieve(*path, *checksum, *modtime)
-# EUDATiCHECKSUMget(*path, *checksum, *modtime)
+# EUDATiCHECKSUMretrieve(*path, *checksum, *modtime, *resource)
+# EUDATiCHECKSUMget(*path, *checksum, *modtime, *resource)
 # EUDATgetObjectTimeDiff(*filePath, *mode, *age)
 # EUDATgetObjectAge(*filePath, *age) 
 # EUDATfileInPath(*path,*subColl)
@@ -34,13 +38,54 @@
 # EUDATgetLastAVU(*Path, *Key, *Value)
 # EUDATgetCollAVU(*path, *res)
 # EUDATgetBulkMetadata(*path, *res)
+# EUDATgetObjMetadata(*path, *res)
 # EUDATcountMetaKeys( *Path, *Key, *Value )
-# EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime)
 #---- repository packages ---
 # EUDATrp_checkMeta(*source,*AName,*AValue)
 # EUDATrp_ingestObject( *source )
 # EUDATrp_transferInitiated( *source )
 # EUDATrp_transferFinished( *source )
+
+
+################################################################################
+#                                                                              #
+# Logging policies                                                             #
+#                                                                              #
+################################################################################
+logVerbose(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level == 3) {
+        logWithLevel("verbose", *msg);
+    }
+}
+
+logDebug(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level >= 2) {
+        logWithLevel("debug", *msg);
+    }
+}
+
+logInfo(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level >= 1) {
+        logWithLevel("info", *msg);
+    }
+}
+
+logError(*msg) {
+    getEUDATLoggerLevel(*level);
+    if (*level >= 0) {
+        logWithLevel("error", *msg);
+    }
+}
+
+logWithLevel(*levelstring, *msg) {
+    if (*levelstring == "info") { writeLine("serverLog","INFO: *msg");}
+    else if (*levelstring == "debug") { writeLine("serverLog","DEBUG: *msg");}
+    else if (*levelstring == "error") { writeLine("serverLog","ERROR: *msg");}
+    else if (*levelstring == "verbose") { writeLine("serverLog","VERBOSE: *msg");}
+}
 
 ################################################################################
 #                                                                              #
@@ -63,26 +108,22 @@
 #-------------------------------------------------------------------------------
 EUDATAuthZ(*user, *action, *target, *response) {
     getAuthZParameters(*authZMapPath);
-    logDebug("checking authorization for *user to perform: *action *target");
+    logVerbose("checking authorization for *user to perform: *action *target");
     msiExecCmd("authZmanager.py", "*authZMapPath check *user '*action' '*target'",
                "null", "null", "null", *outAuthZ);
     msiGetStdoutInExecCmdOut(*outAuthZ, *response);
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-    if (*msiFreeEnabled) {
-        msifree_microservice_out(*outAuthZ);
-    }
     if (*response == "False") {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
         # if (*status == "false") {}
-        logDebug("authorization denied");
+        logVerbose("authorization denied");
         msiExit("-1", "user is not allowed to perform the requested action");
     }
     else {
         # here should be placed specific authorization rules 
         # EUDATsetFilterACL(*action, *target, null, null, *status);
         # if (*status == "true") {}
-        logDebug("authorization granted");
+        logVerbose("authorization granted");
     }
 }
 
@@ -92,35 +133,42 @@ EUDATAuthZ(*user, *action, *target, *response) {
 #                                                                              #
 ################################################################################
 
-# It verifies if the current path is a special path reserved for metadata.
-#
-# Return
-#  True or False
-#
-# Parameters:
-#   *path     [IN]    the  path of the object/collection
-#
-# Author: Claudio Cacciari, Cineca
-#-------------------------------------------------------------------------------
-EUDATisMetadata(*path) {
-    *isMeta = bool("false");
-    if (*path like regex ".*\\.metadata.*") {
-        logDebug("the path *path is a metadata special path");
-        *isMeta = bool("true");
-    }
-    *isMeta;
-}
 
-# Push system level metadata to the messaging system
+# Push system level metadata to the messaging system.
+# The metadata are extracted recursively for the root collection, all the sub-collections
+# and the contained objects.
 # 
 # Parameters:
-#   *path     [IN]    the  path of the object/collection
+#   *path     [IN]    the  path of the object
+#   *response [OUT]    response
+# return:     true/false
+# 
+# Author: Claudio Cacciari, Cineca
+#-------------------------------------------------------------------------------
+EUDATObjExist(*path, *response) {
+    *res = bool("true");
+    *response = "*path exists and it is an object";
+    if (errormsg(msiObjStat(*path,*out), *errmsg) < 0) {
+        *response = "*path does not exist or it is not readable or it is not an object";
+        logError("[EUDATObjExist] *response");
+        *res = bool("false");
+    }
+    *res;
+}
+
+# Push system level metadata to the messaging system.
+# The metadata are extracted recursively for the root collection, all the sub-collections
+# and the contained objects.
+# 
+# Parameters:
+#   *path     [IN]    the  path of the collection
+#   *queue    [IN]    the messaging system queue
 # 
 # Author: Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
 EUDATPushMetadata(*path, *queue) {
 
-    logInfo("[EUDATPushMetadata] pushing metadata of object *path to topic *queue")
+    logInfo("[EUDATPushMetadata] pushing metadata of collection *path to topic *queue")
     # loop over the sub-collections of the collection
     foreach (*Row in SELECT COLL_NAME WHERE COLL_NAME = '*path' || like '*path/%') {
         *msg = '{ ' ++ *Row.COLL_NAME ++ ':';
@@ -128,9 +176,50 @@ EUDATPushMetadata(*path, *queue) {
         EUDATgetBulkMetadata(*Row.COLL_NAME, *res_objs);
         *message = *msg ++ '{ *res_coll, objects: [*res_objs] } }';
         logDebug("[EUDATPushMetadata] message: *message");
-        EUDATMessage(*queue, *message);        
+        EUDATMessage(*queue, *message); 
     }
 }
+
+# Push system level metadata to the messaging system.
+# The metadata are extracted for the collection
+# 
+# Parameters:
+#   *path     [IN]    the  path of the collection
+#   *queue    [IN]    the messaging system queue
+# 
+# Author: Claudio Cacciari, Cineca
+#-------------------------------------------------------------------------------
+EUDATPushCollMetadata(*path, *queue) {
+
+    logInfo("[EUDATPushCollMetadata] pushing metadata of collection *path to topic *queue")
+    *msg = '{ ' ++ *path ++ ':';
+    EUDATgetCollAVU(*path, *res_coll);
+    *message = *msg ++ '{ *res_coll, objects: [] } }';
+    logDebug("[EUDATPushCollMetadata] message: *message");
+    EUDATMessage(*queue, *message);
+}    
+
+
+# Push system level metadata to the messaging system.
+# The metadata are extracted for an object.
+# 
+# Parameters:
+#   *path     [IN]    the path of the object
+#   *queue    [IN]    the messaging system queue
+# 
+# Author: Claudio Cacciari, Cineca
+#-------------------------------------------------------------------------------
+EUDATPushObjMetadata(*path, *queue) {
+
+    logInfo("[EUDATPushObjMetadata] pushing metadata of obj *path to topic *queue")
+    msiSplitPath(*path, *parent, *child);
+    *msg = '{ ' ++ *parent ++ ':';
+    EUDATgetObjMetadata(*path, *res_objs);
+    *message = *msg ++ '{ objects: [*res_objs] } }';
+    logDebug("[EUDATPushObjMetadata] message: *message");
+    EUDATMessage(*queue, *message);
+}
+
 
 # It manages the writing and reading of log messages to/from external log services.
 # The current implementation writes the logs to specific log file.
@@ -139,24 +228,41 @@ EUDATPushMetadata(*path, *queue) {
 #  no response is expected
 #
 # Parameters:
-#   *queue     [IN]    the queue which will host the message
+#   *queue     [IN]    the queue which will host the message,
+#                      set it to None if you want to use the control queue
 #   *message   [IN]    the message to be sent
 #
 # Author: Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
 EUDATMessage(*queue, *message) {
 
-    logInfo("[EUDATMessage] pushing the message to topic *queue");
-    getMessageParameters(*msgConfPath, *enabled);
+    *res = 'None';
+    getMessageParameters(*msgConfPath, *ctrlQName, *enabled);
     if (*enabled) {
-        logInfo("[EUDATMessage] sending message '*message' to the topic '*queue'");
-        msiExecCmd("messageManager.py", "*msgConfPath publish *queue *message",
-                   "null", "null", "null", *outMessage);
-        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-        if (*msiFreeEnabled) {
-            msifree_microservice_out(*outMessage);
+        logInfo("[EUDATMessage] sending message to the topic '*queue'");
+        logVerbose("[EUDATMessage] message '*message'");
+        if (*queue == 'None') {
+            logDebug("[EUDATMessage] creating a new topic");
+            msiExecCmd("messageManager.py", "*msgConfPath topic -m create '*message'",
+                       "null", "null", "null", *outMessage1);
+            msiGetStdoutInExecCmdOut(*outMessage1, *outResp1);
+            logVerbose("[EUDATMessage] output: *outResp1");
+            *res = trimr(*outResp1, "\n");
+            *queue = *ctrlQName;
+            logDebug("[EUDATMessage] creating a new subscription for topic: *res");
+            *subName = *res ++ "_NOTIFY";
+            msiExecCmd("messageManager.py", "*msgConfPath sub create '*subName' '*res'",
+                       "null", "null", "null", *outMessage2);
+            msiGetStdoutInExecCmdOut(*outMessage2, *outResp2);
+            logVerbose("[EUDATMessage] output: *outResp2");
         }
+        logDebug("[EUDATMessage] sending the message"); 
+        msiExecCmd("messageManager.py", "*msgConfPath publish *queue *message", 
+                   "null", "null", "null", *outMessage);
+        msiGetStdoutInExecCmdOut(*outMessage, *outResp);
+        logVerbose("[EUDATMessage] output: *outResp");
     }
+    *res
 }
 
 # It manages the writing and reading of log messages to/from external log services.
@@ -173,12 +279,14 @@ EUDATMessage(*queue, *message) {
 #-------------------------------------------------------------------------------
 EUDATLog(*message, *level) {
     getLogParameters(*logConfPath);
-    logInfo("logging message '*message'");
-    msiExecCmd("logmanager.py", "*logConfPath log *level *message",
-               "null", "null", "null", *outLog);
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-    if (*msiFreeEnabled) {
-        msifree_microservice_out(*outLog);
+    logVerbose("[EUDATLog] logging message '*message'");
+    *err = errormsg(msiExecCmd("logmanager.py", "*logConfPath log *level *message",
+                    "null", "null", "null", *outLog), *errmsg);
+    if (*err < 0) {
+        logError("[EUDATLog] Error: *errmsg");
+    }
+    else {
+        logVerbose("[EUDATLog] message logged succesfully");
     }
 }
 
@@ -198,6 +306,7 @@ EUDATLog(*message, *level) {
 # Author: Claudio Cacciari, Cineca
 #-------------------------------------------------------------------------------
 EUDATQueue(*action, *message, *number) {
+    logDebug("[EUDATQueue] performing action *action");
     getLogParameters(*logConfPath);
     *options = "";
     if (*action == 'pop' || *action == 'queuesize') {
@@ -206,61 +315,30 @@ EUDATQueue(*action, *message, *number) {
     if (*action == 'pop' && int(*number) > 1) {
         *options = "-n "++str(*number);
     }
-    logInfo("logging action '*action' for message '*message'");
-    msiExecCmd("logmanager.py", "*logConfPath *action *options *message",
-               "null", "null", "null", *outQueue);
-    if (*action == 'pop' || *action == 'queuesize') {
-        msiGetStdoutInExecCmdOut(*outQueue, *message);
+    *err = errormsg(msiExecCmd("logmanager.py", "*logConfPath *action *options *message",
+                    "null", "null", "null", *outQueue), *errmsg);
+    if (*err < 0) {
+        logError("[EUDATQueue] Error: *errmsg");
     }
-    if (*action == 'pop' && int(*number) > 1) {
-        *message = triml(*message, "[");
-        *message = trimr(*message, "]");
-    }
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-    if (*msiFreeEnabled) {
-        msifree_microservice_out(*outQueue);
-    }
+    else {
+        if (*action == 'pop' || *action == 'queuesize') {
+            msiGetStdoutInExecCmdOut(*outQueue, *message);
+            logVerbose("[EUDATQueue] output: *message");
+        }
+        if (*action == 'pop' && int(*number) > 1) {
+            *message = triml(*message, "[");
+            *message = trimr(*message, "]");
+            logVerbose("[EUDATQueue] output: *message");
+        }
+    } 
 }
 
-################################################################################
-#                                                                              #
-# Logging policies                                                             #
-#                                                                              #
-################################################################################
-
-logDebug(*msg) {
-    getEUDATLoggerLevel(*level);
-    if (*level == 2) {
-        logWithLevel("debug", *msg);
-    }
-}
-
-logInfo(*msg) {
-    getEUDATLoggerLevel(*level);
-    if ((*level == 1) || (*level == 2)) {
-        logWithLevel("info", *msg);
-    }
-}
-
-logError(*msg) {
-    getEUDATLoggerLevel(*level);
-    if ((*level == 0) || (*level == 1) || (*level == 2)) {
-        logWithLevel("error", *msg);
-    }
-}
-
-logWithLevel(*level, *msg) {
-    on (*level == "info") { writeLine("serverLog","INFO: *msg");}
-    on (*level == "debug") { writeLine("serverLog","DEBUG: *msg");}
-    on (*level == "error") { writeLine("serverLog","ERROR: *msg");}
-}
-
-# Function: trsnsfrom string to boolean value
+# Function: transform string to boolean value
 #
 # Author: Claudio Cacciari (Cineca)
 #-----------------------------------------------
 EUDATtoBoolean(*var) {
-    logDebug("[EUDATtoBoolean] converting variable *var to boolean");
+    logVerbose("[EUDATtoBoolean] converting variable *var to boolean");
     if (*var == "None" || *var == "" || *var == "False" || *var == "false" || *var == "FALSE") {
         *status = bool("false");
     }
@@ -276,6 +354,7 @@ EUDATtoBoolean(*var) {
 #-------------------------------------------------------------------------------
 EUDATReplaceHash(*path, *out) {
  
+    logVerbose("[EUDATReplaceHash] replacing bad chars in *path");
     # replace #
     *out=*path;
     foreach ( *char in list("#","%","&") ) {
@@ -287,6 +366,7 @@ EUDATReplaceHash(*path, *out) {
        msiStrchop(*n,*n_chop);
        *out = *n_chop;
     }
+    logVerbose("[EUDATReplaceHash] replaced bad chars: *out");
 }
 
 # Function: replace microservice msiGetZoneNameFromPath (eudat.c)
@@ -295,8 +375,10 @@ EUDATReplaceHash(*path, *out) {
 #-------------------------------------------------------------------------------
 EUDATGetZoneNameFromPath(*path, *out) {
 
+    logVerbose("[EUDATGetZoneNameFromPath] getting zone name from: *path");
     *list = split("*path","/");
     *out = elem(*list,0);
+    logVerbose("[EUDATGetZoneNameFromPath] got zone name: *out");
 }
 
 # Gets the connection details of an iRODS Zone.
@@ -309,6 +391,7 @@ EUDATGetZoneNameFromPath(*path, *out) {
 #-------------------------------------------------------------------------------
 EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 
+    logVerbose("[EUDATGetZoneHostFromZoneName] getting host from zone: *zoneName");    
     *conn = ""
     foreach ( *row in SELECT ZONE_CONNECTION WHERE ZONE_NAME = '*zoneName') {
         *conn = *row.ZONE_CONNECTION;
@@ -325,6 +408,7 @@ EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
             msiSubstr("*serverID", "8", "-1", *conn);
         }
     }
+    logVerbose("[EUDATGetZoneHostFromZoneName] got host: *conn");
 }
 
 # Checks if date of the last computation of iCHECKSUM was set and set the date if not.
@@ -343,17 +427,18 @@ EUDATGetZoneHostFromZoneName(*zoneName, *conn) {
 #-------------------------------------------------------------------------------
 EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 
-    *metaName = 'eudat_dpm_checksum_date:*resc';
-    
-    foreach (*row in SELECT count(META_DATA_ATTR_VALUE) WHERE COLL_NAME = '*coll' AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName') {
+    logDebug("[EUDATiCHECKSUMdate] setting checksum timestamp for *coll/*name");
+    *metaName = 'eudat_dpm_checksum_date:*resc';    
+    foreach (*row in SELECT count(META_DATA_ATTR_VALUE) WHERE COLL_NAME = '*coll' 
+             AND DATA_NAME = '*name' AND META_DATA_ATTR_NAME = '*metaName') {
        *count = *row.META_DATA_ATTR_VALUE
         #*count = 0 means the attr was not set
         if (*count=="0"){
-            logInfo("[EUDATiCHECKSUMdate] setting *metaName=*modTime for *coll/*name.");
+            logDebug("[EUDATiCHECKSUMdate] setting *metaName=*modTime for *coll/*name.");
             msiString2KeyValPair("*metaName=*modTime",*kvpaircs);
             msiSetKeyValuePairsToObj(*kvpaircs, "*coll/*name", "-d")
         }else{
-            logInfo("[EUDATiCHECKSUMdate] *metaName already set for *coll/*name.");
+            logDebug("[EUDATiCHECKSUMdate] *metaName already set for *coll/*name.");
         }   
     }   
 }   
@@ -366,15 +451,16 @@ EUDATiCHECKSUMdate(*coll, *name, *resc, *modTime) {
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
 #   *modtime            [OUT]   modification time of the checksum
+#   *resource           [IN]    irods resource name
 #   *status             [REI]   false if no value is found, true elsewhere
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #-------------------------------------------------------------------------------
-EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
+EUDATiCHECKSUMretrieve(*path, *checksum, *modtime, *resource) {
     *status = bool("false");
     *checksum = "";
     *modtime = "";
-    logInfo("[EUDATiCHECKSUMretrieve] Looking at *path");
+    logDebug("[EUDATiCHECKSUMretrieve] getting checksum for *path");
     msiSplitPath(*path, *coll, *name);
     #Loop over all resources, possibly the checksum was not computed for all of them
     foreach ( *c in SELECT DATA_CHECKSUM, DATA_RESC_NAME, DATA_MODIFY_TIME WHERE DATA_NAME = '*name' AND COLL_NAME = '*coll') {
@@ -382,16 +468,20 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
         *resc = *c.DATA_RESC_NAME;      
         *modtime = *c.DATA_MODIFY_TIME;
 
-        if (*checksumTmp==""){
-            logInfo("[EUDATiCHECKSUMretrieve] the iCHECKSUM on resource *resc is empty.");
-        }else{
-            *checksum=*checksumTmp;
-            logInfo("[EUDATiCHECKSUMretrieve] iCHECKSUM = *checksum on resource *resc.");
-            #EUDATiCHECKSUMdate is called here instead just after msiDataObjChksum in EUDATiCHECKSUMget
-            #because it is not the only possible point the checksum may be computed
-            #other ones are "ichksum", "iput -k", "irepl" (on checksumed source) called by the user.
+        if (*checksumTmp=="") {
+            logDebug("[EUDATiCHECKSUMretrieve] the iCHECKSUM on resource *resc is empty.");
+        } 
+        else {
+            *checksum = *checksumTmp;
+            logDebug("[EUDATiCHECKSUMretrieve] iCHECKSUM = *checksum on resource *resc");
+            # EUDATiCHECKSUMdate is called here instead just after msiDataObjChksum in EUDATiCHECKSUMget
+            # because it is not the only possible point the checksum may be computed
+            # other ones are "ichksum", "iput -k", "irepl" (on checksumed source) called by the user.
             EUDATiCHECKSUMdate(*coll, *name, *resc, *modtime);
             *status = bool("true");
+            if (*resource != "None" && *resource != "" && *resource == *resc) {
+                break;
+            }
         }
     }
     *status;
@@ -403,18 +493,21 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime) {
 #   *path               [IN]    the iRODS path of the object involved in the query
 #   *checksum           [OUT]   iCHECKSUM
 #   *modtime            [OUT]   modification time of the checksum
+#   *resource           [IN]    iRODS resource name
 #
 # Author: Giacomo Mariani, CINECA, Michal Jankowski PSNC
 #-------------------------------------------------------------------------------
-EUDATiCHECKSUMget(*path, *checksum, *modtime) {
-    if (!EUDATiCHECKSUMretrieve(*path, *checksum, *modtime)) {
+EUDATiCHECKSUMget(*path, *checksum, *modtime, *resource) {
+    logDebug("[EUDATiCHECKSUMget] getting checksum for *path");
+    if (!EUDATiCHECKSUMretrieve(*path, *checksum, *modtime, *resource)) {
         #If it is a collection, do not calculate the checksum
         msiGetObjType(*path,*type);
         if (*type == '-d')  {
             msiDataObjChksum(*path, "forceChksum", *checksum);
+            logDebug("[EUDATiCHECKSUMget] got checksum: *checksum");
         }
         #call again EUDATiCHECKSUMretrieve in order to set checksum date
-        EUDATiCHECKSUMretrieve(*path, *checksum, *modtime);
+        EUDATiCHECKSUMretrieve(*path, *checksum, *modtime, *resource);
     }
 }
 
@@ -432,19 +525,22 @@ EUDATiCHECKSUMget(*path, *checksum, *modtime) {
 # Author: Giacomo Mariani, CINECA
 #-------------------------------------------------------------------------------
 EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
+    logDebug("[EUDATgetObjectTimeDiff] getting object *filePath time difference");
     *age = -1;
     # Check if the file exists 
-    if(errorcode(msiObjStat(*filePath,*out)) < 0) {
-        logInfo("EUDATgetObjectTimeDiff -> File *filePath does not exist");
+    if(errormsg(msiObjStat(*filePath,*out), *errmsg) < 0) {
+        logDebug("[EUDATgetObjectTimeDiff] object  does not exist");
+        logError("[EUDATgetObjectTimeDiff] *errmsg");
     }
     else {
         # Look when the file has been created in iRODS
         msiSplitPath(*filePath, *fileDir, *fileName);   
-        foreach ( *ec in SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' AND COLL_NAME = '*fileDir') {
+        foreach ( *ec in SELECT DATA_CREATE_TIME, DATA_MODIFY_TIME WHERE DATA_NAME = '*fileName' 
+                  AND COLL_NAME = '*fileDir') {
             *creationTime = *ec.DATA_CREATE_TIME;
-            logDebug("EUDATgetObjectTimeDiff -> Created at  *creationTime");
+            logVerbose("[EUDATgetObjectTimeDiff] Created at *creationTime");
             *modifyTime = *ec.DATA_MODIFY_TIME;
-            logDebug("EUDATgetObjectTimeDiff -> Modified at *modifyTime");
+            logVerbose("[EUDATgetObjectTimeDiff] Modified at *modifyTime");
         }
         if (*mode == "1") {
             *age=int(*modifyTime)-int(*creationTime);
@@ -453,7 +549,7 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
             msiGetSystemTime(*Now,"unix");
             *age=int(*Now)-int(*modifyTime);
         }
-        logDebug("EUDATgetObjectTimeDiff -> Difference in time: *age seconds");
+        logDebug("[EUDATgetObjectTimeDiff] Difference in time: *age seconds");
     }
 }
 
@@ -468,13 +564,17 @@ EUDATgetObjectTimeDiff(*filePath, *mode, *age) {
 # Author: Claudio Cacciari, CINECA
 #-------------------------------------------------------------------------------
 EUDATgetObjectAge(*filePath, *age) {
+    logDebug("[EUDATgetObjectAge] getting the difference between now"
+             ++ " and the modification time of the object: *filePath");
     *age = -1;
     # Check if the file exists
-    if(errorcode(msiObjStat(*filePath,*out)) >= 0) {
+    if(errormsg(msiObjStat(*filePath,*out), *errmsg) >= 0) {
         EUDATgetObjectTimeDiff(*filePath, "2", *age);
+        logDebug("[EUDATgetObjectAge] the age is: *age");
     }
     else {
-        logInfo("EUDATgetObjectAge -> File *filePath does not exist");
+        logDebug("[EUDATgetObjectAge] object *filePath does not exist");
+        logError("[EUDATgetObjectAge] *errmsg");
     }
     *age;
 }
@@ -489,14 +589,15 @@ EUDATgetObjectAge(*filePath, *age) {
 # Author: Hao Xu, DICE; Giacomo Mariani, CINECA
 #-------------------------------------------------------------------------------
 EUDATfileInPath(*path,*subColl) {
-    logInfo("conditional acPostProcForCopy -> EUDATfileInPath");
+    logInfo("[EUDATfileInPath] checking if object *path is in collection *subColl");
     msiSplitPath(*path, *coll, *name);
     *b = bool("false");
     foreach ( *c in SELECT count(DATA_NAME) WHERE COLL_NAME like '*subColl' AND DATA_NAME = '*name' ) {
         *num = *c.DATA_NAME;
         if(*num == '1') {
-            logInfo("EUDATfileInPath -> found file *name in collection *subColl");
+            logDebug("[EUDATfileInPath] found object *name in collection *subColl");
             *b = bool("true");
+            break;
         }   
     }
     *b;
@@ -522,19 +623,34 @@ EUDATCreateAVU(*Key, *Value, *Path) {
 # get the single value of a specific metadata in ICAT
 #
 # Parameters:
-# *Path  [IN] target object
-# *Key   [IN] name of the MD
-# *Value [OUT] value of the MD, None if not set.
+# *path  [IN] target object/collection
+# *key   [IN] name of the MD
+# *value [OUT] value of the MD, None if not set.
 #
-# Author: Pascal Dugénie, CINES
+# Author: Pascal Dugénie (CINES), Claudio Cacciari (Cineca)
 #-----------------------------------------------------------------------------
-EUDATgetLastAVU(*Path, *Key, *Value)
-{
-    *Value = 'None'
-    msiSplitPath(*Path,*parent,*child);
-    foreach ( *B in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
-        *Value = *B.META_DATA_ATTR_VALUE;
+EUDATgetLastAVU(*path, *key, *value) {
+    logVerbose("[EUDATgetLastAVU] getting the last value of the AVUs with key *key in path *path");
+    *value = 'None';
+    *avus = list();
+    msiGetObjType(*path, *type);
+    if (*type == '-c')  {
+        *d = SELECT META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' AND META_COLL_ATTR_NAME = '*key';
+        foreach(*c in *d) {
+            *avus = cons(*c.META_COLL_ATTR_VALUE, *avus);
+        }
     }
+    else {
+        msiSplitPath(*path, *parent, *child);
+        foreach ( *B in SELECT META_DATA_ATTR_VALUE WHERE META_DATA_ATTR_NAME = '*key' 
+                  AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
+            *avus = cons(*B.META_DATA_ATTR_VALUE, *avus);
+        }
+    }
+    if (size(*avus) > 0) {
+        *value = hd(*avus);
+    }
+    logVerbose("[EUDATgetLastAVU] got the value *value");
 }
 
 # Get all the AVUs of a collection
@@ -547,14 +663,17 @@ EUDATgetLastAVU(*Path, *Key, *Value)
 #-----------------------------------------------------------------------------
 EUDATgetCollAVU(*path, *res)
 {
-    logInfo("[EUDATgetCollAVU] getting AVU for collection *path");
+    logDebug("[EUDATgetCollAVU] getting AVU for collection *path");
     *res = '';
-    foreach ( *R in SELECT META_COLL_ATTR_NAME,META_COLL_ATTR_VALUE,COLL_OWNER_NAME WHERE COLL_NAME = '*path' ) {
+    *owner = '';
+    foreach ( *R in SELECT COLL_OWNER_NAME WHERE COLL_NAME = '*path' ) {
         *owner = *R.COLL_OWNER_NAME
+        *res = *res ++ "owner:" ++ *owner;
+    }
+    foreach ( *R in SELECT META_COLL_ATTR_NAME,META_COLL_ATTR_VALUE WHERE COLL_NAME = '*path' ) {
         *res = *res ++ *R.META_COLL_ATTR_NAME ++ ":" ++*R.META_COLL_ATTR_VALUE ++ ",";
     }
-    *res = *res ++ "owner:" ++ *owner;
-    logDebug("[EUDATgetCollAVU] AVUs: *res");
+    logVerbose("[EUDATgetCollAVU] AVUs: *res");
 }
 
 # Get all the AVUs of the objects under a collection
@@ -565,14 +684,13 @@ EUDATgetCollAVU(*path, *res)
 #
 # Author: Claudio Cacciari, Cineca
 #-----------------------------------------------------------------------------
-EUDATgetBulkMetadata(*path, *res)
-{
-    logInfo("[EUDATgetBulkMetadata] getting objects'metadata for collection *path");
+EUDATgetBulkMetadata(*path, *res) {
+    logDebug("[EUDATgetBulkMetadata] getting objects' metadata for collection *path");
     *res = '';
     *name_old = '';
     foreach ( *R in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE, DATA_CHECKSUM, 
-                           DATA_NAME, DATA_OWNER_NAME, DATA_RESC_NAME WHERE COLL_NAME = '*path' ) {
-        *name = *R.DATA_NAME
+                           DATA_NAME, DATA_OWNER_NAME, DATA_RESC_NAME 
+                           WHERE COLL_NAME = '*path' AND DATA_REPL_NUM = '0') {
         if (*name_old != *R.DATA_NAME) {
             *res = *res ++ *R.DATA_NAME ++ "=:=resource=:=" ++ *R.DATA_RESC_NAME ++ ",";           
             *res = *res ++ *R.DATA_NAME ++ "=:=owner=:=" ++ *R.DATA_OWNER_NAME ++ ",";
@@ -582,8 +700,35 @@ EUDATgetBulkMetadata(*path, *res)
         *name_old = *R.DATA_NAME
     }
     *res = trimr(*res, ',');
-    logDebug("[EUDATgetBulkMetadata] metadata: *res");
+    logVerbose("[EUDATgetBulkMetadata] metadata: *res");
 }
+
+# Get all the AVUs of the object
+#
+# Parameters:
+# *path  [IN]  target object
+# *res   [OUT] the AVUs
+#
+# Author: Claudio Cacciari, Cineca
+#-----------------------------------------------------------------------------
+EUDATgetObjMetadata(*path, *res) {
+    logDebug("[EUDATgetObjMetadata] getting object's metadata for path *path");
+    *res = '';
+    msiSplitPath(*path, *parent, *child);
+    foreach ( *R in SELECT DATA_CHECKSUM, DATA_NAME, DATA_OWNER_NAME, DATA_RESC_NAME
+                           WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child' AND DATA_REPL_NUM = '0') {
+        *res = *res ++ *R.DATA_NAME ++ "=:=resource=:=" ++ *R.DATA_RESC_NAME ++ ",";
+        *res = *res ++ *R.DATA_NAME ++ "=:=owner=:=" ++ *R.DATA_OWNER_NAME ++ ",";
+        *res = *res ++ *R.DATA_NAME ++ "=:=checksum=:=" ++ *R.DATA_CHECKSUM ++ ",";
+    }
+    foreach ( *R in SELECT META_DATA_ATTR_NAME, META_DATA_ATTR_VALUE
+                           WHERE COLL_NAME = '*parent' AND DATA_NAME = '*child' AND DATA_REPL_NUM = '0') {
+        *res = *res ++ *R.DATA_NAME ++ "=:=" ++ *R.META_DATA_ATTR_NAME ++ "=:=" ++ *R.META_DATA_ATTR_VALUE ++ ",";
+    }
+    *res = trimr(*res, ',');
+    logVerbose("[EUDATgetObjMetadata] metadata: *res");
+}
+
 
 # count metadata in ICAT
 #
@@ -594,54 +739,29 @@ EUDATgetBulkMetadata(*path, *res)
 #
 # Author: Pascal Dugénie, CINES
 #-----------------------------------------------------------------------------
-EUDATcountMetaKeys( *Path, *Key, *Value )
-{
+EUDATcountMetaKeys( *Path, *Key, *Value ) {
+    logDebug("[EUDATcountMetaKeys] counting the AVUs with key *Key in path *Path");
     msiSplitPath(*Path, *parent , *child );
-    foreach ( *B in SELECT count(META_DATA_ATTR_VALUE) WHERE META_DATA_ATTR_NAME = '*Key' AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
+    foreach ( *B in SELECT count(META_DATA_ATTR_VALUE) WHERE META_DATA_ATTR_NAME = '*Key' 
+              AND COLL_NAME = '*parent' AND DATA_NAME = '*child') {
         *Value = *B.META_DATA_ATTR_VALUE;
     }
+    logVerbose("[EUDATcountMetaKeys] got count = *Value");     
 }
 
-
-# Store the metadata PID, CHECKSUM, ROR, CHECKSUM Timestamp in a json file
-# inside the special collection .metadata. It stores one file per DO plus
-# one file for the collection.
-# Checksum and related timestamp are calculated if not provided.
+# get the content of the user map file for OAuth2 authentication in json format
 # 
 # Parameters:
-#       *path     [IN]   Path of the object/collection
-#       *pid      [IN]   Persistent Identifier of the object/collection 
-#       *ror      [IN]   Repository of Records, the repository of the master copy
-#       *checksum [IN]   The checksum of the object
-#       *modtime  [IN]   The modification time of the checksum
+#     *json_map     [OUT] a string representing the user mapping
 #
 # Author: Claudio Cacciari, CINECA
-#-------------------------------------------------------------------------------
-EUDATStoreJSONMetadata(*path, *pid, *ror, *checksum, *modtime) {
-
-    getMetaParameters(*metaConfPath,*enabled);
-    if (*enabled) {
-        *extraMetaData = "";
-        if (*checksum == "" || *checksum == 'None') {
-            EUDATiCHECKSUMget(*path, *checksum, *modtime);
-        }
-        if (*checksum != "") {
-            *extraMetaData = "-c *checksum -t *modtime";
-        }
-        if (*ror == "" || *ror == 'None') {
-            *ror = EUDATGeteValPid(*pid, "EUDAT/ROR");
-        }
-        if (*ror != "") {
-            *extraMetaData = *extraMetaData ++ " -r *ror";
-        }
-        msiExecCmd("metadataManager.py","*metaConfPath $userNameClient store '*path'"
-                ++ " -i *pid *extraMetaData", "null", "null", "null", *outMeta);
-        msiGetStdoutInExecCmdOut(*outMeta, *resp);
-        getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
-        if (*msiFreeEnabled) {
-            msifree_microservice_out(*outMeta);
-        }
-    }
+# -----------------------------------------------------------------------------
+EUDATGetPAMusers(*json_map) {
+    logVerbose("[EUDATGetPAMusers] checking authorization for $userNameClient to read users");
+    EUDATAuthZ($userNameClient, "read", "users", *response);
+    msiExecCmd("pam_user_reader.py", "null", "null", "null", "null", *outUsersJson);
+    msiGetStdoutInExecCmdOut(*outUsersJson, *json_map);    
+    logVerbose("[EUDATGetPAMusers] json user map = *json_map");
 }
 
 ################################################################################
@@ -683,7 +803,8 @@ EUDATrp_ingestObject( *source )
 {
     rp_getRpIngestParameters(*protectArchive, *archiveOwner);
     logInfo("ingestObject-> Check for (*source)");
-    EUDATiCHECKSUMget(*source, *checksum, *modtime);
+    *resource = "";
+    EUDATiCHECKSUMget(*source, *checksum, *modtime, *resource);
     EUDATCreateAVU("INFO_Checksum", *checksum, *source);
 # Modified begin 
     EUDATgetLastAVU(*source, "OTHER_original_checksum", *orig_checksum);

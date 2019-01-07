@@ -7,8 +7,8 @@
 # Provides the log level for the EUDAT specific rules
 # 
 # Arguments:
-# *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2]
-#                   0:ERROR, 1:INFO, 2:DEBUG
+# *euLogLevel [OUT] the debug level for the EUDAT specific rules [0 | 1 | 2 | 3]
+#                   0:ERROR, 1:INFO, 2:DEBUG, 3:VERBOSE DEBUG
 #-------------------------------------------------------------------------------                   
 getEUDATLoggerLevel(*euLogLevel) {
     *euLogLevel=2
@@ -33,10 +33,24 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled);
+    getConfParameters(*authzEnabled);
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
     }
+}
+
+# Provides parameters for the connection with the EPIC service
+#  
+# Arguments:
+# *serverApireg     [OUT] the endpoint of the HTTP API interface for data with PIDs
+# *serverApipub     [OUT] the endpoint of the HTTP API interface for public data
+#
+# Author: Claudio Cacciari (Cineca)
+#-------------------------------------------------------------------------------
+getHttpApiParameters(*serverApireg, *serverApipub) {
+
+    *serverApireg="https://<hostnameWithFullDomain>/api/registered";
+    *serverApipub="https://<hostnameWithFullDomain>/api/public";
 }
 
 # Parse the credentials to connect to an EPIC server. A file called
@@ -57,7 +71,7 @@ parseCredentials (*baseuri, *username, *prefix, *password) {
     *password = "<password>"
     *prefix = "<prefix>"
  
-    getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled); 
+    getConfParameters(*authzEnabled); 
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", "EPIC credentials", *response);
     }
@@ -86,53 +100,33 @@ getLogParameters(*logConfPath) {
     *logConfPath="/srv/irods/current/modules/B2SAFE/cmd/log.manager.conf"; 
 }
 
-
-#Provides parameters for the metadata management mechanism
-#
-# Arguments:
-# *metaConfPath  [OUT] the file path to the metadata tool configuration.
-# *enabled       [OUT] boolean value to enable (if true) globally the 
-#                      json metadata writing
-#
-# Author: Claudio Cacciari (Cineca)
-# -------------------------------------------------------------------------------
-getMetaParameters(*metaConfPath, *enabled) {
-    *metaConfPath="/srv/irods/current/modules/B2SAFE/cmd/metadataManager.conf"; 
-    *enabled=bool("false");
-}
-
 #Provides parameters for the message management mechanism
 #
 # Arguments:
-# *msgConfPath [OUT] the file path to the message conf file.
-# *enabled     [OUT] boolean value to enable (if true) globally the
-#                    the usage of the messaging system
+# *msgConfPath      [OUT] the file path to the message conf file.
+# *controlQueueName [OUT] the name of the queue/topic which stores the list
+#                         of modified collections
+# *enabled          [OUT] boolean value to enable (if true) globally the
+#                         the usage of the messaging system
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getMessageParameters(*msgConfPath, *enabled) {
-    *msgLogPath="/opt/eudat/b2safe/conf/msgManager.conf";
+getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
+    *msgConfPath="/opt/eudat/b2safe/conf/msgManager.conf";
+    *controlQueueName="B2SAFE";
     *enabled=bool("false");
 }
 
 # Provides parameters for some B2SAFE configurations.
-# The plugin msifree_microservice_out is a bug fixing to avoid memory leak
-# in case of collection replication involving thousands of files and the
-# parameter msiFreeEnabled enables it.
-# The CURL plugin 
 #
 # Arguments:
-# *msiFreeEnabled  [OUT] if True the msiFree plugin must be deployed
-# *msiCurlEnabled  [OUT] if True the msiCurl plugin must be deployed 
 # *authzEnabled    [OUT] if True the authorization mechanism enforces the assertions 
 #                        defined in the file retrieved by getAuthZParameters.
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
-    *msiFreeEnabled=bool("true");
+getConfParameters(*authzEnabled) {
     *authzEnabled=bool("true");
-    *msiCurlEnabled=bool("false");
 }
 
 # Provides version of the B2SAFE
@@ -144,7 +138,7 @@ getConfParameters(*msiFreeEnabled, *msiCurlEnabled, *authzEnabled) {
 #-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
     *major_version = "4";
-    *minor_version = "0";
+    *minor_version = "2";
     *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }

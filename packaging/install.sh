@@ -13,7 +13,6 @@
 INSTALL_CONFIG=./install.conf
 STATUS=0
 EUDAT_RULEFILES=''
-EPICCLIENT2=true
 JSON_CONFIG="false"
 DATE_TODAY=`date +%Y%m%d`
 #
@@ -35,11 +34,6 @@ CRED_STORE_TYPE=os
 CRED_FILE_PATH=$B2SAFE_PACKAGE_DIR/conf
 SERVER_ID=
 #
-# credentials for epicclient
-BASE_URI=
-USERNAME=
-PREFIX=
-#
 # credentials for epicclient2
 HANDLE_SERVER_URL=
 PRIVATE_KEY=
@@ -58,8 +52,7 @@ SHARED_SPACE=
 # sensible defaults are chosen. They can be overridden by adding them to
 # the configuration in install.conf
 AUTHZ_ENABLED=true
-MSIFREE_ENABLED=false
-MSICURL_ENABLED=false
+MSG_QUEUE_ENABLED=false
 #
 #
 #============================================
@@ -138,32 +131,58 @@ check_epicclient2_config() {
     then
         echo "epicclient2 parameters set. We will use epicclient2"
     else
-        ANSWER_STRING="YES, I am really really really sure I want to use the old epicclient!"
+        BASENAME=$(basename $INSTALL_CONFIG)
+        echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
+        echo "Update where necessary and rerun the procedure"
         echo ""
-        echo "epicclient2 parameters are NOT set"
+        echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
+        echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
+        echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""
+        echo "PREFIX=\"ZZZ\""
+        echo "HANDLEOWNER=\"0.NA/ZZZ\""
+        echo "REVERSELOOKUP_USERNAME=\"ZZZ\""
+        echo "HTTPS_VERIFY=\"True\""
         echo ""
-        echo -n "If you want to use the old epicclient answer \"${ANSWER_STRING}\" :"
-        read ANSWER
-        echo ""
-        if [ "$ANSWER_STRING" == "$ANSWER" ]
+        STATUS=1
+    fi
+
+    return $STATUS
+
+}
+
+check_http_api_config() {
+
+    COUNTER=0
+    PARAMETERS_PRESENT=0
+
+    # check which of the http api parameters are set
+    for parameter in SERVERAPIREG SERVERAPIPUB
+    do
+        let COUNTER=COUNTER+1
+        eval processed_parameter=\$$parameter
+        if ! [ "${processed_parameter}X" == "X"  ]
         then
-            echo "we will use the old epicclient"
-            EPICCLIENT2=false
-        else
-            BASENAME=$(basename $INSTALL_CONFIG)
-            echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
-            echo "Update where necessary and rerun the procedure"
-            echo ""
-            echo "HANDLE_SERVER_URL=\"https://epic3.storage.surfsara.nl:8001\""
-            echo "PRIVATE_KEY=\"/path/prefix_suffix_index_privkey.pem\""
-            echo "CERTIFICATE_ONLY=\"/path/prefix_suffix_index_certificate_only.pem\""
-            echo "PREFIX=\"ZZZ\""
-            echo "HANDLEOWNER=\"0.NA/ZZZ\""
-            echo "REVERSELOOKUP_USERNAME=\"ZZZ\""
-            echo "HTTPS_VERIFY=\"True\""
-            echo ""
-            STATUS=1
+           let PARAMETERS_PRESENT=PARAMETERS_PRESENT+1
         fi
+    done
+
+    if [ "$COUNTER" -eq "$PARAMETERS_PRESENT" ]
+    then
+        echo "http api parameters set. We will use the http api parameters"
+    else
+        BASENAME=$(basename $INSTALL_CONFIG)
+        echo "Please add the following parameters to the file: \"${B2SAFE_PACKAGE_DIR}/packaging/${BASENAME}\""
+        echo "Update where necessary and rerun the procedure"
+        echo ""
+        echo "SERVERAPIREG=\"https://<hostnameWithFullDomain>/api/registered\""
+        echo "SERVERAPIPUB=\"https://<hostnameWithFullDomain>/api/pub\""
+        echo ""
+        echo "or if no http api is present"
+        echo ""
+        echo "SERVERAPIREG=\"irods://<hostnameWithFullDomain>:1247\""
+        echo "SERVERAPIPUB=\"irods://<hostnameWithFullDomain>:1247\""
+        echo ""
+        STATUS=1
     fi
 
     return $STATUS
@@ -373,10 +392,6 @@ install_python_scripts() {
         echo "rm $PYTHON_LINKFILE"
         rm $PYTHON_LINKFILE
     fi
-    if ! [ "${EPICCLIENT2}" == "true" ]
-    then
-        file=`find $B2SAFE_PACKAGE_DIR/cmd/${SHORTFILE}` 
-    fi
     # link the correct file
     echo "ln -sf $file $PYTHON_LINKFILE"
     ln -sf $file $PYTHON_LINKFILE
@@ -415,52 +430,6 @@ update_get_epic_api_parameters() {
         echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
         STATUS=1
     fi
-
-    return $STATUS
-}
-
-update_epicclient_credentials() {
-
-    echo -n "enter the password belonging to the credentals of username: $USERNAME for prefix: $PREFIX :"
-    read -s PASSWORD
-    echo ""
-
-    if [ ! -e ${CRED_FILE_PATH}.org.${DATE_TODAY} ]
-    then
-        if [ -e $CRED_FILE_PATH ]
-        then
-           cp $CRED_FILE_PATH ${CRED_FILE_PATH}.org.${DATE_TODAY} 
-           # set access mode to file
-           chmod 600 ${CRED_FILE_PATH}.org.${DATE_TODAY}
-        fi
-    fi
-
-    CRED_FILE_PATH_EXAMPLE=$B2SAFE_PACKAGE_DIR/conf/credentials_epicclient_example
-    cat $CRED_FILE_PATH_EXAMPLE | \
-        awk -v BASE_URI=$BASE_URI -v USERNAME=$USERNAME -v PREFIX=$PREFIX -v PASSWORD=$PASSWORD '{
-            if ( $1 ~ /baseuri/ ) {
-                $0="    \"baseuri\": \""BASE_URI"\","
-            }
-            if ( $1 ~ /"username/ ) {
-                $0="    \"username\": \""USERNAME"\","
-            }
-            if ( $1 ~ /prefix/ ) {
-                $0="    \"prefix\": \""PREFIX"\","
-            }
-            if ( $1 ~ /password/ ) {
-                $0="    \"password\": \""PASSWORD"\","
-            } print $0
-        }' >  $CRED_FILE_PATH.new
-    if [ $? -eq 0 ]
-    then
-        mv $CRED_FILE_PATH.new   $CRED_FILE_PATH
-    else
-        echo "ERROR: updating $CRED_FILE_PATH failed!"
-        STATUS=1
-    fi
-
-    # set access mode to file
-    chmod 600 $CRED_FILE_PATH
 
     return $STATUS
 }
@@ -691,17 +660,13 @@ update_get_conf_parameters() {
         cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
     fi
     cat $B2SAFE_LOCALFILE | \
-        awk -F= -v AUTHZ_ENABLED=$AUTHZ_ENABLED -v MSIFREE_ENABLED=$MSIFREE_ENABLED -v MSICURL_ENABLED=$MSICURL_ENABLED '{
+        awk -F= -v AUTHZ_ENABLED=$AUTHZ_ENABLED -v MSG_QUEUE_ENABLED=$MSG_QUEUE_ENABLED '{
             if ( $1 ~ /^ +\*authzEnabled/ ) {
                 $1=$1"=bool(\""AUTHZ_ENABLED"\");"
                 $2=""
-            }
-            if ( $1 ~ /^ +\*msiFreeEnabled/ ) {
-                $1=$1"=bool(\""MSIFREE_ENABLED"\");"
-                $2=""
-            }
-            if ( $1 ~ /^ +\*msiCurlEnabled/ ) {
-                $1=$1"=bool(\""MSICURL_ENABLED"\");"
+            } 
+            if ( $1 ~ /^ +\*messageQueueEnabled/ ) {
+                $1=$1"=\""MSG_QUEUE_ENABLED"\";"
                 $2=""
             } print $0
         }' >  $B2SAFE_LOCALFILE.new
@@ -716,6 +681,34 @@ update_get_conf_parameters() {
     return $STATUS
 }
 
+update_get_http_api_parameters() {
+
+    B2SAFE_LOCALFILE=$B2SAFE_PACKAGE_DIR/rulebase/local.re
+    if [ ! -e ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} ]
+    then
+        cp $B2SAFE_LOCALFILE ${B2SAFE_LOCALFILE}.org.${DATE_TODAY} 
+    fi
+    cat $B2SAFE_LOCALFILE | \
+        awk -F= -v SERVERAPIREG=$SERVERAPIREG -v SERVERAPIPUB=$SERVERAPIPUB '{
+            if ( $1 ~ /^ +\*serverApireg/ ) {
+                $1=$1"=\""SERVERAPIREG"\";"
+                $2=""
+            } 
+            if ( $1 ~ /^ +\*serverApipub/ ) {
+                $1=$1"=\""SERVERAPIPUB"\";"
+                $2=""
+            } print $0
+        }' >  $B2SAFE_LOCALFILE.new
+    if [ $? -eq 0 ]
+    then
+        mv $B2SAFE_LOCALFILE.new  $B2SAFE_LOCALFILE
+    else
+        echo "ERROR: updating $B2SAFE_LOCALFILE failed!"
+        STATUS=1
+    fi
+
+    return $STATUS
+}
 
 
 ########################
@@ -773,6 +766,17 @@ if [ $STATUS -eq 0 ]
 then
     echo "check epicclient2 config in install.conf"
     check_epicclient2_config
+    STATUS=$?
+fi
+
+#
+# check if parameters for http api are set.
+# if they are NOT set ask the user to add them
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "check http api config in install.conf"
+    check_http_api_config
     STATUS=$?
 fi
 
@@ -840,16 +844,9 @@ fi
 #
 if [ $STATUS -eq 0 ]
 then
-    if [ "${EPICCLIENT2}" == "true" ]
-    then
-        echo "update_epicclient2_credentials"
-        update_epicclient2_credentials
-        STATUS=$?
-    else
-        echo "update_epicclient_credentials"
-        update_epicclient_credentials
-        STATUS=$?
-    fi
+    echo "update_epicclient2_credentials"
+    update_epicclient2_credentials
+    STATUS=$?
 fi
 
 #
@@ -861,7 +858,6 @@ then
     echo "update_authz_map_json"
     update_get_auth_parameters
     STATUS=$?
-    #update_authz_map_json
 fi
 
 #
@@ -896,3 +892,12 @@ then
     STATUS=$?
 fi
 
+#
+# update the "getConfParameters" rule in "/opt/eudat/b2safe/rulebase/local.re"
+#
+if [ $STATUS -eq 0 ]
+then
+    echo "update_http_api_parameters"
+    update_get_http_api_parameters
+    STATUS=$?
+fi

@@ -8,11 +8,10 @@ import json
 import base64
 import argparse
 import ConfigParser
+import hashlib
 
 logger = logging.getLogger('messageManager')
 session = requests.Session()
-#payload = {'key': '2b655947ec32f2352c8bcb4d4619bb77b3ad1cbc'}
-#endpoint = 'https://messaging-devel.argo.grnet.gr/v1/projects/EUDAT2020'
 
 class Configuration():
     """ 
@@ -88,7 +87,10 @@ def createTopic(name):
                       data=data, headers=headers, params=payload)
     logger.debug('Status code: {}'.format(str(res.status_code)))
     logger.debug('Response: {}'.format(res.text))
-    return res.text
+    if res.status_code == 409:
+        return name.strip()
+    resJson = json.loads(res.text)
+    return resJson['name'].rsplit('/',1)[1]
 
 
 def deleteTopic(name):
@@ -192,10 +194,13 @@ def manageTopic(args):
     if args.action == 'list':
         print listTopics()
     elif args.name is not None:
+        name = args.name 
+        if args.md5hash:
+            name = hashlib.md5(args.name).hexdigest()
         if args.action == 'create':
-            print createTopic(args.name)
+            print createTopic(name)
         elif args.action == 'delete':
-            print deleteTopic(args.name)
+            print deleteTopic(name)
     else:
         print 'topic name is missing'
 
@@ -215,8 +220,11 @@ def manageSubscription(args):
         if not ('topic' in args_dict.keys()):
             print 'topic name is missing'
             sys.exit(1)
+        topicName = args.topic
+        if args.md5hash:
+            topicName = hashlib.md5(args.name).hexdigest()    
         if args.action == 'create':
-            print createSub(args.name, args.topic)
+            print createSub(args.name, topicName)
 
 
 def _initializeLogger(args):
@@ -231,6 +239,12 @@ def _initializeLogger(args):
         formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
         han.setFormatter(formatter)
         logger.addHandler(han)
+
+
+def _setToControlQueue(queue):
+    """add the new queue to the control queue."""
+
+       
 
 
 if __name__ == "__main__":
@@ -261,6 +275,8 @@ if __name__ == "__main__":
                               help='topic action')
     parser_topic.add_argument("name", nargs='?', default=argparse.SUPPRESS, 
                               help='topic name for create and delete actions')
+    parser_topic.add_argument("-m", "--md5hash", help="create the topic using"
+                             + " the md5 hash of the name", action="store_true")
     parser_topic.set_defaults(func=manageTopic)
 
     parser_sub = subparsers.add_parser('sub', help='subscription management')
@@ -269,7 +285,9 @@ if __name__ == "__main__":
     parser_sub.add_argument("name", nargs='?', default=argparse.SUPPRESS, 
                             help='subscription name for create and delete actions')
     parser_sub.add_argument("topic", nargs='?', default=argparse.SUPPRESS,
-                            help='topic name for create action')    
+                            help='topic name for create action')
+    parser_sub.add_argument("-m", "--md5hash", help="the topic real name is"
+                           + " the md5 hash of the name", action="store_true") 
     parser_sub.set_defaults(func=manageSubscription)  
 
     _args = parser.parse_args()

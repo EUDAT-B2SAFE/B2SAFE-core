@@ -125,14 +125,7 @@ CRED_STORE_TYPE=os
 CRED_FILE_PATH=\$B2SAFE_PACKAGE_DIR/conf/credentials
 SERVER_ID="irods://<fully_qualified_hostname>:1247"
 #
-# epic credentials file usage parameters
-#
-# old epicclient parameters
-#BASE_URI="https://<fully_qualified_hostname_epic_server>/<instance>/handles/"
-#USERNAME=<username_for_prefix>
-#PREFIX=<prefix>
-#
-# new epicclient2 parameters
+# epicclient2 parameters
 HANDLE_SERVER_URL=<https://epic3.storage.surfsara.nl:8001>
 PRIVATE_KEY=</path/prefix_suffix_index_privkey.pem>
 CERTIFICATE_ONLY=</path/prefix_suffix_index_certificate_only.pem>
@@ -155,12 +148,8 @@ LOG_DIR=/var/log/irods
 # check if user is authorized to perform several functions
 AUTHZ_ENABLED=true
 #
-# enable if iRODS contrib package is installed with msifree microservice to
-# prevent memory leaks in iRODS
-MSIFREE_ENABLED=true
-#
-# enable if a speedup is to be used. (won't work in future versions)
-MSICURL_ENABLED=false
+# check if message queue is enabled
+MSG_QUEUE_ENABLED=false
 #
 
 EOF
@@ -193,7 +182,11 @@ fi
 
 
 %changelog
-* Wed Apr 18 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.0
+* Thu Nov 22 2018  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.0
+- add new parameters.
+* Wed Nov 22 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.1
+- remove obsolete parameters. Only support epicclient2.py
+* Tue Apr 18 2017  Robert Verkerk <robert.verkerk@surfsara.nl> 4.0.0
 - update for better info. Remove requires. iRODS can be in 2 different packages.
 * Fri Nov 20 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0.0
 - set owner of files during installation of rpm.
@@ -201,7 +194,7 @@ fi
 - remove docs directory.
 * Thu Oct 15 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - add extra files and create docs directory, specify config files.
-* Mon Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
+* Tue Jul 07 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - assign version of package at build time with input parameters 
 * Fri Feb 13 2015  Robert Verkerk <robert.verkerk@surfsara.nl> 3.0
 - Add files to b2safe package
