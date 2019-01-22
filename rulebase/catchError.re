@@ -53,9 +53,10 @@ EUDATCatchErrorChecksum(*source, *source_res, *destination, *dest_res, *response
 }
 
 EUDATCatchErrorChecksum(*source, *destination, *response) {
-    *source_res = "";
-    *dest_res = "";
-    EUDATCatchErrorChecksum(*source, *source_res, *destination, *dest_res, *response);
+    *source_res = "null";
+    *dest_res = "null";
+    *b = EUDATCatchErrorChecksum(*source, *source_res, *destination, *dest_res, *response);
+    *b;
 }
 
 # Check if 2 replicas have the same size.
@@ -111,9 +112,10 @@ EUDATCatchErrorSize(*source, *source_res, *destination, *dest_res, *response) {
 }
 
 EUDATCatchErrorSize(*source, *destination, *response) {
-    *source_res = "";
-    *dest_res = "";
-    EUDATCatchErrorSize(*source, *source_res, *destination, *dest_res, *response);
+    *source_res = "null";
+    *dest_res = "null";
+    *b = EUDATCatchErrorSize(*source, *source_res, *destination, *dest_res, *response);
+    *b;
 }
 
 # Check if a user is or is not owner of the data object/collection

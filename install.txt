@@ -65,9 +65,6 @@ sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/pa
 NOTE: following needs to be updated/added in "/opt/eudat/b2safe/packaging/install.conf":
    - DEFAULT_RESOURCE
    - SERVER_ID
-   - BASE_URI (needed for old epicclient) (OBSOLETE, so make it a comment)
-   - USERNAME (needed for old epicclient) (OBSOLETE, so make it a comment)
-   - PREFIX   (needed for old epicclient) (OBSOLETE, so make it a comment)
    - HANDLE_SERVER_URL      (needed for epicclient2)
    - PRIVATE_KEY            (needed for epicclient2)
    - CERTIFICATE_ONLY       (needed for epicclient2)
@@ -76,14 +73,12 @@ NOTE: following needs to be updated/added in "/opt/eudat/b2safe/packaging/instal
    - REVERSELOOKUP_USERNAME (needed for epicclient2)
    - HTTPS_VERIFY           (needed for epicclient2)
    - AUTHZ_ENABLED (default=true)
-   - MSIFREE_ENABLED (default=true for fresh installation, =false for update)
-   - MSICURL_ENABLED (default=false)
+   - MSG_QUEUE_ENABLED (default=false)
 
 
 - check the python scripts for missing python libraries.
   $ cd /opt/eudat/b2safe/cmd
   $ ./authZmanager.py -h
-  $ ./epicclient.py --help
   $ ./epicclient2.py --help
   $ ./logmanager.py -h
   $ ./messageManager.py -h

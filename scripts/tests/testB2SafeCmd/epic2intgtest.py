@@ -106,7 +106,7 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         search_result = subprocess_popen(command)
         search_result_json = json.loads(search_result[0])
         self.assertEqual(
-            create_result[0], search_result_json[0],
+            unicode(create_result[0]).lower(), search_result_json[0].lower(),
             'search existing handle by key returns unexpected response')
 
  
@@ -168,7 +168,7 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'URL', 'http://www.testB2SafeCmd.com/1']
         search_result = subprocess_popen(command)
         search_result_json = json.loads(search_result[0])
-        self.assertEqual(create_result[0], search_result_json[0],
+        self.assertEqual(unicode(create_result[0]).lower(), search_result_json[0].lower(),
                          'create handle should add new handle')
         
         
