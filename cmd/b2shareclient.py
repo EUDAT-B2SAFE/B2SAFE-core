@@ -1,253 +1,293 @@
 #!/usr/bin/env python 
 # -*- coding: utf-8 -*-
-
-################################################################################
-# B2SAFE B2SHARE client Command Line Interface                                 #
-################################################################################
-import sys
-#sys.path.insert(0,'/usr/lib/python3.4/site-packages')
-
-import logging.handlers
-import argparse
-import os
-import pprint
+import json
+import jsonpatch
 import requests
 
-from manifest import IRODSUtils
-from configuration import Configuration
-from b2shareclientworker import B2shareClient
+class B2shareClient():
 
-logger = logging.getLogger('B2shareClient')
-
-def draft(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Start creating draft ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if accessToken is None:
-        logger.error("Drafting FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    configuration.access_token = accessToken
+    def __init__(self, conf):
+        self.configuration = conf
     
-    b2shcl = B2shareClient(configuration)
-    filePIDsList = collectPIDsForCollection(args.collectionPath, configuration)
-    commID = args.communityID
-    if args.communityID is None:
-        commID = getCommunityIDByName(configuration, args.communityName)
-    recordId = None
-    if commID:
-        recordId = b2shcl.createDraft(commID, args.title, filePIDsList)
-    if recordId is not None:
-        logger.info("Drafting for record "+recordId+" END.")
-    else:
-        logger.error("Drafting FAILED.")
+    # Creates a new record, in the draft state in B2SHARE for the collection with
+    # a given title,
+    # a list of PIDs of the files in the collection
+    # for the specified community
+    # and with the default values for open_access to be true and no community specific data
+    def createDraft(self, community_id, title, filePIDsString):
+        record_id = None
+        if community_id and filePIDsString:
+            self.configuration.logger.debug("title: " + str(title) + \
+                                            ", token: " + self.configuration.access_token \
+                                            + ", community: " + str(community_id))
+            acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+            create_draft_url = self.configuration.b2share_host_name + self.configuration.records_endpoint + acces_part
+            data = '{"titles":[{"title":"' + title + '"}], ' + \
+                   '"community":"' + community_id + '", ' + \
+				   '"external_pids":' + filePIDsString + ', ' + \
+                   '"open_access":true, "community_specific": {}}'
+            headers = {"Content-Type":"application/json"}
+            if self.configuration.dryrun:
+                self.configuration.logger.info("DRYRUN: the method would send: POST Request with URL: " + create_draft_url \
+                                                            + "\n headers: "+ str(headers) \
+                                                            + "\n data: " + data)
+            else:
+                try:
+                    #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                    response = requests.post(url=create_draft_url, headers=headers, data=data, verify=False)
+                    self.configuration.logger.debug("status code: " + str(response.status_code))
+                    if (str(response.status_code) == "200") | (str(response.status_code) == "201"): 
+                        record_id = response.json()['id']
+                        self.configuration.logger.info("Record created with id: " + record_id)
+                    else:
+                        self.configuration.logger.error("NO record created. Response: " + str(response.json()))
+                except requests.exceptions.RequestException as e:
+                    self.configuration.logger.error(e)
+        return record_id
 
-def getCommunityIDByName(configuration, community_name):
-    host = configuration.b2share_host_name
-    endpoint = configuration.list_communities_endpoint
-    acces_part = configuration.access_parameter + "=" + configuration.access_token
-    list_communities_url = host + endpoint + acces_part
-    #TODO: delete 'verify=False', if B2SHARE server has proper certificate
-    community_id = None
-    try:
-        response = requests.get(url=list_communities_url, verify=False)
-        print(list_communities_url)
-        logger.debug("status code: " + str(response.status_code))
-        if (str(response.status_code) == "200"): 
-            communities_list = response.json()["hits"]["hits"]
-            for community_object in communities_list:
-                name = community_object["name"]
-                if community_name == name:
-                    community_id = community_object["id"]
-        else:
-            logger.error("NO community found: " + str(response.json()))
-    except requests.exceptions.RequestException as e:
-        logger.error(e)
-    return community_id
-
-def getAllCommunities(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Start get all communities ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if accessToken is None:
-        logger.error("Drafting FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    configuration.access_token = accessToken
-    
-    b2shcl = B2shareClient(configuration)
-    communities = b2shcl.getAllCommunities()
-    if communities:
-        logger.info("All available communities: \n "+str(communities)+" END.")
-        print("List of communities and their id's: \n"+ pprint.pformat(communities))
-    else:
-        logger.error("get all communities FAILED.")
-
-def collectPIDsForCollection(collectionPath, configuration):
-    PIDobjectsString = '['
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
-    rc, res = irodsu.deepListDir(collectionPath)
-    if res:
-        filePathsMap = collectFilePathsFromTree(res)
-    for filePath in filePathsMap.keys():
-        filePID = irodsu.getMetadata(filePath, "PID")
-        if filePID : 
-            # filePath[1:] deletes leading / in a path as requested in issue #112 on GitHub
-            PIDobject = '{"key":"'+filePath[1:]+'",'+' "ePIC_PID":"'+filePID[0] +'"}'
-            PIDobjectsString = PIDobjectsString + PIDobject +','
-    forLastElemIndex = len(PIDobjectsString) - 1 #delete last comma
-    PIDobjectsString = PIDobjectsString[:forLastElemIndex] + ']'
-    return PIDobjectsString
-
-def collectFilePathsFromTree(filesTree):
-    filePaths = {}
-    for coll in filesTree:
-        for fp in filesTree[coll]['__files__']:
-            # loop over the files of the collection
-            filePaths[coll + os.sep + fp] = fp
-        if len(filesTree[coll]) > 1:
-                # there are also subdirs
-                del filesTree[coll]['__files__']
-                filemap = collectFilePathsFromTree(filesTree[coll])
-                # merge the map dictionaries
-                temp = filemap.copy()
-                temp.update(filePaths)
-                filePaths = temp  
-    return filePaths
-
-def addMetadata(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Adding metadata ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if accessToken is None:
-        logger.error("Adding metadata FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    
-    configuration.access_token = accessToken
-    
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
-    metadata_file = irodsu.getFile(args.metadata)
-    b2shcl = B2shareClient(configuration)
-    b2shcl.addB2shareMetadata(args.record_id, metadata_file)
-    logger.info("Added metadata")
-
-def publish(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Publishing ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if not accessToken:
-        logger.error("Publishing FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    configuration.access_token = accessToken
-    
-    b2shcl = B2shareClient(configuration)
-    b2shcl.publishRecord(args.rec_id)
-    logger.info("Publishing END.")
-
-#get access_token from users metadata in iRODS
-def getAccessTokenWithConfigs(configuration):
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
-    users_metadata = irodsu.getMetadata(args.userName, "access_token", '-u')
-    if users_metadata:
-        return users_metadata[0]
-    else:
-        return None
-    
-def getCommunitySchema(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Get Community Schema ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if not accessToken:
-        logger.error("Get Community Schema FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    configuration.access_token = accessToken
-    
-    commID = args.commID
-    if commID is None:
-        commID = getCommunityIDByName(configuration, args.commName)
-    
-    b2shcl = B2shareClient(configuration)
-    schema = b2shcl.getCommunitySchema(commID)
-    logger.info(str(schema))
-    logger.info("Get Community Schema END.")
+    # Patch the draft with extra metadata
+    # metadata_file: JSON object from the metadata file = community schema filled by user with data
+    def addB2shareMetadata(self, record_id, metadata_file):
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        patch_url = self.configuration.b2share_host_name + self.configuration.records_endpoint + record_id \
+                    + "/draft" + acces_part
         
-def getDraftByID(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("Get draft by ID ...")
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if not accessToken:
-        logger.error("Get draft by ID FAILED. No B2SHARE access token found in users meta data.")
+        metadata_lines = metadata_file.split('\n\n')
+        patch_source = {}
+        patch_destination = {}
+        
+        #ignore first line as it is a comment
+        for line in metadata_lines[1:]:
+            option_value_line = line.split('\n')
+            if not self.isLineContainingValue(option_value_line):
+                continue
+            option_name = option_value_line[0]
+            if option_name == 'community' or option_name == '' or option_name == 'titles':
+                self.configuration.logger.info("Ignore the line " + option_name + \
+                                               " with value " + option_value_line[1])
+                continue
+            draft_metadata = self.getDraftMetadata(record_id)
+            if draft_metadata:
+                if option_name in draft_metadata.keys():
+                    # add or replace the existing values in the draft record
+                    # replace: patch_source[option_name] = draft_metadata[option_name]
+                    # add: 
+                    patch_source[option_name] = ''
+            option_value = option_value_line[1]
+            if self.isArray(option_value): 
+                option_value = self.patchArrayFrom(option_value)
+            elif self.isObject(option_value): 
+                option_value = self.toJsonObject(option_value)
+            elif self.isBoolean(option_value):
+                option_value = self.valueToBoolean(option_value)   
+            else:
+                # value is a string
+                option_value = option_value
+            patch_destination[option_name] = option_value
+        
+        patch = jsonpatch.make_patch(patch_source, patch_destination)
+        headers = {"Content-Type": "application/json-patch+json"}
+        
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: PATCH Request with URL: " + patch_url \
+                                                            + "\n headers: "+ str(headers) \
+                                                            + "\n data: " + str(patch))
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.patch(url=patch_url, headers=headers, data=str(patch), verify=False)
+                if str(response.status_code) == "200":
+                    self.configuration.logger.info("Adding metadata to the draft " + record_id + " SUCCESSFUL.")
+                else:
+                    self.configuration.logger.error("Adding metadata to the draft " + record_id + " FAILED. Response: " + str(response.json()))
+            except requests.exceptions.RequestException as e:
+                    self.configuration.logger.error(e)
+    
+    def patchArrayFrom(self, option_value):
+        option_value = option_value.replace('[','').replace(']','')
+        if self.isObjectsArray(option_value):
+            array_of_objects = self.objectsArrayFrom(option_value)
+            return array_of_objects
+        else:
+            strings_array = self.strigsArrayFrom(option_value)
+            return strings_array
+    
+    def strigsArrayFrom(self, option_value):
+        strings_array = []
+        for string_value in option_value.split(','):
+            strings_array.append(string_value.strip())
+        return strings_array
+    
+    def objectsArrayFrom(self, value):
+        values_array = []
+        if '},' in value:
+            #many objects in array
+            delimiter = '}'
+            arr = value.split(delimiter)
+            values_array.append(arr[0]+'}')
+            for elem in value.split(delimiter)[1:]:
+                values_array.append(elem[1:].strip()+'}')
+        else:
+            #one element in array
+            values_array.append(value)
+        array_of_objects = []
+        for array_element in values_array:
+            if '{' in array_element:
+                array_of_objects.append(self.toJsonObject(array_element))
+        return array_of_objects
+    
+    def toJsonObject(self, value):
+        v = json.loads(value)
+        return v
+    
+    def getDraftMetadata(self, record_id):
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        get_draft_metadata = self.configuration.b2share_host_name + self.configuration.records_endpoint + record_id \
+                    + "/draft" + acces_part
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: GET Request with URL: " + get_draft_metadata)
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.get(url=get_draft_metadata, verify=False)
+                self.configuration.logger.debug("status code: " + str(response.status_code))
+                if str(response.status_code) == "200":
+                    return response.json()["metadata"]
+                else:
+                    self.configuration.logger.error("Request for draft metadata failed. URL: "+get_draft_metadata)
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+            return None
+    
+    def publishRecord(self, record_id):
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        publish_record_url = self.configuration.b2share_host_name + self.configuration.records_endpoint + record_id \
+                             + "/draft" + acces_part
+        patch = '[{"op":"add", "path":"/publication_state", "value":"submitted"}]'
+        headers = {"Content-Type": "application/json-patch+json"}
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: PATCH Request with URL: " + publish_record_url \
+                                                            + "\n headers: "+ str(headers) \
+                                                            + "\n data: " + str(patch))
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.patch(url=publish_record_url, headers=headers, data=patch, verify=False)
+                if str(response.status_code) == "200":
+                    self.configuration.logger.info("Publishing SUCCESSFUL. " + str(response.text))
+                else:
+                    self.configuration.logger.error("Publishing FAILED. Response: " + str(response.json()))
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+                self.configuration.logger.error("Publishing FAILED. Response: " + str(response.json()))
+        
+    
+    def valueToBoolean(self, option_value):
+        if option_value.lower() == "true":
+            return True
+        if option_value.lower() == "false":
+            return False
+    
+    def isBoolean(self, option_value):
+        return ((option_value.lower() == "true") | (option_value.lower() == "false"))
+    
+    def isObject(self, option_value):
+        return option_value.startswith('{')
+    
+    def isObjectsArray(self, option_value):
+        return option_value.startswith('{')
+    
+    def isArray(self, option_value):
+        return option_value.startswith('[')
+    
+    def isLineContainingValue(self, line_content):
+        return len(line_content) == 2
+    
+    #TODO add the function Get iRODS metadata
+    def getB2safeMetadata(self):
+        """Get system metadata"""
         return None
-    configuration.access_token = accessToken
     
-    b2shcl = B2shareClient(configuration)
-    draft = b2shcl.getDraftByID(args.draft_id)
-    if draft:
-        logger.info("Request for a draft with id " + draft + " SUCCESSFUL.")  
-    logger.info("Get draft by ID END.")
-
-def deleteDraft(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
-    configuration.parseConf()
-    logger.info("DELETING DRAFT: " + args.draft_to_delete_id)
-    accessToken = getAccessTokenWithConfigs(configuration)
-    if not accessToken:
-        logger.error("DELETING DRAFT FAILED. No B2SHARE access token found in users meta data.")
-        return None
-    configuration.access_token = accessToken
+    def getCommunitySchema(self, community_id):
+        community_endpoint = self.configuration.list_communities_endpoint
+        get_schema_endpoint = self.configuration.get_community_schema_endpoint
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token        
+        get_community_schema_url = self.configuration.b2share_host_name + community_endpoint\
+                                   + community_id + get_schema_endpoint + acces_part
+        community_schema = None
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: GET Request with URL: " + get_community_schema_url)
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.get(url=get_community_schema_url, verify=False)
+                self.configuration.logger.debug(response.text)
+                if str(response.status_code) == "200":
+                    community_schema = response.text
+                else:
+                    self.configuration.logger.error("Request for community schema failed. Response: " + str(response.json()))
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+        return community_schema
     
-    b2shcl = B2shareClient(configuration)
-    b2shcl.deleteDraft(args.draft_to_delete_id)     
-    logger.info("DELETING DRAFT END.")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='B2SAFE B2SHARE client')
-    parser.add_argument("--confpath", help="path to the configuration file")
-    parser.add_argument("-dbg", "--debug", action="store_true",
-                        help="enable debug")
-    parser.add_argument("-d", "--dryrun", action="store_true",
-                        help="run without performing any real change")
-    parser.add_argument("-u", "--userName", help="iRODS user name")
-
-    subparsers = parser.add_subparsers(help='sub-command help', dest='subcmd')
+    def getDraftByID(self, draft_id):
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        get_draft_url = self.configuration.b2share_host_name + 'records/' + draft_id + "/draft" + acces_part
+        draft = None
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: GET Request with URL: " + get_draft_url)
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.get(url=get_draft_url,  verify=False)
+                if str(response.status_code) == "200":
+                    self.configuration.logger.info("Request for a draft with id " + draft_id + " SUCCESSFUL.")
+                    draft = response.text
+                else:
+                    self.configuration.logger.error("Request for a draft with id " + draft_id + " FAILED. Response: " + str(response.json()))
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+        return draft
     
-    parser_draft = subparsers.add_parser('draft', help='create a draft record in B2Share')
-    comm_group = parser_draft.add_mutually_exclusive_group(required=True)
-    comm_group.add_argument("-c", "--communityName", help="B2Share community name")
-    comm_group.add_argument("-i", "--communityID", help="B2Share community id")
-    parser_draft.add_argument('-ti', '--title', help='title of the record')
-    parser_draft.add_argument('-cp', '--collectionPath', required=True, help='path to the collection in iRODS with files')
-    parser_draft.set_defaults(func=draft)
-
-    parser_meta = subparsers.add_parser('meta', help='add metadata to the draft')
-    parser_meta.add_argument('-id', '--record_id', required=True, help='the b2share id of the record')
-    parser_meta.add_argument('-md', '--metadata', required=True, help='path to the metadata JSON file of the record')
-    parser_meta.set_defaults(func=addMetadata)
-
-    parser_pub = subparsers.add_parser('pub', help='publish the draft')
-    parser_pub.add_argument('-pi', '--rec_id', required=True, help='the b2share id of the record')
-    parser_pub.set_defaults(func=publish)
+    def deleteDraft(self, draft_id):
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        delete_draft_url = self.configuration.b2share_host_name + self.configuration.records_endpoint + \
+                            draft_id + "/draft" + acces_part
+        headers = {"Content-Type": "application/json"}
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: DELETE Request with URL: " + delete_draft_url)
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.delete(url=delete_draft_url, headers=headers, verify=False)
+                if str(response.status_code) == "204":
+                    self.configuration.logger.info("Draft with id " + draft_id + " DELETED.")
+                else:
+                    self.configuration.logger.error("Deleting draft with id " + draft_id + " FAILED. Response: " + str(response.json()))
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+                self.configuration.logger.error("Deleting draft with id " + draft_id + " FAILED. Response: " + str(response.json()))
     
-    parser_list_comm = subparsers.add_parser('listCommunities', help="list all communities with their names and id's")
-    parser_list_comm.set_defaults(func=getAllCommunities)
-    
-    parser_commSchema = subparsers.add_parser('communitySchema', help='get community schema')
-    input_group = parser_commSchema.add_mutually_exclusive_group(required=True)
-    input_group.add_argument("-cn", "--commName", help="B2Share community name")
-    input_group.add_argument("-ci", "--commID", help="B2Share community id")
-    parser_commSchema.set_defaults(func=getCommunitySchema)
-    
-    parser_getDraft = subparsers.add_parser('getDraft', help='get draft and if there write it to the log file')
-    parser_getDraft.add_argument('-di', '--draft_id', required=True, help='the b2share id of the record')
-    parser_getDraft.set_defaults(func=getDraftByID)
-    
-    parser_deleteDraft = subparsers.add_parser('deleteDraft', help='delete the draft')
-    parser_deleteDraft.add_argument('-ddi', '--draft_to_delete_id', required=True, help='the b2share id of the record')
-    parser_deleteDraft.set_defaults(func=deleteDraft)
-
-    args = parser.parse_args()
-    args.func(args)
+    def getAllCommunities(self):       
+        host = self.configuration.b2share_host_name
+        endpoint = self.configuration.list_communities_endpoint
+        acces_part = self.configuration.access_parameter + "=" + self.configuration.access_token
+        list_communities_url = host + endpoint + acces_part
+        communities = {}
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: the method would send: GET Request with URL: " + list_communities_url)
+        else:
+            try:
+                #TODO: delete 'verify=False', if B2SHARE server has proper certificate
+                response = requests.get(url=list_communities_url, verify=False)
+                if str(response.status_code) == "200":
+                    communities_list = response.json()["hits"]["hits"]
+                    for community_object in communities_list:
+                        name = community_object["name"]
+                        community_id = community_object["id"]
+                        communities[name] = community_id
+                else:
+                    self.configuration.logger.error(response.text)
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
+        return communities

@@ -9,13 +9,13 @@ import logging
 test_logger = logging.getLogger('B2shareClientTest')  
 
 sys.path.append("../../cmd") 
-from b2shareclientworker import B2shareClient
+from b2shareclient import B2shareClient
 
 class B2shareClientTest(unittest.TestCase):
     def setUp(self):
         # mock configuration
         # TODO: change "confpath" to variable from call of the test or in the test suite
-        self.configurationMock = MagicMock(confpath = "/home/irods/B2SAFE-core/conf/b2safe_b2share.conf", 
+        self.configurationMock = MagicMock(confpath = "/home/irods/B2SAFE-core/conf/b2share_connection.conf", 
                                       b2share_host_name = 'https://trng-b2share.eudat.eu/api', 
                                       list_communities_endpoint = '/communities',
                                       access_parameter = '/?access_token=',
@@ -134,102 +134,6 @@ class B2shareClientTest(unittest.TestCase):
         
         mock_post_patcher.stop()
         self.assertTrue(bool(record_id))
-        
-#### test failure status_code
-    def testGetAllCommunities_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.get')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.json.return_value = json.loads('{}')
-        mock_get.return_value.status_code = 400
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        communities = b2shcl.getAllCommunities()
-        
-        mock_get_patcher.stop()
-        
-        self.assertFalse(bool(communities))
-       
-    def testDeleteDraft_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.delete')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.status_code = 400
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        b2shcl.deleteDraft(self.draft_id_mock)
-        
-        mock_get_patcher.stop()
-        self.assertTrue(True)
-    
-    def testGetDraftByID_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.get')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.status_code = 400
-        mock_get.return_value.text = None
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        draft = b2shcl.getDraftByID(self.draft_id_mock)
-        
-        mock_get_patcher.stop()
-        self.assertFalse(bool(draft))
-    
-    def testgGetCommunitySchema_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.get')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.status_code = 400
-        mock_get.return_value.text = None
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        community_schema = b2shcl.getCommunitySchema(self.community_id_mock)
-        
-        mock_get_patcher.stop()
-        self.assertFalse(bool(community_schema))
-    
-    def testPublishRecord_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.patch')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.status_code = 400
-        mock_get.return_value.text = None
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        b2shcl.publishRecord(self.draft_id_mock)
-        
-        mock_get_patcher.stop()
-        self.assertTrue(True)
-    
-    def testGetDraftMetadata_failed(self):
-        mock_get_patcher = patch('scripts.tests.cmd.b2shareclient.requests.get')
-        mock_get = mock_get_patcher.start()
-        mock_get.return_value.status_code = 400
-        mock_get.return_value.json.return_value = json.loads('{}')
-        mock_get.return_value.text = None
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        draft_metadata = b2shcl.getDraftMetadata(self.draft_id_mock)
-        
-        mock_get_patcher.stop()
-        self.assertFalse(bool(draft_metadata))
-        
-    def testAddB2shareMetadata_failed(self):
-        mock_patch_patcher = patch('scripts.tests.cmd.b2shareclient.requests.patch')
-        mock_patch = mock_patch_patcher.start()
-        mock_patch.return_value.status_code = 400
-        
-        self.b2shcl.addB2shareMetadata(self.draft_id_mock, self.metadata_file_mock)
-        
-        mock_patch_patcher.stop()
-        self.assertTrue(bool(True))
-        
-    def testCreateDraft_failed(self):
-        mock_post_patcher = patch('scripts.tests.cmd.b2shareclient.requests.post')
-        mock_post = mock_post_patcher.start()
-        mock_post.return_value.status_code = 400
-        mock_post.return_value.json.return_value = json.loads('{}')
-        
-        b2shcl = B2shareClient(self.configurationMock)
-        record_id = b2shcl.createDraft(self.community_id_mock, self.title_mock, self.filePIDsString_mock)
-        
-        mock_post_patcher.stop()
-        self.assertFalse(bool(record_id))
 
 if __name__ == '__main__':
     unittest.main()

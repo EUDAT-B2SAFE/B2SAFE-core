@@ -14,6 +14,8 @@ class Configuration():
     """
     defaultLogDir = os.getcwd() + os.sep + "logs"
     defaultLogFileName = os.sep + "b2share_connection.log"
+    irods_home_dir = ""
+    irods_debug = ""
     
     def __init__(self, conffile, debug, dryrun, logger):
         self.conffile = conffile
@@ -32,7 +34,7 @@ class Configuration():
         
         #self.config = ConfigParser.RawConfigParser()
         if not os.path.exists(self.conffile):
-            self.logger.error('missing configuration file %s:%s' % (self.conffile))
+            self.logger.error('missing configuration file %s:' % (self.conffile))
             return # error config file not found
         
         with open(self.conffile, "r") as confFile:
@@ -58,6 +60,8 @@ class Configuration():
         if self.debug:
             loglevel = 'DEBUG'
         self.logger.setLevel(self.log_level[loglevel])
+        
+        
         
         rfh = logging.handlers.RotatingFileHandler(logfilepath, \
                                                    maxBytes=8388608, \
