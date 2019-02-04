@@ -45,6 +45,8 @@ def subprocess_popen(cmd, input_string=None):
 
     arr = string.split(data_stdout, '\n')
     arr = map(string.strip, arr)
+    if arr and arr[-1] == '':
+        arr.pop()
     return arr
 
 
