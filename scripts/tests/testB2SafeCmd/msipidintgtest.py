@@ -21,6 +21,15 @@ else:
     print "example: export prefix=21.T12996 "
     exit(1)
 
+if 'url_prefix_in_profile' in os.environ:
+    URL_PREFIX_IN_PROFILE = os.environ['url_prefix_in_profile']
+else:
+    print "please define url_prefix_in_profile as a variable "
+    print "example: export url_prefix_in_profile='true' "
+    print "example: export url_prefix_in_profile='false' "
+    print "This is dependant on the configuration of the profile in \"/etc/irods/irods_pid.json\" "
+    exit(1)
+
 if 'HOME' in os.environ:
     IRODS_ENV = os.environ['HOME']+IRODS_ENV
 
@@ -208,7 +217,10 @@ class MsiPidIntegrationTests(unittest.TestCase):
         jsonfilecontent = json.loads(open(IRODS_ENV, 'r').read())
         self.irods_zone_name = jsonfilecontent.pop('irods_zone_name')
 
-        command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        if URL_PREFIX_IN_PROFILE.lower() == 'true':
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        else:
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='URL'", "*value='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
         lookup_result = subprocess_popen(command)
         for line in lookup_result:
             if line != '':
@@ -218,7 +230,10 @@ class MsiPidIntegrationTests(unittest.TestCase):
 
     def tearDown(self):
         """ Cleanup testB2SafeCmd environment after the tests have run"""
-        command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        if URL_PREFIX_IN_PROFILE.lower() == 'true':
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        else:
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='URL'", "*value='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
         lookup_result = subprocess_popen(command)
 
         #print lookup_result
@@ -316,7 +331,10 @@ class MsiPidIntegrationTests(unittest.TestCase):
         self.assertEqual(
           create_result[0], '0',
           "create handle should return 0")
-        command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        if URL_PREFIX_IN_PROFILE.lower() == 'true':
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP, "*path='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
+        else:
+            command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='URL'", "*value='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
         lookup_result = subprocess_popen(command)
         self.assertEqual(unicode(create_result[1]).lower(), lookup_result[1].lower(),
                          'create handle should add new handle')
