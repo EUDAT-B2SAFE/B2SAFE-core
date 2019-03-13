@@ -42,6 +42,32 @@ CONFIG_PARAMETERS = ["b2safe_package_dir",
                      "shared_space",
                      "authz_enabled",
                      "msg_queue_enabled"]
+PID_DEFAULT_PROFILE = [
+    {
+        "entry": {
+            "index": 1,
+            "type": "URL",
+            "data": {
+                "format": "string",
+                "value": "{OBJECT}"
+            }
+        }
+    },
+    {
+        "entry": {
+            "index": 100,
+            "type": "HS_ADMIN",
+            "data": {
+                "format": "admin",
+                "value": {
+                    "handle": "0.NA/{HANDLE_PREFIX}",
+                    "index": 200,
+                    "permissions": "011111110011"
+                }
+            }
+        }
+    }
+]
 
 ########################
 # Functions
@@ -352,6 +378,66 @@ def update_log_manager_conf(json_config):
     # write logmanager config
     write_json_config(logmanager_config, log_manager_conf_file)
 
+def update_pid_uservice_config(json_config):
+    ''' update pid uService json file '''
+
+    pid_uservice_conf_file = json_config["irods_conf_dir"]+'/irods_pid.json'
+    handle_url_without_port = json_config["handle_server_url"].split(":")[0] + ":" \
+                              + json_config["handle_server_url"].split(":")[1]
+    handle_url_port = json_config["handle_server_url"].split(":")[2]
+
+    irods_server = str(json_config["server_id"].split(":")[1])[2:]
+    irods_url_port = json_config["server_id"].split(":")[2]
+
+    webdav_server = str(json_config["server_api_pub"].split(":")[0]) + ":" \
+                              + json_config["server_api_pub"].split(":")[1]
+    webdav_url_port = json_config["server_api_pub"].split(":")[2]
+
+    # create pid uService file
+    if not os.path.exists(pid_uservice_conf_file):
+        shutil.copy2(pid_uservice_conf_file+'.02_custom_profile',
+                     pid_uservice_conf_file)
+        secure_file(pid_uservice_conf_file)
+
+    # save pid uService file
+    save_config_file(pid_uservice_conf_file)
+
+    # read pid uService config
+    pid_uservice_config = read_json_config(pid_uservice_conf_file)
+
+    # handle service
+    pid_uservice_config["handle"]["url"] = handle_url_without_port+'/api/handles'
+    pid_uservice_config["handle"]["port"] = handle_url_port
+    pid_uservice_config["handle"]["prefix"] = json_config["handle_prefix"]
+    pid_uservice_config["handle"]["cert"] = json_config["handle_certificate_only"]
+    pid_uservice_config["handle"]["key"] = json_config["handle_private_key"]
+    pid_uservice_config["handle"]["insecure"] = json_config["handle_https_verify"]
+    pid_uservice_config["handle"]["profile"] = PID_DEFAULT_PROFILE
+
+    # irods
+    pid_uservice_config["irods"]["server"] = irods_server
+    pid_uservice_config["irods"]["port"] = irods_url_port
+    pid_uservice_config["irods"]["url_prefix"] = json_config["server_id"]
+    pid_uservice_config["irods"]["webdav_prefix"] = webdav_server
+    pid_uservice_config["irods"]["webdav_port"] = webdav_url_port
+
+    # reverse lookup
+    pid_uservice_config["lookup"]["url"] = handle_url_without_port+'/hrls/handles'
+    pid_uservice_config["lookup"]["port"] = handle_url_port
+    pid_uservice_config["lookup"]["prefix"] = json_config["handle_prefix"]
+    pid_uservice_config["lookup"]["password"] = json_config["handle_reverse_lookup_password"]
+    pid_uservice_config["lookup"]["insecure"] = json_config["handle_https_verify"]
+    pid_uservice_config["lookup"]["before_create"] = False
+
+    # permissions
+
+
+    print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
+    # write pid uService config
+#    write_json_config(pid_uservice_config, pid_uservice_conf_file)
+
+
+
 def write_json_config(json_dict, json_config_file):
     ''' write the parameters from a dict to a json config file '''
 
@@ -417,6 +503,11 @@ install_python_b2safe_scripts(B2SAFE_CONFIG)
 # Set the proper values in the epicclient2.py  credentials file
 #
 update_epicclient_credentials(B2SAFE_CONFIG)
+
+#
+# Set the pid uService parameters
+#
+update_pid_uservice_config(B2SAFE_CONFIG)
 
 #
 # update the 'getAuthZParameters'   rule in '/opt/eudat/b2safe/rulebase/local.re'
