@@ -70,6 +70,21 @@ else
   HTTPS_VERIFY_STRING="\"${HTTPS_VERIFY}\""
 fi
 
+let count=0
+handle_users_array=(`echo ${USERS} | sed 's/[\t ]+/\n/g'`)
+handle_users_string=
+for each in ${handle_users_array[@]}
+do
+  if [ $count -eq 0 ]
+  then
+    handle_users_string=$(echo -n "\"$each\"")
+  else
+    handle_users_string=$handle_users_string$(echo -n ", \"$each\"")
+  fi
+  let count=$count+1
+done
+
+
 cat > install.json << EOT
 {
   "b2safe_package_dir": "${B2SAFE_PACKAGE_DIR}",
@@ -88,7 +103,8 @@ cat > install.json << EOT
   "handle_owner": "${HANDLEOWNER}",
   "handle_reverse_lookup_name": "${REVERSELOOKUP_USERNAME}",
   "handle_https_verify": ${HTTPS_VERIFY_STRING},
-  "handle_users": [ "${USERS}" ],
+  "handle_users": [ ${handle_users_string} ],
+  "handle_groups": [  ],
   "log_level": "${LOG_LEVEL}",
   "log_directory": "${LOG_DIR}",
   "shared_space": "${SHARED_SPACE}",
@@ -96,3 +112,5 @@ cat > install.json << EOT
   "msg_queue_enabled": ${MSG_QUEUE_ENABLED}
 }
 EOT
+
+chmod 600 install.json

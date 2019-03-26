@@ -37,6 +37,7 @@ CONFIG_PARAMETERS = ["b2safe_package_dir",
                      "handle_reverse_lookup_password",
                      "handle_https_verify",
                      "handle_users",
+                     "handle_groups",
                      "log_level",
                      "log_directory",
                      "shared_space",
@@ -336,9 +337,9 @@ def update_local_re_parameters(json_config):
                                json_config["b2safe_package_dir"]+'/conf/authz.map.json', True)
 
     # getConfParameters
-    update_flat_file_parameter(config_file, '*authzEnabled', json_config["authz_enabled"], True)
+    update_flat_file_parameter(config_file, '*authzEnabled', str(json_config["authz_enabled"]).lower(), True)
     update_flat_file_parameter(config_file, '*messageQueueEnabled',
-                               json_config["msg_queue_enabled"], True)
+                               str(json_config["msg_queue_enabled"]).lower(), True)
 
     # getEpicApiParameters
     update_flat_file_parameter(config_file, '*credStoreType', json_config["cred_store_type"], True)
@@ -393,6 +394,16 @@ def update_pid_uservice_config(json_config):
                               + json_config["server_api_pub"].split(":")[1]
     webdav_url_port = json_config["server_api_pub"].split(":")[2]
 
+    if json_config["handle_https_verify"].lower() == 'true':
+        handle_lookup_insecure = False
+        handle_lookup_cacert = null
+    elif json_config["handle_https_verify"].lower() == 'false':
+        handle_lookup_insecure = True
+        handle_lookup_cacert = null
+    else:
+        handle_lookup_insecure = False
+        handle_lookup_cacert = json_config["handle_https_verify"]
+
     # create pid uService file
     if not os.path.exists(pid_uservice_conf_file):
         shutil.copy2(pid_uservice_conf_file+'.02_custom_profile',
@@ -407,34 +418,44 @@ def update_pid_uservice_config(json_config):
 
     # handle service
     pid_uservice_config["handle"]["url"] = handle_url_without_port+'/api/handles'
-    pid_uservice_config["handle"]["port"] = handle_url_port
+    pid_uservice_config["handle"]["port"] = int(handle_url_port)
     pid_uservice_config["handle"]["prefix"] = json_config["handle_prefix"]
     pid_uservice_config["handle"]["cert"] = json_config["handle_certificate_only"]
     pid_uservice_config["handle"]["key"] = json_config["handle_private_key"]
-    pid_uservice_config["handle"]["insecure"] = json_config["handle_https_verify"]
+    pid_uservice_config["handle"]["insecure"] = handle_lookup_insecure
+    pid_uservice_config["handle"]["cacert"] = handle_lookup_cacert
     pid_uservice_config["handle"]["profile"] = PID_DEFAULT_PROFILE
 
     # irods
     pid_uservice_config["irods"]["server"] = irods_server
-    pid_uservice_config["irods"]["port"] = irods_url_port
+    pid_uservice_config["irods"]["port"] = int(irods_url_port)
     pid_uservice_config["irods"]["url_prefix"] = json_config["server_id"]
     pid_uservice_config["irods"]["webdav_prefix"] = webdav_server
-    pid_uservice_config["irods"]["webdav_port"] = webdav_url_port
+    pid_uservice_config["irods"]["webdav_port"] = int(webdav_url_port)
 
     # reverse lookup
     pid_uservice_config["lookup"]["url"] = handle_url_without_port+'/hrls/handles'
-    pid_uservice_config["lookup"]["port"] = handle_url_port
+    pid_uservice_config["lookup"]["port"] = int(handle_url_port)
     pid_uservice_config["lookup"]["prefix"] = json_config["handle_prefix"]
+    pid_uservice_config["lookup"]["user"] = json_config["handle_reverse_lookup_name"]
     pid_uservice_config["lookup"]["password"] = json_config["handle_reverse_lookup_password"]
-    pid_uservice_config["lookup"]["insecure"] = json_config["handle_https_verify"]
+    pid_uservice_config["lookup"]["insecure"] = handle_lookup_insecure
+    pid_uservice_config["lookup"]["cacert"] = handle_lookup_cacert
     pid_uservice_config["lookup"]["before_create"] = False
 
     # permissions
-
+    if 'handle_users' in json_config:
+        pid_uservice_config["permissions"]["users_create"] = json_config["handle_users"]
+        pid_uservice_config["permissions"]["users_delete"] = json_config["handle_users"]
+        pid_uservice_config["permissions"]["users_write"] = json_config["handle_users"]
+    if 'handle_groups' in json_config:
+        pid_uservice_config["permissions"]["groups_create"] = json_config["handle_groups"]
+        pid_uservice_config["permissions"]["groups_delete"] = json_config["handle_groups"]
+        pid_uservice_config["permissions"]["groups_write"] = json_config["handle_groups"]
 
     print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
     # write pid uService config
-#    write_json_config(pid_uservice_config, pid_uservice_conf_file)
+    write_json_config(pid_uservice_config, pid_uservice_conf_file)
 
 
 
