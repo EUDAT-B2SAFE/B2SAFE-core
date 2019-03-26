@@ -57,7 +57,8 @@ cp $RPM_SOURCE_DIR/*.txt      $RPM_BUILD_ROOT%{_irodsPackage}
 cp $RPM_SOURCE_DIR/LICENSE    $RPM_BUILD_ROOT%{_irodsPackage}
 cp $RPM_SOURCE_DIR/cmd/*      $RPM_BUILD_ROOT%{_irodsPackage}/cmd
 cp $RPM_SOURCE_DIR/conf/*     $RPM_BUILD_ROOT%{_irodsPackage}/conf
-cp $RPM_SOURCE_DIR/packaging/install.sh $RPM_BUILD_ROOT%{_irodsPackage}/packaging
+cp $RPM_SOURCE_DIR/packaging/install.py $RPM_BUILD_ROOT%{_irodsPackage}/packaging
+cp $RPM_SOURCE_DIR/packaging/convert_b2safe_conf_to_json.sh $RPM_BUILD_ROOT%{_irodsPackage}/packaging
 cp $RPM_SOURCE_DIR/rulebase/* $RPM_BUILD_ROOT%{_irodsPackage}/rulebase
 cp $RPM_SOURCE_DIR/rules/*    $RPM_BUILD_ROOT%{_irodsPackage}/testRules
 mkdir -p $RPM_BUILD_ROOT/var/log/irods
@@ -90,6 +91,7 @@ rm -rf %{buildroot}
 %attr(600,-,-) %{_irodsPackage}/conf/*.json
 %attr(600,-,-) %{_irodsPackage}/conf/*.conf
 %attr(700,-,-) %{_irodsPackage}/packaging/*.sh
+%attr(700,-,-) %{_irodsPackage}/packaging/*.py
 %attr(-,-,-)   /var/log/irods
 %doc
 # config files
@@ -160,6 +162,8 @@ fi
 
 
 %changelog
+* tue Mar 26 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
+- add python installation/setup script.
 * Fri Mar 8 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
 - add new parameters. Convert to json input file for configuration.
 * Thu Nov 22 2018  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.0

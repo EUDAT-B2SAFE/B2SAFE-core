@@ -50,7 +50,8 @@ cp $RPM_SOURCE_DIR/*.txt          $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}
 cp $RPM_SOURCE_DIR/LICENSE        $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}
 cp $RPM_SOURCE_DIR/cmd/*          $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/cmd
 cp $RPM_SOURCE_DIR/conf/*         $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf
-cp $RPM_SOURCE_DIR/packaging/install.sh $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging
+cp $RPM_SOURCE_DIR/packaging/install.py $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging
+cp $RPM_SOURCE_DIR/packaging/convert_b2safe_conf_to_json.sh $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging
 cp $RPM_SOURCE_DIR/rulebase/*     $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/rulebase
 cp $RPM_SOURCE_DIR/rules/*        $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/testRules
 mkdir -p                          $RPM_BUILD_ROOT${PACKAGE}/var/log/irods
@@ -60,6 +61,7 @@ chmod 700 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/cmd/*.py
 chmod 600 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf/*.json
 chmod 600 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/conf/*.conf
 chmod 700 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging/*.sh
+chmod 700 $RPM_BUILD_ROOT${PACKAGE}${IRODS_PACKAGE_DIR}/packaging/*.py
 
 # create packaging directory
 mkdir -p  $RPM_BUILD_ROOT${PACKAGE}/DEBIAN
