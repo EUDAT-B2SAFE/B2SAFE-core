@@ -1,58 +1,43 @@
 #!/usr/bin/env python
 
-from testB2SafeCmd.epicapitest import EpicClientAPITestCase
-from testB2SafeCmd.epiccredtest import EpicClientCredentialsTestCase
-from testB2SafeCmd.epicclitest import EpicClientCLITestCase
-from testB2SafeCmd.epicintgtest import EpicClientIntegrationTests
 from testB2SafeCmd.testLogManager import LogManagerTestCase
 from testB2SafeCmd.testAuthzManager import AuthzManagerTestCase
 from testB2SafeCmd.irodsintgtest import IrodsIntegrationTests
 from testB2SafeCmd.irodsb2safetest import IrodsB2safeIntegrationTests
 from testB2SafeCmd.epic2intgtest import EpicClient2IntegrationTests 
+from testB2SafeCmd.msipidintgtest import MsiPidIntegrationTests
 
 import argparse
 import unittest
 
 __author__ = 'lphan'
 
-def create_epic_test_suite():
-    epic_api_suite = unittest.TestLoader().loadTestsFromTestCase(
-        EpicClientAPITestCase)
-    epic_cred_suite = unittest.TestLoader().loadTestsFromTestCase(
-        EpicClientCredentialsTestCase)
-    epic_cli_suite = unittest.TestLoader().loadTestsFromTestCase(
-        EpicClientCLITestCase)
-    epic_it_suite = unittest.TestLoader().loadTestsFromTestCase(
-        EpicClientIntegrationTests)
-    return unittest.TestSuite(
-        [epic_api_suite, epic_cred_suite, epic_cli_suite, epic_it_suite])
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Test script for epicclient '
-                                                 '(epic), '
-                                                 'epicclient2 (epic2), '
+    parser = argparse.ArgumentParser(description='epicclient2 (epic2), '
+                                                 'msiPid (msipid), '
                                                  'logging manager (log), '
                                                  'authorization manager (auth), '
                                                  'iRODS (irods), '
                                                  'B2SAFE (b2safe), '
                                                  'and all scripts (all)')
     parser.add_argument('-test', action='store', dest='script',
-                        help='[epic, epic2, log, auth, irods, b2safe, all]')
+                        help='[epic2, msipid, log, auth, irods, b2safe, all]')
 
     param = parser.parse_args()
 
-    if param.script == "epic":
-        # Test cases for B2Safe-Epicclient#
-        print "Test Epicclient Script"
-        epic_suite = create_epic_test_suite()
-        unittest.TextTestRunner(descriptions=2, verbosity=2).run(epic_suite)
-
-    elif param.script == "epic2":
+    if param.script == "epic2":
         # test cases for B2safe-epicclient2#
         print "Test Epicclient2 Script"
         epic2_suite = unittest.TestLoader().loadTestsFromTestCase(
         EpicClient2IntegrationTests)
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(epic2_suite)
+
+    elif param.script == "msipid":
+        # test cases for B2safe-msipid#
+        print "Test msiPid Script"
+        msiPid_suite = unittest.TestLoader().loadTestsFromTestCase(
+        MsiPidIntegrationTests)
+        unittest.TextTestRunner(descriptions=2, verbosity=2).run(msiPid_suite)
 
     elif param.script == "log":
         # Test cases for B2Safe-LogManager#
@@ -88,7 +73,6 @@ if __name__ == '__main__':
         print "run authZmanager.py - if true then run epicclient2beta and log "\
               "with logmanager.py"
         all_suite = unittest.TestSuite()
-        all_suite.addTest(create_epic_test_suite())
         all_suite.addTest(LogManagerTestCase("test_case"))
         all_suite.addTest(AuthzManagerTestCase("test_case"))
         all_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(
@@ -98,4 +82,4 @@ if __name__ == '__main__':
         unittest.TextTestRunner(descriptions=2, verbosity=2).run(all_suite)
 
     else:
-        print "Invalid Input; Valid example ./testB2SafeCmd -test epic"
+        print "Invalid Input; Valid example ./testB2SafeCmd -test epic2"
