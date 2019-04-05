@@ -479,7 +479,7 @@ EUDATiCHECKSUMretrieve(*path, *checksum, *modtime, *resource) {
             # other ones are "ichksum", "iput -k", "irepl" (on checksumed source) called by the user.
             EUDATiCHECKSUMdate(*coll, *name, *resc, *modtime);
             *status = bool("true");
-            if (*resource != "None" && *resource != "" && *resource == *resc) {
+            if (*resource == "null" || *resource == "" || *resource == "None" || *resource == *resc) {
                 break;
             }
         }
