@@ -80,8 +80,8 @@ def add_irods_cmd_dir(json_config):
 
     base_irods_dir = os.path.dirname(json_config["irods_dir"])
 
-    if os.path.isdir(base_irods_dir+"/msiExecCmd_bin"):
-        irods_cmd_dir = '/msiExecCmd_bin'
+    if os.path.isdir(base_irods_dir+"/irods/msiExecCmd_bin"):
+        irods_cmd_dir = '/irods/msiExecCmd_bin'
     else:
         irods_cmd_dir = '/iRODS/server/bin/cmd'
 
@@ -165,6 +165,9 @@ def install_python_b2safe_scripts(json_config):
             os.symlink(symlink_file, destination_path)
         except IOError:
             print "Error creating symbolic link: %s" % symlink_file
+            exit(1)
+        except OSError:
+            print "Error creating symbolic link: " + symlink_file + ", " + destination_path
             exit(1)
 
 def read_json_config(json_config_file):
@@ -303,15 +306,20 @@ def update_irods_server_config(json_config):
     for item in json_config["re_rulebase_set"]:
         match_item = False
         match_dict = False
-        for irods_config_item in irods_config["re_rulebase_set"]:
-            # in version 4.1.x it is a dict. In 4.2.1 and higher it is an single item.
-            if isinstance(irods_config_item, dict):
-                match_dict = True
-                if item == irods_config_item["filename"]:
-                    match_item = True
-            else:
+        if not ("re_rulebase_set" in irods_config.keys()):
+            for irods_config_item in irods_config["plugin_configuration"]["rule_engines"][0]["plugin_specific_configuration"]["re_rulebase_set"]:
                 if item == irods_config_item:
                     match_item = True
+        else:
+            for irods_config_item in irods_config["re_rulebase_set"]:
+                # in version 4.1.x it is a dict. In 4.2.1 and higher it is an single item.
+#                if isinstance(irods_config_item, dict):
+#                match_dict = True
+                if item == irods_config_item["filename"]:
+                    match_item = True
+#                else:
+#                    if item == irods_config_item:
+#                        match_item = True
         # append to the list/array only if needed. Either dict or single item.
         if not match_item and match_dict:
             append_item_dict = {'filename': item}
@@ -391,8 +399,10 @@ def update_pid_uservice_config(json_config):
     irods_url_port = json_config["server_id"].split(":")[2]
 
     webdav_server = str(json_config["server_api_pub"].split(":")[0]) + ":" \
-                              + json_config["server_api_pub"].split(":")[1]
-    webdav_url_port = json_config["server_api_pub"].split(":")[2]
+                             + json_config["server_api_pub"].split(":")[1]
+    webdav_url_port = "80"
+    if len(json_config["server_api_pub"].split(":")) > 2:
+        webdav_url_port = json_config["server_api_pub"].split(":")[2]
 
     if json_config["handle_https_verify"].lower() == 'true':
         handle_lookup_insecure = False

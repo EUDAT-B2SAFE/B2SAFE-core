@@ -162,7 +162,7 @@ fi
 
 
 %changelog
-* tue Mar 26 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
+* Tue Mar 26 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
 - add python installation/setup script.
 * Fri Mar 8 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
 - add new parameters. Convert to json input file for configuration.

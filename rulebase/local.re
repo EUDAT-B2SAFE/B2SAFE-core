@@ -138,7 +138,7 @@ getConfParameters(*authzEnabled) {
 #-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
     *major_version = "4";
-    *minor_version = "2";
+    *minor_version = "3";
     *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }
