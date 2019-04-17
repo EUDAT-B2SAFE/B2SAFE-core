@@ -1,0 +1,6 @@
+python-irodsclient
+jsonpatch
+requests
+configparser
+mock
+pytest
