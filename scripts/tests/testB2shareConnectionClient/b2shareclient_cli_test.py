@@ -1,10 +1,15 @@
 import unittest
 from mock import MagicMock, patch
+from os.path import dirname
+from os.path import abspath
 import json
 import os
 import sys
 
-sys.path.append("../../cmd") 
+sys.path.insert(0,
+                os.path.join(dirname(dirname(dirname(dirname(abspath(__file__))))),
+                             "cmd"))
+
 import b2shareclientCLI as b2shareclientCLI
 
 import logging

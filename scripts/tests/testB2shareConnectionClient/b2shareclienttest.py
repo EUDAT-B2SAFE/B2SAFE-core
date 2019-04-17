@@ -2,13 +2,19 @@
 # -*- coding: utf-8 -*-
 import unittest
 from mock import MagicMock, patch
+import os
+from os.path import dirname
+from os.path import abspath
 import json
 import sys
 
 import logging
 test_logger = logging.getLogger('B2shareClientTest')  
 
-sys.path.append("../../cmd") 
+sys.path.insert(0,
+                os.path.join(dirname(dirname(dirname(dirname(abspath(__file__))))),
+                             "cmd"))
+
 from b2shareclient import B2shareClient
 
 class B2shareClientTest(unittest.TestCase):
