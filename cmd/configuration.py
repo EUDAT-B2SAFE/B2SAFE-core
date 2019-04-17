@@ -23,6 +23,7 @@ class Configuration():
         self.dryrun = dryrun
         self.logger = logger
         self.access_token = ""
+        self.irodsenv = None
         self.log_level = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
                           'ERROR': logging.ERROR, 'WARNING': logging.WARNING, \
                           'CRITICAL': logging.CRITICAL}
@@ -102,4 +103,3 @@ class Configuration():
         else: 
             self.logger.error('missing section %s: with parameter %s' % (section, option))
         return None
-    

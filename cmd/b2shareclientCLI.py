@@ -94,7 +94,9 @@ def getAllCommunities(args):
 
 def collectPIDsForCollection(collectionPath, configuration):
     PIDobjectsString = '['
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
+    irodsu = IRODSUtils(configuration.irods_home_dir, logger,
+                        configuration.irods_debug,
+                        irods_env=configuration.irodsenv)
     rc, res = irodsu.deepListDir(collectionPath)
     if not res:
         return None
@@ -140,7 +142,9 @@ def addMetadata(args):
     
     configuration.access_token = accessToken
     
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
+    irodsu = IRODSUtils(configuration.irods_home_dir, logger,
+                        configuration.irods_debug,
+                        irods_env=configuration.irodsenv)
     metadata_file = irodsu.getFile(args.metadata)
     b2shcl = B2shareClient(configuration)
     b2shcl.addB2shareMetadata(args.record_id, metadata_file)
@@ -162,7 +166,9 @@ def publish(args):
 
 #get access_token from users metadata in iRODS
 def getAccessTokenWithConfigs(configuration, args):
-    irodsu = IRODSUtils(configuration.irods_home_dir, logger, configuration.irods_debug)
+    irodsu = IRODSUtils(configuration.irods_home_dir, logger,
+                        configuration.irods_debug,
+                        irods_env=configuration.irodsenv)
     if irodsu:
         users_metadata = irodsu.getMetadata(args.userName, "access_token", '-u')
         if users_metadata:
@@ -231,7 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dryrun", action="store_true",
                         help="run without performing any real change")
     parser.add_argument("-u", "--userName", help="iRODS user name")
-
+    parser.add_argument("--irodenv", help="Path to irods configuration")
     subparsers = parser.add_subparsers(help='sub-command help', dest='subcmd')
     
     parser_draft = subparsers.add_parser('draft', help='create a draft record in B2Share')

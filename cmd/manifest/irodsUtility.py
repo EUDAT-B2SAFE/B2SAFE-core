@@ -1,27 +1,57 @@
 #!/usr/bin/env python
 # -*- python -*-
-
-import json
 import logging
 import os
+import io
 import subprocess
+from os.path import expanduser
+from irods.session import iRODSSession
+import irods.keywords as kw
+
+
+class IRODS(object):
+    """
+    Wrapper class for iRODS session with cleanup on context exit
+    """
+    def __init__(self,
+                 irods_config_file,
+                 irods_auth_file):
+        self.irods_config_file = irods_config_file
+        self.irods_auth_file = irods_auth_file
+
+    def __enter__(self):
+        auth_file = self.irods_auth_file
+        env_file = self.irods_config_file
+        self.session = iRODSSession(irods_env_file=env_file,
+                                    irods_authentication_file=auth_file)
+        # self.session.connection_timeout = self.connection_timeout
+        return self.session
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.session.cleanup()
 
 
 ##############################################################################
 # iRODS Admin Utility Class #
 ##############################################################################
-class IRODSUtils():
-    """ 
+class IRODSUtils(object):
+    """
     utility for irods management
     """
 
-    def __init__(self, home_dir='/', logger_parent=None, debug=False):
+    def __init__(self, home_dir='/', logger_parent=None, debug=False,
+                 irods_env=None):
         """initialize the object"""
-       
-        self.user = None 
-        if logger_parent: 
+        if irods_env is None:
+            self.irods_env = expanduser("~/.irods/irods_environment.json")
+        else:
+            self.irods_env = irods_env
+        self.irods_auth = os.path.join(os.path.dirname(self.irods_env),
+                                       ".irodsA")
+        self.user = None
+        if logger_parent:
             self.logger = logger_parent
-        else: 
+        else:
             logger_name = "IrodsUtils"
             self.logger = logging.getLogger(logger_name)
         self.irods_home_dir = home_dir
@@ -30,31 +60,37 @@ class IRODSUtils():
         else:
             self.logger.setLevel(logging.INFO)
 
-
     def getFile(self, path, resource=None):
         """get file content"""
 
-        cmdList = ["iget"]
-        if resource is not None:
-            cmdList += ['-R', resource]
-        cmdList += [path, '-']
-        try:
-            (rc, out) = self.execute_icommand(cmdList)
-            return out
-        except:
-            return None
+        BLOCK_SIZE = 1024 * io.DEFAULT_BUFFER_SIZE
+        if resource is None:
+            options = {}
+        else:
+            options = {kw.DEST_RESC_NAME_KW: resource}
 
-   
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            obj = session.data_objects.get(path)
+            result = ''
+            with obj.open('r', **options) as f:
+                while True:
+                    chunk = f.read(BLOCK_SIZE)
+                    if chunk:
+                        result += chunk
+                    else:
+                        break
+            return result
+
     def putFile(self, source, destination, resource=None):
         """put the file into the destination collection"""
-
-        cmdList = ["iput"]
-        if resource is not None:
-            cmdList += ['-R', resource]
-        cmdList += ["-f", source, destination]
-        (rc, out) = self.execute_icommand(cmdList)
-        return out
-
+        if resource is None:
+            options = {}
+        else:
+            options = {kw.DEST_RESC_NAME_KW: resource}
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            session.data_objects.put(source, destination, **options)
 
     def getMetadata(self, path, key, option=''):
         """get file metadata"""
