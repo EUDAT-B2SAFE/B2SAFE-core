@@ -32,6 +32,7 @@ class TestIRODSUtils(unittest.TestCase):
                    irods_auth_file=irodsu.irods_auth) as session:
             self.coll_path = '/{}/home/{}/test_dir'.format(session.zone,
                                                            session.username)
+            self.irods_username = session.username
             session.collections.create(self.coll_path)
             session.cleanup()
 
@@ -106,11 +107,17 @@ class TestIRODSUtils(unittest.TestCase):
                                               'c': {'__files__':
                                                     ['TESTFILE']},
                                               'd': {'__files__':
-                                                    ['TESTFILE']}},
-                                        'c': {'__files__': ['TESTFILE']},
-                                        'd': {'__files__': ['TESTFILE']}},
-                                  'b': {'__files__': ['TESTFILE'],
-                                        'c': {'__files__': ['TESTFILE']},
-                                        'd': {'__files__': ['TESTFILE']}},
-                                  'c': {'__files__': ['TESTFILE']},
-                                  'd': {'__files__': ['TESTFILE']}})
+                                                    ['TESTFILE']}}}})
+        result = irodsu.listDir(a, False)
+        self.assertEqual(result, {'a': {'__files__': ['TESTFILE'],
+                                        'b': {}}})
+
+    def test_get_owner(self):
+        testfile = os.path.join(dirname(abspath(__file__)),
+                                "testfile.txt")
+        remote_file = self.coll_path + "/TESTFILE"
+        irodsu = IRODSUtils(irods_env=ENV)
+        irodsu.putFile(testfile, remote_file)
+        owner = self.irods_username
+        self.assertEqual(irodsu.getOwners(remote_file), [owner])
+        self.assertEqual(irodsu.getOwners(self.coll_path), [owner])
