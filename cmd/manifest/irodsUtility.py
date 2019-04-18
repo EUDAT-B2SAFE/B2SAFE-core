@@ -7,6 +7,7 @@ from os.path import expanduser
 from irods.session import iRODSSession
 from irods.models import DataObject
 from irods.models import Collection
+from irods.models import User
 from irods.exception import DataObjectDoesNotExist
 from irods.meta import iRODSMeta
 import irods.keywords as kw
@@ -95,8 +96,20 @@ class IRODSUtils(object):
                    irods_auth_file=self.irods_auth) as session:
             session.data_objects.put(source, destination, **options)
 
+    def getUserMetadata(self, user, key):
+        """get metadata for object or collection"""
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            meta = session.metadata.get(User, user)
+            if meta:
+                return [m.value.strip()
+                        for m in meta
+                        if m.name == key]
+            else:
+                return None
+
     def getMetadata(self, path, key):
-        """get file metadata for object or collection"""
+        """get metadata for object or collection"""
 
         with IRODS(irods_config_file=self.irods_env,
                    irods_auth_file=self.irods_auth) as session:

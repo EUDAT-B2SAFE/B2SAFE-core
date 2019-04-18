@@ -17,13 +17,14 @@ class Configuration():
     irods_home_dir = ""
     irods_debug = ""
     
-    def __init__(self, conffile, debug, dryrun, logger):
+    def __init__(self, conffile, debug, dryrun, logger,
+                 irodsenv=None):
         self.conffile = conffile
         self.debug = debug
         self.dryrun = dryrun
         self.logger = logger
         self.access_token = ""
-        self.irodsenv = None
+        self.irodsenv = irodsenv
         self.log_level = {'INFO': logging.INFO, 'DEBUG': logging.DEBUG, \
                           'ERROR': logging.ERROR, 'WARNING': logging.WARNING, \
                           'CRITICAL': logging.CRITICAL}

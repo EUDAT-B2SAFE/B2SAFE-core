@@ -14,11 +14,12 @@ from b2shareclient import B2shareClient
 from configuration import Configuration
 from manifest import IRODSUtils
 
-
 logger = logging.getLogger('B2shareClientCLI')
 
+
 def draft(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Start creating draft ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -74,7 +75,8 @@ def getCommunityIDByName(configuration, community_name):
     return community_id
 
 def getAllCommunities(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Start get all communities ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -97,7 +99,7 @@ def collectPIDsForCollection(collectionPath, configuration):
     irodsu = IRODSUtils(configuration.irods_home_dir, logger,
                         configuration.irods_debug,
                         irods_env=configuration.irodsenv)
-    rc, res = irodsu.deepListDir(collectionPath)
+    res = irodsu.deepListDir(collectionPath)
     if not res:
         return None
     filePathsMap = None
@@ -132,7 +134,8 @@ def collectFilePathsFromTree(filesTree):
     return filePaths
 
 def addMetadata(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Adding metadata ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -151,7 +154,8 @@ def addMetadata(args):
     logger.info("Added metadata")
 
 def publish(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Publishing ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -170,7 +174,7 @@ def getAccessTokenWithConfigs(configuration, args):
                         configuration.irods_debug,
                         irods_env=configuration.irodsenv)
     if irodsu:
-        users_metadata = irodsu.getMetadata(args.userName, "access_token", '-u')
+        users_metadata = irodsu.getUserMetadata(args.userName, "access_token")
         if users_metadata:
             return users_metadata[0]
         else:
@@ -179,7 +183,8 @@ def getAccessTokenWithConfigs(configuration, args):
         return None
 
 def getCommunitySchema(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Get Community Schema ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -199,7 +204,8 @@ def getCommunitySchema(args):
     return schema
         
 def getDraftByID(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("Get draft by ID ...")
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -216,7 +222,8 @@ def getDraftByID(args):
     return draft
 
 def deleteDraft(args):
-    configuration = Configuration(args.confpath, args.debug, args.dryrun, logger)
+    configuration = Configuration(args.confpath, args.debug, args.dryrun,
+                                  logger, irodsenv=args.irodsenv)
     configuration.parseConf()
     logger.info("DELETING DRAFT: " + args.draft_to_delete_id)
     accessToken = getAccessTokenWithConfigs(configuration, args)
@@ -237,7 +244,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dryrun", action="store_true",
                         help="run without performing any real change")
     parser.add_argument("-u", "--userName", help="iRODS user name")
-    parser.add_argument("--irodenv", help="Path to irods configuration")
+    parser.add_argument("--irodsenv", help="Path to irods configuration")
     subparsers = parser.add_subparsers(help='sub-command help', dest='subcmd')
     
     parser_draft = subparsers.add_parser('draft', help='create a draft record in B2Share')
