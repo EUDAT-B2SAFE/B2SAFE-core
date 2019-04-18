@@ -6,6 +6,9 @@ import io
 import subprocess
 from os.path import expanduser
 from irods.session import iRODSSession
+from irods.models import DataObject
+from irods.models import Collection
+from irods.exception import DataObjectDoesNotExist
 import irods.keywords as kw
 
 
@@ -92,86 +95,53 @@ class IRODSUtils(object):
                    irods_auth_file=self.irods_auth) as session:
             session.data_objects.put(source, destination, **options)
 
-    def getMetadata(self, path, key, option=''):
-        """get file metadata"""
+    def getMetadata(self, path, key):
+        """get file metadata for object or collection"""
 
-        if option == '':
-            option = '-C'
-            query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
-            (rc, out) = self.queryIrodsIcat(query)
-            if out.startswith('CAT_NO_ROWS_FOUND'):
-                option = '-d'
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            try:
+                session.data_objects.get(path)
+                meta = session.metadata.get(DataObject, path)
+            except DataObjectDoesNotExist:
+                meta = session.metadata.get(Collection, path)
+            if meta:
+                return [m.value.strip()
+                        for m in meta
+                        if m.name == key]
+            else:
+                return None
 
-        (rc, out) = self.execute_icommand(["imeta", "ls", option, path, key])
-        if out:
-            metadata = []
-            last_key = ''
-            lines = out.splitlines()
-            for line in lines:
-                self.logger.debug('line: ' + line)
-                if line.startswith('AVUs defined for'):
-                    continue
-                if line.startswith('None'):
-                    break
-                (name, value) = line.split(': ')
-                if name.strip() == 'attribute':
-                    last_key = value.strip()
-                if name.strip() == 'value' and last_key == key:
-                    metadata.append(value.strip())
-                    
-            return metadata
-
-        return None
-    
     def getAllMetadata(self, path):
         """get all metadata for the file or collection under the path"""
- 
-        option = '-C'
-        query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
-        (rc, out) = self.queryIrodsIcat(query)
-        if out.startswith('CAT_NO_ROWS_FOUND'):
-            option = '-d'
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            try:
+                session.data_objects.get(path)
+                meta = session.metadata.get(DataObject, path)
+            except DataObjectDoesNotExist:
+                meta = session.metadata.get(Collection, path)
 
-        (rc, out) = self.execute_icommand(["imeta", "ls", option, path])
-        if out:
-            metadata = {}
-            lines = out.splitlines()
-            for line in lines:
-                self.logger.debug('line: ' + line)
-                if line.startswith('AVUs defined for'):
-                    continue
-                if line.startswith('None'):
-                    break
-                (name, value) = line.split(': ')
-                key = ''
-                if name.strip() == 'attribute':
-                    key = value.strip()
-                if name.strip() == 'value':
-                    metadata[key] = value.strip()
-                    
-            return metadata
-
-        return None
+            if meta:
+                return {m.name.strip(): m.value.strip()
+                        for m in meta}
+            else:
+                return None
 
     def getChecksum(self, path):
         """get file checksum"""
-
-        query = "SELECT COLL_NAME WHERE COLL_NAME = '" + path + "'"
-        (rc, out) = self.queryIrodsIcat(query)
-        if out.startswith('CAT_NO_ROWS_FOUND'):
-            (rc, out) = self.execute_icommand(["ichksum", path])
-            if out: 
-                result = out.split()
-                file_checksum = result[1]
-                self.logger.debug('checksum: ' + file_checksum)
-                return file_checksum.strip()
-
-        return None
-
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            try:
+                obj = session.data_objects.get(path)
+                return obj.checksum
+            except Exception as e:
+                self.logger.error('failed: ' + str(e))
+                return None
 
     def getOwners(self, path):
         """get file owners"""
-     
+
         opt_clause = ""
         field_name = "COLL_OWNER_NAME"
         parent = path
@@ -221,29 +191,32 @@ class IRODSUtils(object):
                 return resources
         return None
  
-    
     def deepListDir(self, path, abs_path=True):
         """List recursively the content of a directory"""
+        #TODO in case of memory issue for large collections, consider to use
+        # a shelve object instead of a dictionary.
+        # or use generators to walk throw the collection
+        def process_collection(coll, tree, abs_path):
+            for collection, subcollections, objects in \
+                coll.walk(topdown=True):
+                if abs_path:
+                    pathname = collection.path
+                else:
+                    pathname = os.path.basename(collection.path)
+                tree[pathname] = {'__files__':
+                                  [o.name for o in objects]}
+                for sc in subcollections:
+                    process_collection(sc,
+                                       tree[pathname],
+                                       abs_path)
+
         pathString = str(path)
-        self.logger.debug('Listing recursively the path: ' + pathString)
-#TODO in case of memory issue for large collections, consider to use
-# a shelve object instead of a dictionary.
-        (rc, out) = self.execute_icommand(["ils", "-r", pathString])
-        if out is not None:
-            tree = {}
-            fpath = ''
-            i = 0
-            lines = out.splitlines()
-            if lines and len(lines) > 0:
-                # split the root path in parent and child(relative or absolute)
-                parent, fpath = self._pathSplit(lines[0].strip()[:-1], abs_path)
-                # recursive loop over collections
-                tree[fpath], ind = self._parseColl(fpath, {'__files__': []}, 
-                                                   lines[1:], abs_path)
-
-            return (rc, tree)
-
-        return (rc, None)
+        tree = {}
+        with IRODS(irods_config_file=self.irods_env,
+                   irods_auth_file=self.irods_auth) as session:
+            coll = session.collections.get(pathString)
+            process_collection(coll, tree, abs_path)
+        return tree
 
     def listDir(self, path, abs_path=True):
         """List only the content of a directory"""
@@ -251,6 +224,7 @@ class IRODSUtils(object):
         self.logger.debug('Listing the path: ' + pathString)
         #TODO in case of memory issue for large collections, consider to use
         # a shelve object instead of a dictionary.
+        # or use generators to walk throw the collection
         (rc, out) = self.execute_icommand(["ils", pathString])
         if out is not None:
             tree = {}
