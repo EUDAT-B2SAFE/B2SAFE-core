@@ -13,7 +13,7 @@ sys.path.insert(0,
 from manifest.irodsUtility import IRODS  # noqa: E402
 from manifest.irodsUtility import IRODSUtils as IRODSUtils  # noqa: E402
 
-ENV = "/home/stefan/.irods/servers/b2safe/irods_environment.json"
+ENV = None
 
 
 class TestIRODSUtils(unittest.TestCase):
