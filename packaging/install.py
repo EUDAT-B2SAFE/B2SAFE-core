@@ -76,14 +76,18 @@ PID_DEFAULT_PROFILE = [
 
 
 def add_irods_cmd_dir(json_config):
-    ''' add the iRODS path to the cmd directory. iRODS 4.1 and higher differs '''
+    ''' add the iRODS path to the cmd directory. iRODS 4.2 and higher differs '''
 
-    base_irods_dir = os.path.dirname(json_config["irods_dir"])
-
-    if os.path.isdir(base_irods_dir+"/irods/msiExecCmd_bin"):
-        irods_cmd_dir = '/irods/msiExecCmd_bin'
+    if os.path.exists(json_config["irods_dir"]):
+        base_irods_dir = json_config["irods_dir"]
     else:
-        irods_cmd_dir = '/iRODS/server/bin/cmd'
+        base_irods_dir = os.path.dirname(json_config["irods_dir"])
+
+    if os.path.exists(base_irods_dir+"/msiExecCmd_bin") and \
+        os.path.isdir(base_irods_dir+"/msiExecCmd_bin"):
+        irods_cmd_dir = '/msiExecCmd_bin'
+    else:
+        irods_cmd_dir = '/server/bin/cmd'
 
     json_config["irods_cmd_dir"] = base_irods_dir+irods_cmd_dir
 
@@ -306,26 +310,27 @@ def update_irods_server_config(json_config):
     for item in json_config["re_rulebase_set"]:
         match_item = False
         match_dict = False
-        if not ("re_rulebase_set" in irods_config.keys()):
-            for irods_config_item in irods_config["plugin_configuration"]["rule_engines"][0]["plugin_specific_configuration"]["re_rulebase_set"]:
-                if item == irods_config_item:
-                    match_item = True
+        # In 4.2.1 and higher it is an single item under plugin_configuration.
+        # in version 4.1.x it is a dict under 're_rulebase_set'.
+        if not "re_rulebase_set" in irods_config.keys():
+            for irods_rule_engine in irods_config["plugin_configuration"]["rule_engines"]:
+                if irods_rule_engine["plugin_name"] == "irods_rule_engine_plugin-irods_rule_language":
+                    for irods_config_item in irods_rule_engine["plugin_specific_configuration"]["re_rulebase_set"]:
+                        if item == irods_config_item:
+                            match_item = True
         else:
+            match_dict = True
             for irods_config_item in irods_config["re_rulebase_set"]:
-                # in version 4.1.x it is a dict. In 4.2.1 and higher it is an single item.
-#                if isinstance(irods_config_item, dict):
-#                match_dict = True
                 if item == irods_config_item["filename"]:
                     match_item = True
-#                else:
-#                    if item == irods_config_item:
-#                        match_item = True
         # append to the list/array only if needed. Either dict or single item.
-        if not match_item and match_dict:
+        if not match_item and not match_dict:
+            for irods_rule_engine in irods_config["plugin_configuration"]["rule_engines"]:
+                if irods_rule_engine["plugin_name"] == "irods_rule_engine_plugin-irods_rule_language":
+                    irods_rule_engine["plugin_specific_configuration"]["re_rulebase_set"].append(item)
+        elif not match_item and match_dict:
             append_item_dict = {'filename': item}
             irods_config["re_rulebase_set"].append(append_item_dict)
-        elif not match_item and not match_dict:
-            irods_config["re_rulebase_set"].append(item)
 
     # write iRODS config
     write_json_config(irods_config, config_file)
@@ -345,7 +350,8 @@ def update_local_re_parameters(json_config):
                                json_config["b2safe_package_dir"]+'/conf/authz.map.json', True)
 
     # getConfParameters
-    update_flat_file_parameter(config_file, '*authzEnabled', str(json_config["authz_enabled"]).lower(), True)
+    update_flat_file_parameter(config_file, '*authzEnabled',
+                               str(json_config["authz_enabled"]).lower(), True)
     update_flat_file_parameter(config_file, '*messageQueueEnabled',
                                str(json_config["msg_queue_enabled"]).lower(), True)
 
@@ -463,7 +469,7 @@ def update_pid_uservice_config(json_config):
         pid_uservice_config["permissions"]["groups_delete"] = json_config["handle_groups"]
         pid_uservice_config["permissions"]["groups_write"] = json_config["handle_groups"]
 
-    print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
+    # print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
     # write pid uService config
     write_json_config(pid_uservice_config, pid_uservice_conf_file)
 
