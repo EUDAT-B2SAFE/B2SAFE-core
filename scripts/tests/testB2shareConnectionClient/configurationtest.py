@@ -2,12 +2,17 @@
 # -*- coding: utf-8 -*-
 import unittest
 import os
+from os.path import dirname
+from os.path import abspath
 import logging
 import sys
 
 logger = logging.getLogger('ConfigurationTest')
 
-sys.path.append("../../cmd") 
+sys.path.insert(0,
+                os.path.join(dirname(dirname(dirname(dirname(abspath(__file__))))),
+                             "cmd"))
+
 from configuration import Configuration
 
 class ConfigurationTest(unittest.TestCase):

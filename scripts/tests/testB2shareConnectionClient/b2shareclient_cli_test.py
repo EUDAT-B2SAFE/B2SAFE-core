@@ -30,6 +30,7 @@ class argsMock():
     draft_to_delete_id = "someID123"
     debug = True
     dryrun = False
+    irodsenv = None
     
 class B2shareClientCLITest(unittest.TestCase):
     def setUp(self):
