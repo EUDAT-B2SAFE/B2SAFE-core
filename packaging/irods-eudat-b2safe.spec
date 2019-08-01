@@ -116,7 +116,7 @@ cat > $INSTALL_CONF << EOF
 {
   "b2safe_package_dir": "%{_irodsPackage}",
   "irods_conf_dir": "/etc/irods",
-  "irods_dir": "/var/lib/irods/iRODS",
+  "irods_dir": "/var/lib/irods",
   "irods_default_resource": "demoResc",
   "cred_store_type": "os",
   "cred_file_path": "%{_irodsPackage}/conf/credentials",

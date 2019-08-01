@@ -1,2 +1,4 @@
 # exclude python compiled files
 *.pyc
+*~
+ci/RPMS
