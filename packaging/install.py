@@ -412,10 +412,10 @@ def update_pid_uservice_config(json_config):
 
     if json_config["handle_https_verify"].lower() == 'true':
         handle_lookup_insecure = False
-        handle_lookup_cacert = null
+        handle_lookup_cacert = None
     elif json_config["handle_https_verify"].lower() == 'false':
         handle_lookup_insecure = True
-        handle_lookup_cacert = null
+        handle_lookup_cacert = None
     else:
         handle_lookup_insecure = False
         handle_lookup_cacert = json_config["handle_https_verify"]
