@@ -157,7 +157,8 @@ def create_handles_for_collection(irods_test_file_path, fixed_content):
 def delete_handle(pid):
     '''procedure to delete a pid'''
     # create iRODS rule to delete created pid
-    irule_rule = '{getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);msiExecCmd("epicclient.py","*credStoreType *credStorePath delete *pid", "null", "null", "null", *out)}'
+    irule_rule = '{getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicDebug);' + \
+                 ' msiExecCmd("epicclient2.py","*credStoreType *credStorePath delete *pid", "null", "null", "null", *out)}'
     irule_input = '*pid='+pid
     irule_output = '*out'
     command = ["irule", irule_rule, irule_input, irule_output]
@@ -225,6 +226,14 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         self.irods_home = jsonfilecontent.pop('irods_home')
         self.irods_user_name = jsonfilecontent.pop('irods_user_name')
         self.irods_zone_name = jsonfilecontent.pop('irods_zone_name')
+        deleted = {}
+        res = search_handle(self.irods_home + '/*')
+        while res != 'empty':
+            deleted[res] = True
+            dres = delete_handle(res)
+            res = search_handle(self.irods_home + '/*')
+            if res in deleted:
+                raise RuntimeError('not deleted PID {0}'.format(res))
 
     def tearDown(self):
         """ Cleanup testB2SafeCmd environment after the tests have run
@@ -331,10 +340,8 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
         # put test file in iRODS
         put_irods_file(test_path, self.irods_home+'/'+test_file)
         os.unlink(test_path)
-
         # create test handle
         handle_created = create_handle(self.irods_home+'/'+test_file, 'pid', 'None', 'false' )
-
         # cleanup before checks
         # retrieve values and delete if a handle has been created
         if handle_created != None:
@@ -385,8 +392,7 @@ class IrodsB2safeIntegrationTests(unittest.TestCase):
             delete_handle(handle_created)
         # delete file from iRODS
         delete_irods_file(test_file)
-
-      # create array with values to test and execute
+        # create array with values to test and execute
         test_values=[{'action': 'NotEqual', 'result_value': handle_created, 'expected_value': None, 'string': 'No PID has been created'}]
         # check basic handle field(s)
         test_values.append({'action': 'NotEqual', 'result_value': handle_dict['url'], 'expected_value': 'None', 'string': 'URL does not have a value'})
