@@ -381,7 +381,7 @@ def search_execution(client, search_key=None, search_value=None):
     # set default return value
     result = None
     json_result = "None"
-    
+
     if search_key is not None and search_value is not None:
         try:
             kvpairs = dict([(search_key, str(''.join(search_value)))])
@@ -406,7 +406,7 @@ def read_execution(client, read_handle, read_key=None):
     # set default return value
     result = None
     json_result = "None"
-    
+
     if read_key is None:
         try:
             # retrieve whole handle
@@ -478,7 +478,8 @@ def create_execution(client, create_handle, create_location, create_overwrite=Fa
         result = 'error'
     except HandleSyntaxError:
         result = 'error'
-
+    except GenericHandleError as ex:
+        result = 'error'
     return(result)
 
 def delete_execution(client, delete_handle, delete_key=None):

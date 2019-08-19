@@ -1,0 +1,38 @@
+version: '2'
+
+volumes:
+  data-volume:
+
+  irods-vault:
+
+  irods-conf:
+
+
+
+services:
+  postgres:
+    build:
+      context: ../postgres
+      dockerfile: Dockerfile
+    ports:
+      - "5432"
+    hostname: postgresc7426.irods
+    volumes:
+      - data-volume:/var/lib/postgresql/9.5/main
+
+  icat:
+    build:
+      context: ../..
+      dockerfile: ci/centos7_4_1_12/Dockerfile
+    ports:
+      - "127.0.0.1:1247:1247"
+    depends_on:
+      - postgres
+    links:
+      - "postgres:postgres"
+    hostname: centos7_41_12.irods
+    volumes:
+      - "../../:/build"
+      - irods-vault:/var/lib/irods
+      - irods-conf:/etc/irods
+    command: /app/setup_irods.sh

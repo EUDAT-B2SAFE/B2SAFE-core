@@ -76,20 +76,23 @@ PID_DEFAULT_PROFILE = [
 
 
 def add_irods_cmd_dir(json_config):
-    ''' add the iRODS path to the cmd directory. iRODS 4.2 and higher differs '''
-
-    if os.path.exists(json_config["irods_dir"]):
-        base_irods_dir = json_config["irods_dir"]
-    else:
-        base_irods_dir = os.path.dirname(json_config["irods_dir"])
-
-    if os.path.exists(base_irods_dir+"/msiExecCmd_bin") and \
-        os.path.isdir(base_irods_dir+"/msiExecCmd_bin"):
-        irods_cmd_dir = '/msiExecCmd_bin'
-    else:
-        irods_cmd_dir = '/server/bin/cmd'
-
-    json_config["irods_cmd_dir"] = base_irods_dir+irods_cmd_dir
+    '''
+    add the iRODS path to the cmd directory.
+    iRODS 4.2 and higher differs.
+    4.1: /var/lib/irods/iRODS/server/bin/cmd
+    4.2: /var/lib/irods/msiExecCmd_bin
+    '''
+    paths = [os.path.join(json_config["irods_dir"],
+                          "iRODS",
+                          "server",
+                          "bin",
+                          "cmd"),
+             os.path.join(json_config["irods_dir"],
+                          "msiExecCmd_bin")]
+    for p in paths:
+        if os.path.exists(p):
+            json_config["irods_cmd_dir"] = p
+            break
 
 def check_user(json_config):
     ''' check the user who is running this program. It has to be the iRODS user '''
@@ -412,10 +415,10 @@ def update_pid_uservice_config(json_config):
 
     if json_config["handle_https_verify"].lower() == 'true':
         handle_lookup_insecure = False
-        handle_lookup_cacert = null
+        handle_lookup_cacert = None
     elif json_config["handle_https_verify"].lower() == 'false':
         handle_lookup_insecure = True
-        handle_lookup_cacert = null
+        handle_lookup_cacert = None
     else:
         handle_lookup_insecure = False
         handle_lookup_cacert = json_config["handle_https_verify"]

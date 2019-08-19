@@ -76,9 +76,15 @@ rm -rf %{buildroot}
 # default attributes
 %defattr(-,-,-,-)
 # files
-# exclude .pyc and .py files
+# exclude .pyc and .pyo files
+%exclude %{_irodsPackage}/packaging/*.pyc
+%exclude %{_irodsPackage}/packaging/*.pyo
 %exclude %{_irodsPackage}/cmd/*.pyc
-%exclude %{_irodsPackage}/cmd/*.pyo 
+%exclude %{_irodsPackage}/cmd/*.pyo
+%exclude %{_irodsPackage}/cmd/Pipefile
+%exclude %{_irodsPackage}/cmd/Pipefile.lock
+%exclude %{_irodsPackage}/cmd/logs
+
 #include files
 %{_irodsPackage}/cmd
 %{_irodsPackage}/conf
@@ -110,7 +116,7 @@ cat > $INSTALL_CONF << EOF
 {
   "b2safe_package_dir": "%{_irodsPackage}",
   "irods_conf_dir": "/etc/irods",
-  "irods_dir": "/var/lib/irods/iRODS",
+  "irods_dir": "/var/lib/irods",
   "irods_default_resource": "demoResc",
   "cred_store_type": "os",
   "cred_file_path": "%{_irodsPackage}/conf/credentials",
@@ -124,8 +130,9 @@ cat > $INSTALL_CONF << EOF
   "handle_owner": "200:0.NA/<ZZZ>",
   "handle_reverse_lookup_name": "<ZZZ>",
   "handle_reverse_lookup_password": "<reverse_lookup_password>",
-  "handle_https_verify": True,
+  "handle_https_verify": "True",
   "handle_users": [ "user0#Zone0", "user1#Zone1" ],
+  "handle_groups": [],
   "log_level": "INFO",
   "log_directory": "/var/log/irods",
   "shared_space": "",
@@ -162,6 +169,8 @@ fi
 
 
 %changelog
+* Wed Jul 24 2019  Stefan Wolfsheimer <stefan.wolfsheimer@surfsara.nl> 4.2.1
+- exclude python object files, fix install.json
 * Tue Mar 26 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1
 - add python installation/setup script.
 * Fri Mar 8 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1

@@ -1,0 +1,4 @@
+[surfsara-irods]
+name=Local CentOS Repo
+baseurl=http://145.100.59.94/CentOS/7/irods-4.2.6/
+gpgcheck=0
