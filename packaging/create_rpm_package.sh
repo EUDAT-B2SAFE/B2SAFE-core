@@ -3,6 +3,12 @@
 set -e
 set -x
 
+BUILD=$1
+if [[ -z "$BUILD" ]]
+then
+    BUILD=0
+fi
+
 USERNAME=`whoami`
 
 if [ "$USERNAME" = "root" ]
@@ -22,6 +28,8 @@ then
 	exit 1
 fi 
 
+
+
 # create build directory's
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
@@ -40,9 +48,9 @@ ABSOLUTE_PATH=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
 MAJOR_VERS=`grep "^\s*\*major_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
 MINOR_VERS=`grep "^\s*\*minor_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
 SUB_VERS=`grep "^\s*\*sub_version" $ABSOLUTE_PATH/../rulebase/local.re | awk -F\" '{print $2}'`
-VERSION="${MAJOR_VERS}.${MINOR_VERS}"
+VERSION="${MAJOR_VERS}.${MINOR_VERS}.${SUB_VERS}"
 
 # build rpm
-rpmbuild -ba --define "_version $VERSION" --define "_release $SUB_VERS" irods-eudat-b2safe.spec
+rpmbuild -ba --define "_version $VERSION" --define "_release $BUILD" irods-eudat-b2safe.spec
 
 # done..
