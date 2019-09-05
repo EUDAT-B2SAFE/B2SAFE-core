@@ -65,7 +65,7 @@ sudo pip install -r requirements.txt
 ```bash
 sudo vi /opt/eudat/b2safe/packaging/install.json
 ```
-
+| parameter              | comment                |
 |------------------------|------------------------|
 | DEFAULT_RESOURCE       |                        |
 | SERVER_ID              |                        |
@@ -78,7 +78,7 @@ sudo vi /opt/eudat/b2safe/packaging/install.json
 | HTTPS_VERIFY           | needed for epicclient2 |
 | AUTHZ_ENABLED          | default=true           |
 | MSG_QUEUE_ENABLED      | default=false          |
-|------------------------|------------------------|
+
 
 
 ### install/configure it as the user who runs iRODS
