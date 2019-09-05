@@ -9,7 +9,9 @@ The EUDAT (http://www.eudat.eu) B2SAFE Service offers functionality to replicate
 ---------------
 Deployment
 ---------------
-See install.txt .
+
+* [Deployment on Centos 7, see install_centos7.md](install_centos7.md)
+* [Deployment on other systems, see install_other.txt](install_other.txt)
 
 ---------------
 Documentation
