@@ -21,7 +21,7 @@ configure the repo as root:
 cat > /etc/yum.repos.d/surfsara-irods.repo <<EOF
 [surfsara-irods]
 name=Surfsara iRODS repo
-baseurl=http://software.irodspoc-sara.surf-hosted.nl/CentOS/7/stefan-wolfsheimer/devel/irods-4.1.12
+baseurl=https://software.irodspoc-sara.surf-hosted.nl/CentOS/7/irods-4.1.12
 sslverify=0
 gpgcheck=0
 EOF
@@ -33,10 +33,10 @@ Configure the yum repository for iRODS 4.2.6
 configure the repo as root:
 
 ```bash
-sudo cat > /etc/yum.repos.d/surfsara-irods.repo <<EOF
+cat > /etc/yum.repos.d/surfsara-irods.repo <<EOF
 [surfsara-irods]
 name=Surfsara iRODS repo
-baseurl=http://software.irodspoc-sara.surf-hosted.nl/CentOS/7/stefan-wolfsheimer/devel/irods-4.2.6
+baseurl=https://software.irodspoc-sara.surf-hosted.nl/CentOS/7/irods-4.2.6
 sslverify=0
 gpgcheck=0
 EOF
@@ -45,7 +45,7 @@ EOF
 Install pid-microservices for iRODS and B2SAFE
 ----------------------------------------------
 ```bash
-sudo yum install msi-persistent-id irods-eudat-b2safe
+sudo yum install msi-persistent-id b2handle irods-eudat-b2safe
 ```
 
 After Installation / upgrade
@@ -90,23 +90,7 @@ sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/pa
 DONE
 
 
-## installation of B2HANDLE
-The customers need to install the b2handle library on the b2safe system and
-create public/private keypairs and certificates and get the public key binary
-uploaded before the upgrades.
-This entails following:
-* Download the b2handle code from: https://github.com/EUDAT-B2SAFE/B2HANDLE
-* Create an rpm and install it on the b2safe system. With the necessary
-dependencies. See the github page:
-
-```bash
-python setup.py bdist_rpm
-````
-
-```bash
-yum install <created_rpm in dist directory> 
-```
-
+## confgiure B2HANDLE
 * Ask the handle hosting service which user to use for a certificate.
 * Create a private/public keypair and create a derived certificate as described
 in  http://eudat-b2safe.github.io/B2HANDLE/creatingclientcertificates.html.: 
@@ -120,3 +104,4 @@ in  http://eudat-b2safe.github.io/B2HANDLE/creatingclientcertificates.html.:
 ```
 * Ask hosting service which username/password to use for reverselooup.
 * Test using curl
+

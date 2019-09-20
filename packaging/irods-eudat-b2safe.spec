@@ -12,7 +12,7 @@ BuildArch:	noarch
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 #BuildRequires:	
-#Requires:	irods-icat or irods-server
+#Requires:	msi-persistent-id b2handle
 
 %define _whoami %(whoami)
 %define _b2safehomepackaging %(pwd)
@@ -169,6 +169,8 @@ fi
 
 
 %changelog
+* Wed Sep 19 2019  Stefan Wolfsheimer <stefan.wolfsheimer@surfsara.nl> 4.2.1
+- add Requires
 * Wed Jul 24 2019  Stefan Wolfsheimer <stefan.wolfsheimer@surfsara.nl> 4.2.1
 - exclude python object files, fix install.json
 * Tue Mar 26 2019  Robert Verkerk <robert.verkerk@surfsara.nl> 4.2.1

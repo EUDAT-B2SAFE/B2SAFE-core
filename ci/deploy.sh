@@ -43,7 +43,10 @@ REPO_NAME=`repo_name $VERSION $GIT_URL $GIT_BRANCH `
 
 set -e
 set -x
+BASEREPO_NAME=$( dirname $REPO_NAME )
 
 ssh $SSH_OPTIONS $YUM_SERVER "mkdir -p /repos/CentOS/7/${REPO_NAME}/Packages/"
+# create symlinks for 3rd party packages
+ssh $SSH_OPTIONS $YUM_SERVER "/home/software/create_symlinks.sh /repos/CentOS/7/$BASEREPO_NAME"
 scp $SSH_OPTIONS ./ci/RPMS/Centos/7/${REPO_NAME}/${RPM_PACKAGE} $YUM_SERVER:/repos/CentOS/7/${REPO_NAME}/Packages/
 ssh $SSH_OPTIONS $YUM_SERVER createrepo --update /repos/CentOS/7/${REPO_NAME}
