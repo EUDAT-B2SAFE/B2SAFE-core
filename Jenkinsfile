@@ -27,6 +27,22 @@ pipeline
 
             }
         }
+        stage('Build_4.1.11')
+        {
+            steps
+            {
+                echo '-------------'
+                echo 'Shutting down'
+                echo '-------------'
+                sh './ci/shutdownall.sh'
+
+                echo '-----------------------------'
+                echo 'Building against iRODS 4.1.11'
+                echo '-----------------------------'
+                sh './ci/build.sh centos7_4_1_11  --build ${BUILD_NUMBER}  --url ${GIT_URL} --branch ${GIT_BRANCH}'
+            }
+
+        }
         stage('Build_4.1.12')
         {
             steps
@@ -63,7 +79,15 @@ pipeline
                 sh './ci/test.sh centos7_4_1_12  --build ${BUILD_NUMBER}  --url ${GIT_URL} --branch ${GIT_BRANCH}'
             }
         }
-
+        stage('Deploy_4_1_11')
+        {
+            steps
+            {
+                echo '------------------------------'
+                echo 'Deploying.'
+                sh './ci/deploy.sh centos7_4_1_11  --build ${BUILD_NUMBER}  --url ${GIT_URL} --branch ${GIT_BRANCH}'
+           }
+        }
         stage('Deploy_4_1_12')
         {
             steps
