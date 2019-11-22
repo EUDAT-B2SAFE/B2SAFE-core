@@ -53,12 +53,38 @@ MSG_QUEUE_ENABLED=false
 
 if [ -e $INSTALL_CONFIG ]
 then
-    source $INSTALL_CONFIG
+  source $INSTALL_CONFIG
 else
-    echo "ERROR: $INSTALL_CONFIG not present!"
-    STATUS=1
+  echo "ERROR: $INSTALL_CONFIG not present!"
+  STATUS=1
 fi
 
+# remove trailing /iRODS or /iRODS/ from IRODS_DIR
+IRODS_DIR=${IRODS_DIR%/iRODS}
+IRODS_DIR=${IRODS_DIR%/iRODS/}
+
+# empty server_api_reg
+if [ "x" == "x${SERVERAPIREG}"  ]
+then
+  echo "WARNING: server_api_reg is empty in install.json. Please give it a reasonable value."
+  echo "         if the http api is not implemented make it the same as the server_id."
+  echo ""
+fi
+
+# empty server_api_pub
+if [ "x" == "x${SERVERAPIPUB}"  ]
+then
+  echo "WARNING: server_api_pub is empty in install.json. Please give it a reasonable value."
+  echo "         if the http api is not implemented make it the same as the server_id."
+  echo ""
+fi
+
+#empty handle_reverse_lookup_password
+echo "WARNING: handle_reverse_lookup_password is empty in install.json. Please give it a reasonable value."
+echo "         It can be retrieved from /opt/eudat/b2safe/conf/credentials"
+echo ""
+
+# set handle_https_verify
 string=$(echo "$HTTPS_VERIFY" | tr '[:upper:]' '[:lower:]')
 if [[ $string =~ .*true.* ]]
 then
@@ -70,11 +96,18 @@ else
   HTTPS_VERIFY_STRING="\"${HTTPS_VERIFY}\""
 fi
 
+# set handle_users
 let count=0
 handle_users_array=(`echo ${USERS} | sed 's/[\t ]+/\n/g'`)
 handle_users_string=
 for each in ${handle_users_array[@]}
 do
+  if [[ $each =~ .*user0#Zone0.* || $each =~ .*user1#Zone1.* ]]
+  then
+    echo "WARNING: handle_users has a default value: \"$each\" in install.json. Please give it a reasonable value."
+    echo "         This will be enforced with the msi_pid uService."
+    echo ""
+  fi
   if [ $count -eq 0 ]
   then
     handle_users_string=$(echo -n "\"$each\"")
@@ -83,7 +116,6 @@ do
   fi
   let count=$count+1
 done
-
 
 cat > install.json << EOT
 {
@@ -102,6 +134,7 @@ cat > install.json << EOT
   "handle_prefix": "${PREFIX}",
   "handle_owner": "${HANDLEOWNER}",
   "handle_reverse_lookup_name": "${REVERSELOOKUP_USERNAME}",
+  "handle_reverse_lookup_password": "",
   "handle_https_verify": ${HTTPS_VERIFY_STRING},
   "handle_users": [ ${handle_users_string} ],
   "handle_groups": [  ],
