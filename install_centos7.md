@@ -56,29 +56,45 @@ To install/configure it in iRODS do following as the user who runs iRODS:
 
 
 ### Install required python modules
+As the user who runs iRODS do following:
 ```bash
 cd /opt/eudat/b2safe/cmd
-sudo pip install -r requirements.txt
+pip install --user -r requirements.txt
 ```
 
-### update install.conf with correct parameters with your favorite editor.
+### convert install.conf to install.json if needed
+When going from version 4.2.x or lower of B2SAFE to version 4.3 or higher convert the installation configuration.
+As the user who runs iRODS do following:
+```bash
+cd /opt/eudat/b2safe/packaging
+./convert_b2safe_conf_to_json.sh
+```
+Notice all the warnings and take them in to account.
+
+
+### update install.json with correct parameters with your favorite editor.
+As the user who runs iRODS do following:
 ```bash
 sudo vi /opt/eudat/b2safe/packaging/install.json
 ```
-| parameter              | comment                |
-|------------------------|------------------------|
-| DEFAULT_RESOURCE       |                        |
-| SERVER_ID              |                        |
-| HANDLE_SERVER_URL      | needed for epicclient2 |
-| PRIVATE_KEY            | needed for epicclient2 |
-| CERTIFICATE_ONLY       | needed for epicclient2 |
-| PREFIX                 | needed for epicclient2 |
-| HANDLEOWNER            | needed for epicclient2 |
-| REVERSELOOKUP_USERNAME | needed for epicclient2 |
-| HTTPS_VERIFY           | needed for epicclient2 |
-| AUTHZ_ENABLED          | default=true           |
-| MSG_QUEUE_ENABLED      | default=false          |
-
+| parameter                      | comment                                     |
+|--------------------------------|---------------------------------------------|
+| irods_default_resource         |                                             |
+| server_id                      |                                             |
+| server_api_reg                 | if no htp api make it same as server_id     |
+| server_api_pub                 | if no htp api make it same as server_id     |
+| handle_server_url              | needed for msi_pid uService                 |
+| handle_private_key             | needed for msi_pid uService                 |
+| handle_certificate_only        | needed for msi_pid uService                 |
+| handle_prefix                  | needed for msi_pid uService                 |
+| handle_owner                   | needed for msi_pid uService                 |
+| handle_reverse_lookup_name     | needed for msi_pid uService                 |
+| handle_reverse_lookup_password | needed for msi_pid uService                 |
+| handle_https_verify            | needed for msi_pid uService                 |
+| handle_users                   | needed for msi_pid uService. Users in iRODS |
+| handle_groups                  | needed for msi_pid uService. Group in iRODS |
+| authz_enabled                  | default=true                                |
+| msg_queue_enabled              | default=false                               |
 
 
 ### install/configure it as the user who runs iRODS
@@ -90,7 +106,7 @@ sudo su - $IRODS_SERVICE_ACCOUNT_NAME -s "/bin/bash" -c "cd /opt/eudat/b2safe/pa
 DONE
 
 
-## confgiure B2HANDLE
+## configure B2HANDLE
 * Ask the handle hosting service which user to use for a certificate.
 * Create a private/public keypair and create a derived certificate as described
 in  http://eudat-b2safe.github.io/B2HANDLE/creatingclientcertificates.html.: 
@@ -100,7 +116,7 @@ in  http://eudat-b2safe.github.io/B2HANDLE/creatingclientcertificates.html.:
          It can be found on: http://www.handle.net/download_hnr.html.
      ii> Execute ./hdl-keygen from hsj-8.1.1/bin directory 
   b> Send public key (.bin file) to your hosting service.
-  c> Step 2: Upload the user’s public key to the....  is executed by the hosting service
+  c> Step 2: Upload of the user’s public key to the appropiate handle is executed by the hosting service
 ```
 * Ask hosting service which username/password to use for reverselooup.
 * Test using curl
