@@ -233,7 +233,7 @@ def update_authz_map(json_config):
     ##write_json_config(authz_map_config, authz_map_file)
 
 def update_epicclient_credentials(json_config):
-    ''' create (if needed) and update epicclient2.py credentials file '''
+    ''' create (if needed) and update epicclient2.py credentials file. Do not update existing file '''
 
     credentials_file = json_config["cred_file_path"]
 
@@ -243,24 +243,24 @@ def update_epicclient_credentials(json_config):
                      credentials_file)
         secure_file(credentials_file)
 
-    # save credentails file
-    save_config_file(credentials_file)
+        # save credentails file
+        save_config_file(credentials_file)
 
-    # read credentials file
-    epicclient2_config = read_json_config(credentials_file)
+        # read credentials file
+        epicclient2_config = read_json_config(credentials_file)
 
-    # modify epicclient2 credentials
-    epicclient2_config["handle_server_url"] = json_config["handle_server_url"]
-    epicclient2_config["private_key"] = json_config["handle_private_key"]
-    epicclient2_config["certificate_only"] = json_config["handle_certificate_only"]
-    epicclient2_config["prefix"] = json_config["handle_prefix"]
-    epicclient2_config["handleowner"] = json_config["handle_owner"]
-    epicclient2_config["reverselookup_username"] = json_config["handle_reverse_lookup_name"]
-    epicclient2_config["reverselookup_password"] = json_config["handle_reverse_lookup_password"]
-    epicclient2_config["HTTPS_verify"] = json_config["handle_https_verify"]
+        # modify epicclient2 credentials
+        epicclient2_config["handle_server_url"] = json_config["handle_server_url"]
+        epicclient2_config["private_key"] = json_config["handle_private_key"]
+        epicclient2_config["certificate_only"] = json_config["handle_certificate_only"]
+        epicclient2_config["prefix"] = json_config["handle_prefix"]
+        epicclient2_config["handleowner"] = json_config["handle_owner"]
+        epicclient2_config["reverselookup_username"] = json_config["handle_reverse_lookup_name"]
+        epicclient2_config["reverselookup_password"] = json_config["handle_reverse_lookup_password"]
+        epicclient2_config["HTTPS_verify"] = json_config["handle_https_verify"]
 
-    # write credentials config
-    write_json_config(epicclient2_config, credentials_file)
+        # write credentials config
+        write_json_config(epicclient2_config, credentials_file)
 
 def update_flat_file_parameter(modify_file, mod_key, mod_value, irods_file=False):
     ''' update a file and make it 'key = "value";' '''
@@ -471,6 +471,10 @@ def update_pid_uservice_config(json_config):
         pid_uservice_config["permissions"]["groups_create"] = json_config["handle_groups"]
         pid_uservice_config["permissions"]["groups_delete"] = json_config["handle_groups"]
         pid_uservice_config["permissions"]["groups_write"] = json_config["handle_groups"]
+
+    # lookup value change if NO http api. This happens if three values are the same.
+    if json_config["server_id"] == json_config["server_api_reg"] == json_config["server_api_pub"]:
+        pid_uservice_config["lookup"]["value"] = "{IRODS_URL_PREFIX}{OBJECT}"
 
     # print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
     # write pid uService config
