@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import re
 import sys
@@ -11,11 +11,11 @@ def search_pattern_in_string(pattern, string):
     """
     searchObj = re.search(pattern, string, re.U|re.I)
     if searchObj:
-        print searchObj.group()
+        print(searchObj.group())
     else:
-        print "no match found!"
+        print("no match found!")
 
 if __name__ == "__main__":
 
-     search_pattern_in_string(sys.argv[1], sys.argv[2])
+    search_pattern_in_string(sys.argv[1], sys.argv[2])
 

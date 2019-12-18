@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import calendar
 import datetime as DT
@@ -11,23 +11,23 @@ def epoch_to_iso8601(timestamp):
     '2015-12-03T13:02:42Z'
     """
     iso_time = DT.datetime.utcfromtimestamp(timestamp).isoformat()+"Z"
-    print iso_time
+    print(iso_time)
 
 def iso8601_to_epoch(dateTime_string):
     """
-    iso8601_to_epoch - convert a iso8601 formatted date into the unix epoch time 
+    iso8601_to_epoch - convert a iso8601 formatted date into the unix epoch time
     >>> iso8601_to_epoch('2015-12-03T13:02:42Z')
     1449147762
     """
-    epoch_time =  calendar.timegm(DT.datetime.strptime(dateTime_string, "%Y-%m-%dT%H:%M:%SZ").timetuple())
-    print epoch_time
+    epoch_time = calendar.timegm(DT.datetime.strptime(dateTime_string, "%Y-%m-%dT%H:%M:%SZ").timetuple())
+    print(epoch_time)
 
 if __name__ == "__main__":
 
-     if sys.argv[1] == 'epoch_to_iso8601':
-         epoch_to_iso8601(float(sys.argv[2])) 
-     elif sys.argv[1] == 'iso8601_to_epoch':
-         iso8601_to_epoch(sys.argv[2])
-     else:
-         print "Error, not valid option"
+    if sys.argv[1] == 'epoch_to_iso8601':
+        epoch_to_iso8601(float(sys.argv[2]))
+    elif sys.argv[1] == 'iso8601_to_epoch':
+        iso8601_to_epoch(sys.argv[2])
+    else:
+        print("Error, not valid option")
 

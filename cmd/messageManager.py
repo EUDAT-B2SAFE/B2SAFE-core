@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import dweepy
 import argparse
 import sys
 import logging
 import logging.handlers
 import json
+import dweepy
 
 logger = logging.getLogger('messageManager')
 
@@ -31,11 +31,11 @@ def getlast(args):
     try:
         jsonPayLoad = dweepy.get_latest_dweet_for(args.queue)
     except dweepy.DweepyError as e:
-        logger.exception('Failed to get the last message from queue %s', 
-                          args.queue)
+        logger.exception('Failed to get the last message from queue %s',
+                         args.queue)
         sys.exit(1)
-    print json.dumps({jsonPayLoad[0]['created']:
-                      jsonPayLoad[0]['content']['message']})
+    print(json.dumps({jsonPayLoad[0]['created']:
+                      jsonPayLoad[0]['content']['message']}))
 
 def getall(args):
     """get all the messages from the queue"""
@@ -43,13 +43,13 @@ def getall(args):
     try:
         jsonPayLoad = dweepy.get_dweets_for(args.queue)
     except dweepy.DweepyError as e:
-        logger.exception('Failed to get all the message from queue %s', 
-                          args.queue)
+        logger.exception('Failed to get all the message from queue %s',
+                         args.queue)
         sys.exit(1)
     payLoad = {}
     for message in jsonPayLoad:
         payLoad[message['created']] = message['content']['message']
-    print json.dumps(payLoad)
+    print(json.dumps(payLoad))
 
 def _initializeLogger(args):
     """initialize the logger instance."""
@@ -60,7 +60,7 @@ def _initializeLogger(args):
         logger.setLevel(logging.INFO)
     if (args.log):
         han = logging.handlers.RotatingFileHandler(args.log,
-                                                   maxBytes=6000000, 
+                                                   maxBytes=6000000,
                                                    backupCount=9)
     else:
         han = logging.StreamHandler()
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='EUDAT message manager.')
 
     parser.add_argument("-l", "--log", help="Path to the log file")
-    parser.add_argument("-d", "--debug", help="Show debug output", 
+    parser.add_argument("-d", "--debug", help="Show debug output",
                         action="store_true")
 
     subparsers = parser.add_subparsers(title='Actions',

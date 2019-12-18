@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #   authZ.manager.py
 #
@@ -48,7 +48,7 @@ class LogManager(object):
         """Internal: Print a debug message if debug is enabled."""
 
         if self.debug:
-            print "[", method, "]", msg
+            print("[", method, "]", msg)
 
     def _parseConf(self):
         """Internal: Parse the configuration file.
@@ -59,8 +59,8 @@ class LogManager(object):
             tmp = eval(filehandle.read())
             filehandle.close()
         except (OSError, IOError) as e:
-            print "problem while reading configuration file %s" % self.file
-            print "Error:", e
+            print("problem while reading configuration file %s" % self.file)
+            print("Error:", e)
 
         self.log_level_value = self.log_level[tmp['log_level']]
         self.log_dir = tmp['log_dir']
@@ -72,7 +72,7 @@ class LogManager(object):
         self.logger.setLevel(self.log_level_value)
         self.logfile = self.log_dir+'/b2safe.log'
         rfh = logging.handlers.RotatingFileHandler(self.logfile,
-                                                   maxBytes=2097152, 
+                                                   maxBytes=2097152,
                                                    backupCount=9)
         formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
         rfh.setFormatter(formatter)
@@ -83,7 +83,7 @@ class LogManager(object):
 
         queuedir = self.log_dir+'/b2safe.queue'
         self.queue = FifoDiskQueue(queuedir)
-        
+
     def getLogger(self):
         """get the logger instance."""
 
@@ -91,12 +91,12 @@ class LogManager(object):
 
     def getLogFile(self):
         """get the log file."""
-        
+
         return self.logfile
 
     def getQueue(self):
         """get the queue instance."""
-        
+
         return self.queue
 
 
@@ -128,17 +128,17 @@ def log(args):
 
 def push(args):
     '''perform push action'''
-    
+
     logManager = LogManager(args.conffilepath, args.debug)
     logManager.initializeQueue()
     queue = logManager.getQueue()
-    queue.push(' '.join(args.message))
+    queue.push(' '.join(args.message).encode())
     queue.close()
 
 
 def pop(args):
     '''perform pop action'''
-    
+
     logManager = LogManager(args.conffilepath, args.debug)
     logManager.initializeQueue()
     queue = logManager.getQueue()
@@ -147,66 +147,66 @@ def pop(args):
         i = 0
         messages = []
         while i < int(args.number):
-            message = queue.pop()
+            message = queue.pop().decode()
             if message is not None:
                 messages.append(message)
             else:
                 break
             i += 1
-        print messages
+        print(messages)
     else:
-        message = queue.pop()
-        print message
-        
+        message = queue.pop().decode()
+        print(message)
+
     queue.close()
 
 
 def queuesize(args):
     '''get the current size of the queue'''
-    
+
     logManager = LogManager(args.conffilepath, args.debug)
     logManager.initializeQueue()
     queue = logManager.getQueue()
     length = str(len(queue))
-    print length
+    print(length)
     queue.close()
 
 
 def test(args):
     '''do a serie of tests'''
-    
+
     def read_log_last_line(logger, logfile):
         '''local helper func: read the last line of the log file'''
-        
+
         logger.info('test log message')
-        
+
         try:
             filehandle = open(logfile, "r")
             linelist = filehandle.readlines()
             filehandle.close()
         except (OSError, IOError) as er:
-            print "problem while reading file %s" % logfile
-            print "Error:", er
+            print("problem while reading file %s" % logfile)
+            print("Error:", er)
             return False
         lastline = linelist[len(linelist)-1]
         if 'test log message' in lastline:
             return True
-        
+
         return False
 
     def test_result(result, testval):
         """local helper func: print OK/FAIL for test result
         Returns 0 on OK, 1 on failure"""
-        
+
         if type(result) != type(testval):
-            print "FAIL (wrong type; test is bad)"
+            print("FAIL (wrong type; test is bad)")
             return 1
-            
+
         if result == testval:
-            print "OK"
+            print("OK")
             return 0
         else:
-            print "FAIL"
+            print("FAIL")
             return 1
 
     try:
@@ -215,55 +215,55 @@ def test(args):
         logger = logManager.getLogger()
         logfile = logManager.getLogFile()
     except IOError as er:
-        print "IOError, directory 'log' might not exist"
-        print "Error: ", er
+        print("IOError, directory 'log' might not exist")
+        print("Error: ", er)
         return False
 
     logManager.initializeQueue()
     queue = logManager.getQueue()
-    
+
     fail = 0
-    
-    print
-    print "logging info to the file " + logfile
-    print "Test: log message"
+
+    print()
+    print("logging info to the file " + logfile)
+    print("Test: log message")
     fail += test_result(read_log_last_line(logger, logfile), True)
 
     print
-    print "Test: queue size before push"
+    print("Test: queue size before push")
     fail += test_result(len(queue), 0)
 
-    print
-    print "Test: push info to the queue"
-    queue.push('test message')
-    print "OK"
+    print()
+    print("Test: push info to the queue")
+    queue.push('test message'.encode())
+    print("OK")
 
-    print
-    print "Test: queue size after push "
+    print()
+    print("Test: queue size after push ")
     fail += test_result(len(queue), 1)
 
-    print
-    print "Test: pop info from queue"
-    fail += test_result('test message', queue.pop())
-    
-    print
-    print "Test: check queue size, again (should be 0)"
+    print()
+    print("Test: pop info from queue")
+    fail += test_result('test message', queue.pop().decode())
+
+    print()
+    print("Test: check queue size, again (should be 0)")
     fail += test_result(len(queue), 0)
 
     queue.close()
     if fail == 0:
-        print
-        print "All tests passed OK"
+        print()
+        print("All tests passed OK")
     else:
-        print
-        print "%d tests failed" % fail
+        print()
+        print("%d tests failed" % fail)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='EUDAT log manager. ')
     parser.add_argument("conffilepath", default="NULL",
                         help="path to the configuration file")
-    parser.add_argument("-d", "--debug", help="Show debug output", 
+    parser.add_argument("-d", "--debug", help="Show debug output",
                         action="store_true")
 
     subparsers = parser.add_subparsers(title='Actions',
@@ -273,12 +273,12 @@ if __name__ == "__main__":
 
     parser_log = subparsers.add_parser('log', help='log a message')
     parser_log.add_argument("level", help='the value of the log level')
-    parser_log.add_argument("message", nargs='+', 
+    parser_log.add_argument("message", nargs='+',
                             help='the message to be logged')
     parser_log.set_defaults(func=log)
 
     parser_push = subparsers.add_parser('push', help='push a message')
-    parser_push.add_argument("message", nargs='+', 
+    parser_push.add_argument("message", nargs='+',
                              help='the message to be queued')
     parser_push.set_defaults(func=push)
 
