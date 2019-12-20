@@ -9,7 +9,6 @@ import os.path
 import json
 import re
 import subprocess
-import string
 
 sys.path.append("../../cmd")
 
@@ -36,8 +35,8 @@ def subprocess_popen(cmd, input_string=None):
         # relay errors to stderr
         sys.stderr.write(data_stderr)
 
-    arr = string.split(data_stdout, '\n')
-    arr = map(string.strip, arr)
+    arr = data_stdout.decode().split('\n')
+    arr = [item.strip() for item in arr]
     if arr and arr[-1] == '':
         arr.pop()
     return arr
@@ -59,7 +58,7 @@ def test_assert_array(self, testvaluesarray):
         elif action.lower() == 'notequal':
             self.assertNotEqual(result, expected, output_string)
         else:
-            print "The action defined is NOT valid"
+            print("The action defined is NOT valid")
 
 # iRODS functions
 
