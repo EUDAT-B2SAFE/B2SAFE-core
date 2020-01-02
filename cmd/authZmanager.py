@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #   authZ.manager.py
 #
@@ -36,7 +36,7 @@ class AuthZClient(object):
     def __init__(self, mapFilePath):
         """Initialize object with connection parameters."""
 
-        self.mapfile  = mapFilePath
+        self.mapfile = mapFilePath
 
     def _debugMsg(self, method, msg):
         """Internal: Print a debug message if debug is enabled."""

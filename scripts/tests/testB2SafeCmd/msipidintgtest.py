@@ -7,7 +7,6 @@ import ast
 import json
 import os
 import os.path
-import string
 import subprocess
 
 sys.path.append("../../cmd") 
@@ -17,17 +16,17 @@ IRODS_ENV = '/.irods/irods_environment.json'
 if 'prefix' in os.environ:
     PREFIX = os.environ['prefix']
 else:
-    print "please define prefix as a variable "
-    print "example: export prefix=21.T12996 "
+    print("please define prefix as a variable ")
+    print("example: export prefix=21.T12996 ")
     exit(1)
 
 if 'url_prefix_in_profile' in os.environ:
     URL_PREFIX_IN_PROFILE = os.environ['url_prefix_in_profile']
 else:
-    print "please define url_prefix_in_profile as a variable "
-    print "example: export url_prefix_in_profile='true' "
-    print "example: export url_prefix_in_profile='false' "
-    print "This is dependant on the configuration of the profile in \"/etc/irods/irods_pid.json\" "
+    print("please define url_prefix_in_profile as a variable ")
+    print("example: export url_prefix_in_profile='true' ")
+    print("example: export url_prefix_in_profile='false' ")
+    print("This is dependant on the configuration of the profile in \"/etc/irods/irods_pid.json\" ")
     exit(1)
 
 if 'HOME' in os.environ:
@@ -51,9 +50,8 @@ def subprocess_popen(cmd, input_string=None):
     if data_stderr != None:
         # relay errors to stderr
         sys.stderr.write(data_stderr)
-
-    arr = string.split(data_stdout, '\n')
-    arr = map(string.strip, arr)
+    arr = data_stdout.decode().split('\n')
+    arr = [item.strip() for item in arr]
     if arr and arr[-1] == '':
         arr.pop()
     return arr
@@ -255,12 +253,12 @@ class MsiPidIntegrationTests(unittest.TestCase):
         command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='BOEKIE'", "*value='zoekie'"]
         lookup_result = subprocess_popen(command)
         self.assertEqual(
-            unicode(create_result[1]).lower(), lookup_result[1].lower(),
+            create_result[1].lower(), lookup_result[1].lower(),
             'search existing handle by key returns unexpected response')
         command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='AAP'", "*value='noot'"]
         lookup_result = subprocess_popen(command)
         self.assertEqual(
-            unicode(create_result[1]).lower(), lookup_result[1].lower(),
+            create_result[1].lower(), lookup_result[1].lower(),
             'search existing handle by key returns unexpected response')
  
 
@@ -336,7 +334,7 @@ class MsiPidIntegrationTests(unittest.TestCase):
         else:
             command = [ 'irule', '-F', RULE_FILE_MSIPID_LOOKUP_KEY, "*key='URL'", "*value='/"+self.irods_zone_name+"/testB2SafeCmd/1'"]
         lookup_result = subprocess_popen(command)
-        self.assertEqual(unicode(create_result[1]).lower(), lookup_result[1].lower(),
+        self.assertEqual(create_result[1].lower(), lookup_result[1].lower(),
                          'create handle should add new handle')
 
 

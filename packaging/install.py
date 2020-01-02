@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# epicclient.py
+# install.py
 #
 # * use 4 spaces!!! not tabs
 # * set tabstop=4
@@ -107,13 +107,13 @@ def check_user(json_config):
                 if line.rstrip() == 'IRODS_SERVICE_ACCOUNT_NAME='+username:
                     user_match = True
     except IOError:
-        print "Error, Unable to open file: %s" % service_account_config_file
+        print("Error, Unable to open file: %s" % service_account_config_file)
         exit(1)
 
     if user_match:
-        print "The iRODS user matches the user who is running this script"
+        print("The iRODS user matches the user who is running this script")
     else:
-        print "The iRODS user  does not match the user who is running this script"
+        print("The iRODS user  does not match the user who is running this script")
         exit(1)
 
 def check_missing_parameters(json_config):
@@ -128,9 +128,9 @@ def check_missing_parameters(json_config):
             missing_parameters.append(parameter)
 
     if not parameters_match:
-        print "Not all parameters are present. Please add following parameter(s)"
+        print("Not all parameters are present. Please add following parameter(s)")
         for item in missing_parameters:
-            print "The missing parameter = %s" % item
+            print("The missing parameter = %s" % item)
         exit(1)
 
 def create_b2safe_symbolic_links(json_config):
@@ -144,7 +144,7 @@ def create_b2safe_symbolic_links(json_config):
         try:
             os.unlink(symlink_file)
         except IOError:
-            print "Error deleting symbolic link: %s" % symlink_file
+            print("Error deleting symbolic link: %s" % symlink_file)
             exit(1)
 
     # add new symlinks
@@ -153,7 +153,7 @@ def create_b2safe_symbolic_links(json_config):
             os.symlink(symlink_file, json_config["irods_conf_dir"]+'/eudat'+str(count)+'.re')
             json_config["re_rulebase_set"].append('eudat'+str(count))
         except IOError:
-            print "Error creating symbolic link: %s" % symlink_file
+            print("Error creating symbolic link: %s" % symlink_file)
             exit(1)
 
         count = count + 1
@@ -171,10 +171,10 @@ def install_python_b2safe_scripts(json_config):
             # add new links
             os.symlink(symlink_file, destination_path)
         except IOError:
-            print "Error creating symbolic link: %s" % symlink_file
+            print("Error creating symbolic link: %s" % symlink_file)
             exit(1)
         except OSError:
-            print "Error creating symbolic link: " + symlink_file + ", " + destination_path
+            print("Error creating symbolic link: " + symlink_file + ", " + destination_path)
             exit(1)
 
 def read_json_config(json_config_file):
@@ -184,7 +184,7 @@ def read_json_config(json_config_file):
         with open(json_config_file) as config_file:
             json_config = json.load(config_file)
     except IOError:
-        print "Error, Unable to open file: %s" % json_config_file
+        print("Error, Unable to open file: %s" % json_config_file)
         exit(1)
 
     return dict(json_config)
@@ -196,10 +196,10 @@ def secure_file(chmod_file):
         try:
             os.chmod(chmod_file, 0o600)
         except IOError:
-            print "Error, Unable to protect file: %s" % chmod_file
+            print("Error, Unable to protect file: %s" % chmod_file)
             exit(1)
     else:
-        print "Error, Unable to protect file: %s as it not present" % chmod_file
+        print("Error, Unable to protect file: %s as it not present" % chmod_file)
         exit(1)
 
 def save_config_file(save_file):
@@ -213,7 +213,7 @@ def save_config_file(save_file):
             shutil.copy2(save_file, save_file_copy)
             secure_file(save_file_copy)
         except IOError:
-            print "Error, Unable to copy file: %s" % save_file
+            print("Error, Unable to copy file: %s" % save_file)
             exit(1)
 
 def update_authz_map(json_config):
@@ -227,7 +227,7 @@ def update_authz_map(json_config):
     # read authz file
     authz_map_config = read_json_config(authz_map_file)
 
-    print "TODO: Update %s not yet implemented !! " % authz_map_file
+    print("TODO: Update %s not yet implemented !! " % authz_map_file)
 
     ### write authz config
     ##write_json_config(authz_map_config, authz_map_file)
@@ -275,7 +275,7 @@ def update_flat_file_parameter(modify_file, mod_key, mod_value, irods_file=False
                 line = line.rstrip()
                 lines.append(line)
     except IOError:
-        print "Error, Unable to open file: %s" % modify_file
+        print("Error, Unable to open file: %s" % modify_file)
         exit(1)
 
     for idx, line in enumerate(lines):
@@ -293,10 +293,10 @@ def update_flat_file_parameter(modify_file, mod_key, mod_value, irods_file=False
             with open(modify_file, "w+") as config_file:
                 config_file.write("\n".join(lines))
         except IOError:
-            print "Error, Unable to open file: %s" % modify_file
+            print("Error, Unable to open file: %s" % modify_file)
             exit(1)
     else:
-        print "Parameter %s not found in file %s !!!" % (mod_key, modify_file)
+        print("Parameter %s not found in file %s !!!" % (mod_key, modify_file))
 
 def update_irods_server_config(json_config):
     ''' add the eudat rules to the iRODS server config '''
@@ -476,7 +476,7 @@ def update_pid_uservice_config(json_config):
     if json_config["server_id"] == json_config["server_api_reg"] == json_config["server_api_pub"]:
         pid_uservice_config["lookup"]["value"] = "{IRODS_URL_PREFIX}{OBJECT}"
 
-    # print json.dumps(pid_uservice_config, indent=2, sort_keys=True)
+    # print(json.dumps(pid_uservice_config, indent=2, sort_keys=True))
     # write pid uService config
     write_json_config(pid_uservice_config, pid_uservice_conf_file)
 
@@ -489,7 +489,7 @@ def write_json_config(json_dict, json_config_file):
         with open(json_config_file, "w+") as config_file:
             config_file.write(json.dumps(json_dict, indent=4, sort_keys=True))
     except IOError:
-        print "Error, Unable to open file: %s" % json_config_file
+        print("Error, Unable to open file: %s" % json_config_file)
         exit(1)
 
 

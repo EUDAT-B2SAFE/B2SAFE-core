@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #   * use 4 spaces!!! not tabs
 #   * See PEP-8 Python style guide http://www.python.org/dev/peps/pep-0008/
@@ -7,7 +7,7 @@
 
 import json
 
-user_map_file="/etc/irods/user_map.json"
+user_map_file = "/etc/irods/user_map.json"
 
 def parseUserMap():
     """Parse the user map file"""
@@ -19,5 +19,5 @@ def parseUserMap():
 
 
 if __name__ == "__main__":
- 
+
     parseUserMap()
