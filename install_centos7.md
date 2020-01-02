@@ -28,7 +28,7 @@ EOF
 ```
 
 
-Configure the yum repository for iRODS 4.2.6
+Configure the yum repository for iRODS 4.2.7
 ---------------------------------------------
 configure the repo as root:
 
@@ -36,7 +36,7 @@ configure the repo as root:
 cat > /etc/yum.repos.d/surfsara-irods.repo <<EOF
 [surfsara-irods]
 name=Surfsara iRODS repo
-baseurl=https://software.irodspoc-sara.surf-hosted.nl/CentOS/7/irods-4.2.6
+baseurl=https://software.irodspoc-sara.surf-hosted.nl/CentOS/7/irods-4.2.7
 sslverify=0
 gpgcheck=0
 EOF
@@ -59,7 +59,7 @@ To install/configure it in iRODS do following as the user who runs iRODS:
 As the user who runs iRODS do following:
 ```bash
 cd /opt/eudat/b2safe/cmd
-pip install --user -r requirements.txt
+pip3 install --user -r requirements.txt
 ```
 
 ### convert install.conf to install.json if needed
