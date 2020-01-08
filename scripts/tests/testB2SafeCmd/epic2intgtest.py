@@ -7,7 +7,6 @@ import ast
 import json
 import os
 import os.path
-import string
 import subprocess
 
 sys.path.append("../../cmd") 
@@ -40,8 +39,8 @@ def subprocess_popen(cmd, input_string=None):
         # relay errors to stderr
         sys.stderr.write(data_stderr)
 
-    arr = string.split(data_stdout, '\n')
-    arr = map(string.strip, arr)
+    arr = data_stdout.decode().split('\n')
+    arr = [item.strip() for item in arr]
     return arr
 
 
@@ -60,8 +59,8 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         stdout_value, stderr_value = search_result.communicate()
         search_result.wait()
 
-        out_arr = stdout_value.split('\n')
-        out_arr = map(string.strip, out_arr)
+        out_arr = stdout_value.decode().split('\n')
+        out_arr = [item.strip() for item in out_arr]
 
         for line in out_arr:
             if line != 'empty':
@@ -85,8 +84,8 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         stdout_value, stderr_value = search_result.communicate()
         search_result.wait()
 
-        out_arr = stdout_value.split('\n')
-        out_arr = map(string.strip, out_arr)
+        out_arr = stdout_value.decode().split('\n')
+        out_arr = [item.strip() for item in out_arr]
 
         for line in out_arr:
             if line != 'empty':
@@ -106,7 +105,7 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         search_result = subprocess_popen(command)
         search_result_json = json.loads(search_result[0])
         self.assertEqual(
-            unicode(create_result[0]).lower(), search_result_json[0].lower(),
+            create_result[0].lower(), search_result_json[0].lower(),
             'search existing handle by key returns unexpected response')
 
  
@@ -168,7 +167,7 @@ class EpicClient2IntegrationTests(unittest.TestCase):
         command = [EPIC_PATH, CRED_STORE, CRED_PATH, 'search', 'URL', 'http://www.testB2SafeCmd.com/1']
         search_result = subprocess_popen(command)
         search_result_json = json.loads(search_result[0])
-        self.assertEqual(unicode(create_result[0]).lower(), search_result_json[0].lower(),
+        self.assertEqual(create_result[0].lower(), search_result_json[0].lower(),
                          'create handle should add new handle')
         
         

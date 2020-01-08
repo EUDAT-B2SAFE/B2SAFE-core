@@ -8,7 +8,6 @@ import os
 import os.path
 import json
 import subprocess
-import string
 
 sys.path.append("../../cmd")
 
@@ -33,8 +32,8 @@ def subprocess_popen(cmd, input_string=None):
         # relay errors to stderr
         sys.stderr.write(data_stderr)
 
-    arr = string.split(data_stdout, '\n')
-    arr = map(string.strip, arr)
+    arr = data_stdout.decode().split('\n')
+    arr = [item.strip() for item in arr]
     return arr
 
 
