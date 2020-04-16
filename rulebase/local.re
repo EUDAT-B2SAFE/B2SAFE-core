@@ -33,10 +33,24 @@ getEpicApiParameters(*credStoreType, *credStorePath, *epicApi, *serverID, *epicD
     *serverID="irods://<hostnameWithFullDomain>:1247"; 
     *epicDebug=2; 
 
-    getConfParameters(*authzEnabled, *b2shareConf);
+    getConfParameters(*authzEnabled);
     if (*authzEnabled) {
         EUDATAuthZ("$userNameClient#$rodsZoneClient", "read", *credStorePath, *response);
     }
+}
+
+# Provides parameters for the connection with the EPIC service
+#  
+# Arguments:
+# *serverApireg     [OUT] the endpoint of the HTTP API interface for data with PIDs
+# *serverApipub     [OUT] the endpoint of the HTTP API interface for public data
+#
+# Author: Claudio Cacciari (Cineca)
+#-------------------------------------------------------------------------------
+getHttpApiParameters(*serverApireg, *serverApipub) {
+
+    *serverApireg="https://<hostnameWithFullDomain>/api/registered";
+    *serverApipub="https://<hostnameWithFullDomain>/api/public";
 }
 
 # Parse the credentials to connect to an EPIC server. A file called
@@ -111,9 +125,8 @@ getMessageParameters(*msgConfPath, *controlQueueName, *enabled) {
 #
 # Author: Claudio Cacciari (Cineca)
 #-------------------------------------------------------------------------------
-getConfParameters(*authzEnabled, *b2shareConf) {
+getConfParameters(*authzEnabled) {
     *authzEnabled=bool("true");
-    *b2shareConf="/opt/eudat/b2safe/conf/b2share.conf"
 }
 
 # Provides version of the B2SAFE
@@ -125,7 +138,7 @@ getConfParameters(*authzEnabled, *b2shareConf) {
 #-------------------------------------------------------------------------------
 getB2SAFEVersion(*version) {
     *major_version = "4";
-    *minor_version = "1";
+    *minor_version = "2";
     *sub_version = "0";
     *version = *major_version ++ "." ++ *minor_version ++ "-" ++ *sub_version;
 }

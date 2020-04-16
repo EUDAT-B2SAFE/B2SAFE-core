@@ -10,15 +10,20 @@
 # List of the functions:
 #
 # EUDATUpdateLogging(*status_transfer_success, *source, *destination, *cause)
-# EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, *logEnabled,*notification,*response)
-# EUDATReplication(*source, *destination, *dest_res, *registered, *recursive)
+# EUDATCheckIntegrity(*source, *source_res, *destination, *dest_res, *logEnabled, *notification, *response)
+# EUDATCheckIntegrity(*source, *destination, *logEnabled, *notification, *response)
+# EUDATReplication(*source, *destination, *dest_res, *registered, *recursive, *response)
+# EUDATReplication(*source, *destination, *registered, *recursive, *response)
 # EUDATTransferUsingFailLog(*buffer_length, *stats)
 # EUDATRegDataRepl(*source, *destination, *dest_res, *recursive, *response)
+# EUDATRegDataRepl(*source, *destination, *recursive, *response)
 # EUDATPIDRegistration(*source, *destination, *notification, *registration_response)
 # EUDATSearchAndCreatePID(*path, *pid)
 # EUDATSearchAndDefineField(*path, *pid, *key)
-# EUDATCheckIntegrityColl(*sCollPesult*source_res, *dCollPath, *dest_res, *logEnabled, *response) 
+# EUDATCheckIntegrityColl(*sCollPath, *source_res, *dCollPath, *dest_res, *logEnabled, *response) 
+# EUDATCheckIntegrityColl(*sCollPath, *dCollPath, *logEnabled, *check_response)
 # EUDATCheckIntegrityDO(*source, *source_res, *destination, *dest_res, *logEnabled, *response)
+# EUDATCheckIntegrityDO(*source, *destination, *logEnabled, *response)
 
 
 # Update the logging files specific for EUDAT B2SAFE

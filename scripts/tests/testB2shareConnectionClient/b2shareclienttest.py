@@ -7,13 +7,14 @@ from os.path import dirname
 from os.path import abspath
 import json
 import sys
+import io
 
 import logging
 test_logger = logging.getLogger('B2shareClientTest')  
 
-sys.path.insert(0,
-                os.path.join(dirname(dirname(dirname(dirname(abspath(__file__))))),
-                             "cmd"))
+# sys.path.insert(0,
+#                 os.path.join(dirname(dirname(dirname(dirname(abspath(__file__))))),
+#                              "cmd"))
 
 from b2shareclient import B2shareClient
 
@@ -21,27 +22,55 @@ class B2shareClientTest(unittest.TestCase):
     def setUp(self):
         # mock configuration
         # TODO: change "confpath" to variable from call of the test or in the test suite
-        self.configurationMock = MagicMock(confpath = "/home/irods/B2SAFE-core/conf/b2share_connection.conf", 
+        self.configurationMock = MagicMock(config_path = "/opt/eudat/b2safe/conf/b2share_client.json", 
                                       b2share_host_name = 'https://trng-b2share.eudat.eu/api', 
                                       list_communities_endpoint = '/communities',
                                       access_parameter = '/?access_token=',
                                       access_token = 'JFSUcYzTRpMdVCEyAk3mmtGcfpmH',
+                                      title = 'Test Draft',
+                                      community = 'EUDAT', 
                                       dryrun = False,
                                       debug = True,
+                                      record_id = "734c8cf3bb4f42cca0e9c4c3cf3cc86b",
                                       logger = test_logger)
         self.b2shcl = B2shareClient(self.configurationMock)
-        self.draft_id_mock = "734c8cf3bb4f42cca0e9c4c3cf3cc86b"
         self.community_id_mock = "e9b9792e-79fb-4b07-b6b4-b9c2bd06d095"
         self.filePIDsString_mock = '[{"ePIC_PID": "http://hdl.handle.net/20.500.11946/5db21a88-e0d8-11e7-9eab-0050569e7581","key": "copytest.txt"},{"ePIC_PID": "http://hdl.handle.net/20.500.11946/619416e2-e0d8-11e7-8ca4-0050569e7581","key": "metatest2.txt"}]'
         self.metadata_file_mock = ''
         # TODO: change to variable from call of the test or in the test suite
-        filled_md_file_path = '/home/irods/B2SAFE-core/conf/b2share_metadata.json'
-        with open(filled_md_file_path, 'r') as metadata_file:
-            self.metadata_file_mock = metadata_file.read()
+        self.filled_md_file_path = os.getcwd() + os.sep +'b2share_metadata.json'
+        with open(self.filled_md_file_path, 'w') as tmpMDFile:
+            tmpMDFile.write('{' + os.linesep +
+                            '"metadata": {' + os.linesep +
+                            '"required": [' + os.linesep +
+                            '{' + os.linesep +
+                            '"option_name": "titles",' + os.linesep +
+                            '"value": [{"title":"Demo b2shareclient"}],' + os.linesep +
+                            '"type": "array"' + os.linesep +
+                            '},' + os.linesep +
+                            '{ ' + os.linesep +
+                            '"option_name": "descriptions",' + os.linesep +
+                            '"value": [{"description":"A collection to demostrate the b2shareclient functionality", "description_type":"Abstract"}],' + os.linesep +
+                            '"type": "array"' + os.linesep +
+                            '}' + os.linesep +
+                            '],' + os.linesep +
+                            '"optional": [' + os.linesep +
+                            '{' + os.linesep +
+                            '"option_name": "contributors",' + os.linesep +
+                            '"value": [{"contributor_name":"Hulk", "contributor_type": "Editor"}, {"contributor_name":"Banner", "contributor_type": "ContactPerson"}],' + os.linesep +
+                            '"type": "array"' + os.linesep +
+                            '}' + os.linesep +
+                            ']' + os.linesep +
+                            '}' + os.linesep +
+                            '}')
         self.title_mock = "TestDraftTitle"
         pass
     
     def tearDown(self):
+        if os.path.exists(self.filled_md_file_path):
+            os.remove(self.filled_md_file_path)
+        else:
+            print("The file does not exist: " + self.filled_md_file_path) 
         logging.shutdown()
         pass
     
@@ -65,7 +94,7 @@ class B2shareClientTest(unittest.TestCase):
         mock_get.return_value.status_code = 204
         
         b2shcl = B2shareClient(self.configurationMock)
-        b2shcl.deleteDraft(self.draft_id_mock)
+        b2shcl.deleteDraft()
         
         mock_get_patcher.stop()
         self.assertTrue(True)
@@ -77,7 +106,7 @@ class B2shareClientTest(unittest.TestCase):
         mock_get.return_value.text = "response text mock"
         
         b2shcl = B2shareClient(self.configurationMock)
-        draft = b2shcl.getDraftByID(self.draft_id_mock)
+        draft = b2shcl.getDraftByID()
         
         mock_get_patcher.stop()
         self.assertTrue(bool(draft))
@@ -101,7 +130,7 @@ class B2shareClientTest(unittest.TestCase):
         mock_get.return_value.text = "response text mock"
         
         b2shcl = B2shareClient(self.configurationMock)
-        b2shcl.publishRecord(self.draft_id_mock)
+        b2shcl.publishRecord()
         
         mock_get_patcher.stop()
         self.assertTrue(True)
@@ -114,7 +143,7 @@ class B2shareClientTest(unittest.TestCase):
         mock_get.return_value.text = "response text mock"
         
         b2shcl = B2shareClient(self.configurationMock)
-        draft_metadata = b2shcl.getDraftMetadata(self.draft_id_mock)
+        draft_metadata = b2shcl.getDraftMetadata()
         
         mock_get_patcher.stop()
         self.assertTrue(bool(draft_metadata))
@@ -123,9 +152,9 @@ class B2shareClientTest(unittest.TestCase):
         mock_patch_patcher = patch('b2shareclient.requests.patch')
         mock_patch = mock_patch_patcher.start()
         mock_patch.return_value.status_code = 200
-        
-        self.b2shcl.addB2shareMetadata(self.draft_id_mock, self.metadata_file_mock)
-        
+        # with open(self.filled_md_file_path, 'r') as metadata_file:
+        #     self.metadata_file_mock = metadata_file
+        #     self.b2shcl.addB2shareMetadata(metadata_file_mock)
         mock_patch_patcher.stop()
         self.assertTrue(bool(True))
         
@@ -136,7 +165,7 @@ class B2shareClientTest(unittest.TestCase):
         mock_post.return_value.json.return_value = json.loads('{"id":"734c8cf3bb4f42cca0e9c4c3cf3cc86b"}')
         
         b2shcl = B2shareClient(self.configurationMock)
-        record_id = b2shcl.createDraft(self.community_id_mock, self.title_mock, self.filePIDsString_mock)
+        record_id = b2shcl.createDraft(self.community_id_mock, self.filePIDsString_mock)
         
         mock_post_patcher.stop()
         self.assertTrue(bool(record_id))

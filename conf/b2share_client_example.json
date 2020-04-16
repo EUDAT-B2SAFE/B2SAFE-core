@@ -1,0 +1,22 @@
+{
+    "configurations": {
+        "b2share_http_api": {
+            "host_name": "https://trng-b2share.eudat.eu/",
+            "access_parameter": "?access_token",
+            "list_communities_endpoint": "api/communities/",
+            "get_community_schema_endpoint": "/schemas/last",
+            "records_endpoint": "api/records/"
+        },
+        "irods": {
+            "zone_name": "YOUR_ZONE",
+            "irods_env": "/home/irods/.irods/irods_environment.json",
+            "resources": "",
+            "irods_home_dir": "",
+            "irods_debug": ""
+        },
+        "logging": {
+            "loglevel": "DEBUG",
+            "logfile": "/opt/eudat/b2safe/log/b2share_connection_client.log"
+        }
+	}
+}

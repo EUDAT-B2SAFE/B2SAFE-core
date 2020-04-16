@@ -3,6 +3,8 @@
 import json
 import jsonpatch
 import requests
+import os
+import numpy
 
 
 class B2shareClient():
@@ -16,168 +18,118 @@ class B2shareClient():
     # for the specified community
     # and with the default values for open_access to be true
     # and no community specific data
-    def createDraft(self, community_id, title, filePIDsString):
+    def createDraft(self, community_id, filePIDsString):
         record_id = None
-        if community_id and filePIDsString:
-            self.configuration.logger.debug("title: " + str(title) +
-                                            ", token: " +
-                                            self.configuration.access_token +
-                                            ", community: " +
-                                            str(community_id))
-            acces_part = self.configuration.access_parameter + \
-                "=" + self.configuration.access_token
-            create_draft_url = self.configuration.b2share_host_name + \
-                self.configuration.records_endpoint + acces_part
-            data = '{"titles":[{"title":"' + title + '"}], ' + \
-                   '"community":"' + community_id + '", ' + \
-                '"external_pids":' + filePIDsString + ', ' + \
-                   '"open_access":true, "community_specific": {}}'
-            headers = {"Content-Type": "application/json"}
-            if self.configuration.dryrun:
-                self.configuration.logger.info("DRYRUN: " +
-                                               "the method would send: " +
-                                               "POST Request with URL: " +
-                                               create_draft_url +
-                                               "\n headers: " + str(headers) +
-                                               "\n data: " + data)
-            else:
-                try:
-                    # TODO: delete 'verify=False',
-                    # if B2SHARE server has proper certificate
-                    response = requests.post(url=create_draft_url,
-                                             headers=headers,
-                                             data=data,
-                                             verify=False)
-                    self.configuration.logger.debug(
-                        "status code: " + str(response.status_code))
-                    if ((str(response.status_code) == "200") |
-                            (str(response.status_code) == "201")):
-                        record_id = response.json()['id']
-                        self.configuration.logger.info(
-                            "Record created with id: " + record_id)
-                    else:
-                        self.configuration.logger.error("NO record created." +
-                                                        "Response: " +
-                                                        str(response.json()))
-                except requests.exceptions.RequestException as e:
-                    self.configuration.logger.error(e)
+        self.configuration.logger.debug("title: " +
+                                        self.configuration.title +
+                                        ", community: " +
+                                        str(community_id))
+        acces_part = self.configuration.access_parameter + \
+            "=" + self.configuration.access_token
+        create_draft_url = self.configuration.b2share_host_name + \
+            self.configuration.records_endpoint + acces_part
+        data = '{"titles":[{"title":"' + \
+            self.configuration.title + '"}], ' + \
+            '"community":"' + community_id + '", ' + \
+            '"external_pids":' + filePIDsString + ', ' + \
+            '"open_access":true, "community_specific": {}}'
+        headers = {"Content-Type": "application/json"}
+        if self.configuration.dryrun:
+            self.configuration.logger.info("DRYRUN: " +
+                                           "the method would send: " +
+                                           "POST Request with URL: " +
+                                           create_draft_url +
+                                           "\n headers: " + str(headers) +
+                                           "\n data: " + data)
+        else:
+            try:
+                response = requests.post(url=create_draft_url,
+                                         headers=headers,
+                                         data=data)
+                self.configuration.logger.debug(
+                    "status code: " + str(response.status_code))
+                if ((str(response.status_code) == "200") |
+                        (str(response.status_code) == "201")):
+                    record_id = response.json()['id']
+                    self.configuration.logger.info(
+                        "Record created with id: " + record_id)
+                else:
+                    self.configuration.logger.error("NO record created." +
+                                                    "Response: " +
+                                                    str(response.json()))
+            except requests.exceptions.RequestException as e:
+                self.configuration.logger.error(e)
         return record_id
 
     # Patch the draft with extra metadata
     # metadata_file:
     # JSON object from the metadata file = community schema
     # filled by user with data
-    def addB2shareMetadata(self, record_id, metadata_file):
+    def addB2shareMetadata(self, metadata_file):
         acces_part = self.configuration.access_parameter + "=" + \
             self.configuration.access_token
         patch_url = "" + self.configuration.b2share_host_name + \
-                    self.configuration.records_endpoint + record_id + \
+                    self.configuration.records_endpoint + \
+                    self.configuration.record_id + \
                     "/draft" + acces_part
-
-        metadata_lines = metadata_file.split('\n\n')
-        patch_source = {}
         patch_destination = {}
+        with metadata_file.open('r+') as json_file:
+            data = json.load(json_file)
+            required_options = data["metadata"]["required"]
+            optional_options = data["metadata"]["optional"]
+            options = required_options + optional_options
+            patch_source = {}
+            draft_metadata = self.getDraftMetadata()
+            for option in options:
+                option_value = option["value"]
+                if option_value is None or option_value == "":
+                    self.configuration.logger.info("Ignored the line " +
+                                                option_name +
+                                                " with value " +
+                                                option_value)
+                    continue
+                option_name = option["option_name"]
+                patch_destination[option_name] = option_value
+                if draft_metadata:
+                    if option_name in draft_metadata.keys():
+                        patch_source[option_name] = draft_metadata[option_name]
+                    else:
+                        patch_source[option_name] = ''
+            if not patch_destination:
+                return
+            patch = jsonpatch.JsonPatch.from_diff(patch_source, patch_destination)
+            headers = {"Content-Type": "application/json-patch+json"}
 
-        # ignore first line as it is a comment
-        for line in metadata_lines[1:]:
-            option_value_line = line.split('\n')
-            if not self.isLineContainingValue(option_value_line):
-                continue
-            option_name = option_value_line[0]
-            if (option_name == 'community' or
-                    option_name == '' or
-                    option_name == 'titles'):
-                self.configuration.logger.info("Ignore the line " +
-                                               option_name +
-                                               " with value " +
-                                               option_value_line[1])
-                continue
-            draft_metadata = self.getDraftMetadata(record_id)
-            if draft_metadata:
-                if option_name in draft_metadata.keys():
-                    # add or replace the existing values
-                    # in the draft record
-                    # for replace: patch_source[option_name] =
-                    #          draft_metadata[option_name]
-                    # for add:
-                    patch_source[option_name] = ''
-            option_value = option_value_line[1]
-            if self.isArray(option_value):
-                option_value = self.patchArrayFrom(option_value)
-            elif self.isObject(option_value):
-                option_value = self.toJsonObject(option_value)
-            elif self.isBoolean(option_value):
-                option_value = self.valueToBoolean(option_value)
+            if self.configuration.dryrun:
+                self.configuration.logger.info("DRYRUN: the method would send: " +
+                                                " PATCH Request with URL: " +
+                                                patch_url +
+                                                "\n headers: " + str(headers) +
+                                                "\n data: " + str(patch))
+                print("DRYRUN: the method would send: " +
+                                                " PATCH Request with URL: " +
+                                                patch_url +
+                                                "\n headers: " + str(headers) +
+                                                "\n data: " + str(patch))
             else:
-                # value is a string
-                option_value = option_value
-            patch_destination[option_name] = option_value
+                try:
+                    response = requests.patch(url=patch_url, headers=headers,
+                                              data=str(patch))
+                    if str(response.status_code) == "200":
+                        self.configuration.logger.info(
+                            "Adding metadata to the draft " +
+                            self.configuration.record_id +
+                            " SUCCESSFUL.")
+                    else:
+                        self.configuration.logger.error(
+                            "Adding metadata to the draft " +
+                            self.configuration.record_id +
+                            " FAILED. Response: " + str(response.json()))
+                except requests.exceptions.RequestException as e:
+                    self.configuration.logger.error(e)
 
-        patch = jsonpatch.make_patch(patch_source, patch_destination)
-        headers = {"Content-Type": "application/json-patch+json"}
-
-        if self.configuration.dryrun:
-            self.configuration.logger.info("DRYRUN: the method would send: " +
-                                           " PATCH Request with URL: " +
-                                           patch_url +
-                                           "\n headers: " + str(headers) +
-                                           "\n data: " + str(patch))
-        else:
-            try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.patch(
-                    url=patch_url, headers=headers,
-                    data=str(patch), verify=False)
-                if str(response.status_code) == "200":
-                    self.configuration.logger.info(
-                        "Adding metadata to the draft " + record_id +
-                        " SUCCESSFUL.")
-                else:
-                    self.configuration.logger.error(
-                        "Adding metadata to the draft " + record_id +
-                        " FAILED. Response: " + str(response.json()))
-            except requests.exceptions.RequestException as e:
-                self.configuration.logger.error(e)
-
-    def patchArrayFrom(self, option_value):
-        option_value = option_value.replace('[', '').replace(']', '')
-        if self.isObjectsArray(option_value):
-            array_of_objects = self.objectsArrayFrom(option_value)
-            return array_of_objects
-        else:
-            strings_array = self.strigsArrayFrom(option_value)
-            return strings_array
-
-    def strigsArrayFrom(self, option_value):
-        strings_array = []
-        for string_value in option_value.split(','):
-            strings_array.append(string_value.strip())
-        return strings_array
-
-    def objectsArrayFrom(self, value):
-        values_array = []
-        if '},' in value:
-            # many objects in array
-            delimiter = '}'
-            arr = value.split(delimiter)
-            values_array.append(arr[0]+'}')
-            for elem in value.split(delimiter)[1:]:
-                values_array.append(elem[1:].strip()+'}')
-        else:
-            # one element in array
-            values_array.append(value)
-        array_of_objects = []
-        for array_element in values_array:
-            if '{' in array_element:
-                array_of_objects.append(self.toJsonObject(array_element))
-        return array_of_objects
-
-    def toJsonObject(self, value):
-        v = json.loads(value)
-        return v
-
-    def getDraftMetadata(self, record_id):
+    def getDraftMetadata(self):
+        record_id = self.configuration.record_id
         acces_part = self.configuration.access_parameter + \
             "=" + self.configuration.access_token
         get_draft_metadata = self.configuration.b2share_host_name +\
@@ -187,13 +139,13 @@ class B2shareClient():
             self.configuration.logger.info(
                 "DRYRUN: the method would send: GET Request with URL: " +
                 get_draft_metadata)
+            print("DRYRUN: the method would send: GET Request with URL: " +
+                  get_draft_metadata)
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.get(url=get_draft_metadata, verify=False)
+                response = requests.get(url=get_draft_metadata)
                 self.configuration.logger.debug(
-                    "status code: " + str(response.status_code))
+                    "Get Draft md status code: " + str(response.status_code))
                 if str(response.status_code) == "200":
                     return response.json()["metadata"]
                 else:
@@ -204,7 +156,31 @@ class B2shareClient():
                 self.configuration.logger.error(e)
             return None
 
-    def publishRecord(self, record_id):
+    # compare every md option between metadata_file and draft_metadata
+    def compareMD(self, metadata_file):
+        draft_metadata = self.getDraftMetadata()
+        with metadata_file.open('r+') as json_file:
+            data = json.load(json_file)
+            required_options = data["metadata"]["required"]
+            optional_options = data["metadata"]["optional"]
+            options = required_options + optional_options
+            for option in options:
+                md_name = option["option_name"]
+                md_value = option["value"]
+                if md_value !='':
+                    if md_name in draft_metadata.keys():
+                        draft_value = draft_metadata[md_name]
+                        if md_value != draft_value:
+                            self.configuration.logger.info("Meta data in collection and draft are NOT equal")
+                            return False
+                    else:
+                        self.configuration.logger.info("Meta data in collection and draft are NOT equal")
+                        return False
+        self.configuration.logger.info("Meta data in collection and draft are equal")
+        return True
+
+    def publishRecord(self):
+        record_id = self.configuration.record_id
         acces_part = self.configuration.access_parameter + \
             "=" + self.configuration.access_token
         publish_record_url = self.configuration.b2share_host_name +\
@@ -221,46 +197,13 @@ class B2shareClient():
                                            "\n data: " + str(patch))
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.patch(
-                    url=publish_record_url, headers=headers,
-                    data=patch, verify=False)
-                if str(response.status_code) == "200":
-                    self.configuration.logger.info(
-                        "Publishing SUCCESSFUL. " +
-                        str(response.text))
-                else:
-                    self.configuration.logger.error(
-                        "Publishing FAILED. Response: " +
-                        str(response.json()))
+                response = requests.patch(url=publish_record_url,
+                                          headers=headers,
+                                          data=patch)
+                return response
             except requests.exceptions.RequestException as e:
                 self.configuration.logger.error(e)
-                self.configuration.logger.error(
-                    "Publishing FAILED. Response: " +
-                    str(response.json()))
-
-    def valueToBoolean(self, option_value):
-        if option_value.lower() == "true":
-            return True
-        if option_value.lower() == "false":
-            return False
-
-    def isBoolean(self, option_value):
-        return ((option_value.lower() == "true") |
-                (option_value.lower() == "false"))
-
-    def isObject(self, option_value):
-        return option_value.startswith('{')
-
-    def isObjectsArray(self, option_value):
-        return option_value.startswith('{')
-
-    def isArray(self, option_value):
-        return option_value.startswith('[')
-
-    def isLineContainingValue(self, line_content):
-        return len(line_content) == 2
+                return None
 
     # TODO add the function Get iRODS metadata
     def getB2safeMetadata(self):
@@ -283,10 +226,9 @@ class B2shareClient():
                 get_community_schema_url)
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.get(
-                    url=get_community_schema_url, verify=False)
+                # Add 'verify=False',
+                # if B2SHARE server has no proper certificate
+                response = requests.get(url=get_community_schema_url)
                 self.configuration.logger.debug(response.text)
                 if str(response.status_code) == "200":
                     community_schema = response.text
@@ -298,21 +240,22 @@ class B2shareClient():
                 self.configuration.logger.error(e)
         return community_schema
 
-    def getDraftByID(self, draft_id):
+    def getDraftByID(self):
+        draft_id = self.configuration.record_id
         acces_part = self.configuration.access_parameter + \
-            "=" + self.configuration.access_token
+                     "=" + self.configuration.access_token
         get_draft_url = self.configuration.b2share_host_name + \
-            'records/' + draft_id + "/draft" + acces_part
+            self.configuration.records_endpoint + draft_id + \
+            "/draft" + acces_part
         draft = None
         if self.configuration.dryrun:
+            print(get_draft_url)
             self.configuration.logger.info(
                 "DRYRUN: the method would send: GET Request with URL: " +
                 get_draft_url)
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.get(url=get_draft_url,  verify=False)
+                response = requests.get(url=get_draft_url)
                 if str(response.status_code) == "200":
                     self.configuration.logger.info(
                         "Request for a draft with id " + draft_id +
@@ -326,7 +269,8 @@ class B2shareClient():
                 self.configuration.logger.error(e)
         return draft
 
-    def deleteDraft(self, draft_id):
+    def deleteDraft(self):
+        draft_id = self.configuration.record_id
         acces_part = self.configuration.access_parameter + \
             "=" + self.configuration.access_token
         delete_draft_url = self.configuration.b2share_host_name + \
@@ -339,10 +283,8 @@ class B2shareClient():
                 delete_draft_url)
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
                 response = requests.delete(
-                    url=delete_draft_url, headers=headers, verify=False)
+                    url=delete_draft_url, headers=headers)
                 if str(response.status_code) == "204":
                     self.configuration.logger.info(
                         "Draft with id " + draft_id + " DELETED.")
@@ -369,10 +311,7 @@ class B2shareClient():
                                            list_communities_url)
         else:
             try:
-                # TODO: delete 'verify=False',
-                # if B2SHARE server has proper certificate
-                response = requests.get(url=list_communities_url,
-                                        verify=False)
+                response = requests.get(url=list_communities_url)
                 if str(response.status_code) == "200":
                     communities_list = response.json()["hits"]["hits"]
                     for community_object in communities_list:

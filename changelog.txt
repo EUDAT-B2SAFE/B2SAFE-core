@@ -1,3 +1,22 @@
+B2SAFE package 4.2.0 [2019/01/07]
+- fixed bug related to redundant replica handles (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/120)
+- updated test rules
+- improved wiki docuentation
+- added support for oauth2 protocol via PAM module
+- added support to HTTP interfaces in the PID parameters
+
+B2SAFE package 4.1.1 [2018/02/22]
+- fixed bug related to EUDATTransferUsingFailLog rule (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/113)
+- updated test rules
+
+B2SAFE package 4.1.0 [2017/12/18]
+- tested sucessfully against iRODS v4.2.1. The test against iRODS 4.2.2 failed due to this bug: https://github.com/irods/irods/issues/3722, therefore the v4.2.2 is not supported yet.
+- fixed bug related to EUDATReplication rule (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/102)
+- improved install.txt documentation (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/103)
+- added EUDATeURLupdateColl(*PID, *newURL) to update the url in multiple PIDS associeted to a whole collection of objects.
+- many improvements in the logging
+- added the option to specify the destination iRODS resource in many rules, included the EUDATReplication.
+
 B2SAFE package 4.0.1 [2017/07/11]
 - added support for iRODS 4.2.1 (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/94)
 - fixed bug related to package deployment (https://github.com/EUDAT-B2SAFE/B2SAFE-core/issues/85)

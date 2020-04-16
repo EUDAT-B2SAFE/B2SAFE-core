@@ -10,8 +10,8 @@ from irods.meta import iRODSMeta
 sys.path.insert(0,
                 join(dirname(dirname(dirname(dirname(abspath(__file__))))),
                      "cmd"))
-from manifest.irodsUtility import IRODS  # noqa: E402
-from manifest.irodsUtility import IRODSUtils as IRODSUtils  # noqa: E402
+from irodsUtility import IRODS  # noqa: E402
+from irodsUtility import IRODSUtils as IRODSUtils  # noqa: E402
 
 ENV = None
 

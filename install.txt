@@ -1,6 +1,7 @@
 *** Installation/Upgrade ***
 
-The following describes the procedure to enable B2SAFE release-4.x.y
+The following describes the procedure to enable B2SAFE release-4.x.y with the 
+B2SHARE publication option
 
 NOTE: This B2SAFE version makes use of the b2HANDLE library.
 It can be found at: https://github.com/EUDAT-B2SAFE/B2HANDLE
@@ -75,16 +76,18 @@ NOTE: following needs to be updated/added in "/opt/eudat/b2safe/packaging/instal
    - AUTHZ_ENABLED (default=true)
    - MSG_QUEUE_ENABLED (default=false)
 
+# update /opt/eudat/b2safe/conf/b2share_client.json with the parameters of your b2safe/irods intallation 
+and with your access parameters for your b2share instance
 
 - check the python scripts for missing python libraries.
   $ cd /opt/eudat/b2safe/cmd
   $ ./authZmanager.py -h
-  $ ./epicclient.py --help
   $ ./epicclient2.py --help
   $ ./logmanager.py -h
   $ ./messageManager.py -h
   $ ./metadataManager.py -h
   $ ./timeconvert.py epoch_to_iso8601 2000000
+  
 
 Try to install missing packages with the standard package manager like apt, yum, zypper etc.
 If packages are not within the standards use pip and install the missing packages with pip. 

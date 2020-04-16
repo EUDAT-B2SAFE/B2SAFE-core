@@ -65,26 +65,27 @@ class IRODSUtils(object):
             self.logger.setLevel(logging.INFO)
 
     def getFile(self, path, resource=None):
-        """get file content"""
+        # """get file content"""
 
-        BLOCK_SIZE = 1024 * io.DEFAULT_BUFFER_SIZE
-        if resource is None:
-            options = {}
-        else:
-            options = {kw.DEST_RESC_NAME_KW: resource}
-
+        # BLOCK_SIZE = 1024 * io.DEFAULT_BUFFER_SIZE
+        # if resource is None:
+        #     options = {}
+        # else:
+        #     options = {kw.DEST_RESC_NAME_KW: resource}
+        """get file object"""
         with IRODS(irods_config_file=self.irods_env,
                    irods_auth_file=self.irods_auth) as session:
             obj = session.data_objects.get(path)
-            result = ''
-            with obj.open('r', **options) as f:
-                while True:
-                    chunk = f.read(BLOCK_SIZE)
-                    if chunk:
-                        result += chunk
-                    else:
-                        break
-            return result
+            return obj
+            # result = ''
+            # with obj.open('r', **options) as f:
+            #     while True:
+            #         chunk = f.read(BLOCK_SIZE)
+            #         if chunk:
+            #             result += str(chunk)
+            #         else:
+            #             break
+            # return result
 
     def putFile(self, source, destination, resource=None):
         """put the file into the destination collection"""
