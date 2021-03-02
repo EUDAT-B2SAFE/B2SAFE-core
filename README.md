@@ -14,9 +14,6 @@ See install.txt .
 ---------------
 Documentation
 ---------------
-https://github.com/EUDAT-B2SAFE/B2SAFE-core/wiki
+https://gitlab.eudat.eu/b2safe/B2SAFE-core/-/wikis/Documentation
 
----------------
-Known issues
----------------
-https://github.com/EUDAT-B2SAFE/B2SAFE-core/wiki/Known-issues
+
