@@ -1,5 +1,7 @@
 B2SAFE
 ===========
+DEPRECATED CODE: please look at the new repository here: https://gitlab.eudat.eu/b2safe/B2SAFE-core/-/wikis/home
+
 B2SAFE service code for EUDAT project.
 
 It is released under BSD license.
